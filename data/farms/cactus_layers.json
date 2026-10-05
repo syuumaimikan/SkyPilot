@@ -1,0 +1,60 @@
+{
+  "id": "cactus_layers",
+  "name": "Checkerboard layers (cactus)",
+  "crops": [
+    "CACTUS"
+  ],
+  "description": "Cactus on sand in a checkerboard so no cactus touches another block horizontally (vanilla rule); a path every third row, two layers with a glass separator. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 32,
+  "palette": {
+    "S": "sand",
+    "c": "cactus",
+    "C": "cactus",
+    "P": "stone_bricks",
+    "G": "glass"
+  },
+  "crop_codes": [
+    "C"
+  ],
+  "checker": [
+    "c",
+    "C"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "CC.",
+        "cc.",
+        "SSP"
+      ]
+    },
+    {
+      "y": 5,
+      "cross_section": [
+        "CC.",
+        "cc.",
+        "SSP",
+        "GGG"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Move to the next path (+Z by 3)",
+    "Walk back along -X",
+    "Drop to the lower layer when the top is done"
+  ],
+  "harvest_direction": "Along X; break the upper cactus block, keep the base",
+  "water_notes": [],
+  "lighting_notes": [],
+  "build_order": [
+    "Place every cactus on a checkerboard: skip each block whose neighbour (X or Z) already has a cactus."
+  ],
+  "seconds_per_block": 0.35
+}

@@ -1,0 +1,21 @@
+{
+  "itemid": "minecraft:skull",
+  "displayname": "§5Sinful Dice",
+  "nbttag": "{ExtraAttributes:{id:\"SINFUL_DICE\"},HideFlags:254,ItemModel:\"minecraft:player_head\",SkullOwner:{Id:\"dd6ab7fc-9cbb-372e-a1fe-facea3b6b51d\",Properties:{textures:[0:{Name:\"textures\",Signature:\"jXMZ7PCVTEZ9tORqRn1HN3Jn1PtBbQhebhd38Dj0S74vfHB61TYqO3H3pq/5Zf4oIFpPW9xj8oUf/y2OATo5dEaOZogXeq1F9ueEvgFDFGOVpzjOoOV+Sex2X2mkT0T8qhyx8fvbrBDAJebjhcWvGxOzIp4B4Nlg4Lx/HEXRpP3U8xOE8P9pAvdoWL3R6cnhAfGGXMFRid5KXJ926VJIGAsGeEVuy1jpr1iYEMG2N22EWqyS9NBtdZ8XS36ea+zwfFASSgxjRgHhpD2XVjqGbcBKZKpfRcMD9Wi/92bSVx4mWqIPBbsuKpwNVMGlTeQnWCHiN75uMIQR3QZCUdGdSK7f9RWutI/amnTbTvjYmqQ4n4laZbDCi6P5mmMgtZ0aJk5PLJKf75iPyMl1ZGZ/2peYTXknBt9G/9boygnvDq/ugN9r56DaIC5vr6gHVVzIVXSEOaGJCSvc1zJ6ADc/oJlP6/A9e6h/sjnAPGhQZRQBi8l1829TUNqEy9ptdt+BUBuinuXIR8e6nUF/ChhUCe6hXCKT/679Ok+BdqdKI44gkX6UsSL9ehGnKCWYVzEaV4+7kA9em8OQZHViHlV/0dyBwpLol5wIf0/sUcujovl+NwvTfOWiNFRFiVpO8SfegyEENVHGkW5a4UWfI2WpDuHx6iPWw3wVY/r6rZ3Lf3Q=\",Value:\"ewogICJ0aW1lc3RhbXAiIDogMTYyNjQ2MjgwNTg4MywKICAicHJvZmlsZUlkIiA6ICJkYmNlZjMyZjI5ZDc0Y2UzOTUzOWMwYjBhMTE1YjZiZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJyYW1waXJlIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzViN2E4ODRmZWE3OTJiODNiMjdiMDY0YmU3ZTQzNjAyMzY4MWNmZTQyNTEwZDIyOTdkNDhkZmRkNzVmZmIyOTYiCiAgICB9CiAgfQp9\"}]},hypixelPopulated:1B},display:{Lore:[0:\"§8Snake eyes!\",1:\"\",2:\"§eRight-click to view recipes!\",3:\"\",4:\"§5§lEPIC\"],Name:\"§5Sinful Dice\"}}",
+  "damage": 3,
+  "lore": [
+    "§8Snake eyes!",
+    "",
+    "§eRight-click to view recipes!",
+    "",
+    "§5§lEPIC"
+  ],
+  "internalname": "SINFUL_DICE",
+  "clickcommand": "",
+  "crafttext": "",
+  "modver": "Firmament 44.3.0-dev+mc26.2+g8dd91b6e",
+  "infoType": "WIKI_URL",
+  "info": [
+    "https://hypixelskyblock.minecraft.wiki/w/Sinful_Dice"
+  ]
+}

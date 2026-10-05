@@ -1,0 +1,94 @@
+# Progression Score model (SkyPilot heuristic). Each area maps one or more metrics onto 0-100
+# via piecewise-linear anchors [value, score]. Stage is NOT derived from networth alone:
+# it uses the weighted overall score.
+
+[[areas]]
+id = "combat"
+name = "Combat"
+weight = 1.0
+metrics = [{ metric = "skill:COMBAT", anchors = [[0, 0], [20, 30], [35, 60], [50, 85], [60, 100]] }]
+
+[[areas]]
+id = "dungeons"
+name = "Dungeons"
+weight = 1.2
+metrics = [
+  { metric = "catacombs", anchors = [[0, 0], [15, 25], [24, 45], [30, 65], [40, 85], [50, 100]], weight = 0.7 },
+  { metric = "class_average", anchors = [[0, 0], [20, 40], [35, 75], [50, 100]], weight = 0.3 },
+]
+
+[[areas]]
+id = "mining"
+name = "Mining"
+weight = 1.0
+metrics = [
+  { metric = "skill:MINING", anchors = [[0, 0], [20, 25], [35, 50], [50, 80], [60, 100]], weight = 0.5 },
+  { metric = "hotm", anchors = [[0, 0], [3, 20], [5, 45], [7, 75], [10, 100]], weight = 0.5 },
+]
+
+[[areas]]
+id = "farming"
+name = "Farming"
+weight = 1.0
+metrics = [
+  { metric = "skill:FARMING", anchors = [[0, 0], [20, 25], [40, 55], [50, 75], [60, 100]], weight = 0.6 },
+  { metric = "garden", anchors = [[0, 0], [5, 30], [10, 60], [15, 100]], weight = 0.4 },
+]
+
+[[areas]]
+id = "fishing"
+name = "Fishing"
+weight = 0.7
+metrics = [{ metric = "skill:FISHING", anchors = [[0, 0], [15, 25], [30, 60], [45, 90], [50, 100]] }]
+
+[[areas]]
+id = "foraging"
+name = "Foraging"
+weight = 0.6
+metrics = [{ metric = "skill:FORAGING", anchors = [[0, 0], [15, 25], [30, 55], [45, 85], [57, 100]] }]
+
+[[areas]]
+id = "slayer"
+name = "Slayer"
+weight = 1.0
+metrics = [{ metric = "slayer_xp_total", anchors = [[0, 0], [20000, 20], [200000, 45], [1000000, 70], [5000000, 90], [15000000, 100]] }]
+
+[[areas]]
+id = "accessories"
+name = "Accessories"
+weight = 1.1
+metrics = [{ metric = "magical_power", anchors = [[0, 0], [200, 20], [500, 45], [900, 70], [1300, 90], [1700, 100]] }]
+
+[[areas]]
+id = "pets"
+name = "Pets"
+weight = 0.6
+metrics = [{ metric = "pet_score", anchors = [[0, 0], [50, 25], [150, 55], [300, 85], [400, 100]] }]
+
+[[areas]]
+id = "economy"
+name = "Economy"
+weight = 0.9
+metrics = [{ metric = "networth", anchors = [[0, 0], [10000000, 15], [100000000, 40], [1000000000, 70], [10000000000, 95], [50000000000, 100]] }]
+
+[[areas]]
+id = "rift"
+name = "Rift"
+weight = 0.4
+metrics = [{ metric = "rift_progress", anchors = [[0, 0], [10, 25], [30, 60], [60, 100]] }]
+
+[[areas]]
+id = "kuudra"
+name = "Kuudra"
+weight = 0.6
+metrics = [{ metric = "kuudra_tier", anchors = [[0, 0], [1, 20], [2, 40], [3, 60], [4, 80], [5, 100]] }]
+
+[stages]
+# overall score thresholds
+mid_game = 25
+late_game = 50
+end_game = 75
+
+# areas >= strong are "strong", <= weak are "weak" (relative to the player's mean as well)
+strong_threshold = 65
+weak_threshold = 35

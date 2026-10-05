@@ -1,0 +1,142 @@
+# Farming crops. Base drops and NPC prices per harvested block come from EliteFarmers
+# farming-weight `crops.ts` (MIT, github.com/EliteFarmers/Website/packages/farming-weight).
+# Farming Fortune: +1% drops per point (wiki "Farming Fortune").
+source = "https://github.com/EliteFarmers/Website/blob/master/packages/farming-weight/src/constants/crops.ts"
+
+# Hypixel limits block breaking; 20 blocks/second is the practical maximum used by
+# community calculators. SkyPilot applies `default_uptime` for movement/lane changes.
+max_blocks_per_second = 20
+default_uptime = 0.9
+
+[[crops]]
+id = "WHEAT"
+name = "Wheat"
+item = "WHEAT"
+base_drops = 1
+npc_price = 6
+fortune_stat = "WHEAT_FORTUNE"
+tools = ["THEORETICAL_HOE_WHEAT_1", "THEORETICAL_HOE_WHEAT_2", "THEORETICAL_HOE_WHEAT_3"]
+design = "wheat_horizontal"
+
+[[crops]]
+id = "CARROT_ITEM"
+name = "Carrot"
+item = "CARROT_ITEM"
+base_drops = 3
+npc_price = 3
+fortune_stat = "CARROT_FORTUNE"
+tools = ["THEORETICAL_HOE_CARROT_1", "THEORETICAL_HOE_CARROT_2", "THEORETICAL_HOE_CARROT_3"]
+design = "carrot_potato_horizontal"
+
+[[crops]]
+id = "POTATO_ITEM"
+name = "Potato"
+item = "POTATO_ITEM"
+base_drops = 3
+npc_price = 3
+fortune_stat = "POTATO_FORTUNE"
+tools = ["THEORETICAL_HOE_POTATO_1", "THEORETICAL_HOE_POTATO_2", "THEORETICAL_HOE_POTATO_3"]
+design = "carrot_potato_horizontal"
+
+[[crops]]
+id = "PUMPKIN"
+name = "Pumpkin"
+item = "PUMPKIN"
+base_drops = 1
+npc_price = 10
+fortune_stat = "PUMPKIN_FORTUNE"
+tools = ["PUMPKIN_DICER", "PUMPKIN_DICER_2", "PUMPKIN_DICER_3"]
+design = "melon_pumpkin_lanes"
+
+[[crops]]
+id = "MELON"
+name = "Melon"
+item = "MELON"
+base_drops = 5
+npc_price = 2
+fortune_stat = "MELON_FORTUNE"
+tools = ["MELON_DICER", "MELON_DICER_2", "MELON_DICER_3"]
+design = "melon_pumpkin_lanes"
+
+[[crops]]
+id = "SUGAR_CANE"
+name = "Sugar Cane"
+item = "SUGAR_CANE"
+base_drops = 2
+npc_price = 4
+fortune_stat = "SUGAR_CANE_FORTUNE"
+tools = ["THEORETICAL_HOE_CANE_1", "THEORETICAL_HOE_CANE_2", "THEORETICAL_HOE_CANE_3"]
+design = "cane_rows"
+
+[[crops]]
+id = "CACTUS"
+name = "Cactus"
+item = "CACTUS"
+base_drops = 2
+npc_price = 4
+fortune_stat = "CACTUS_FORTUNE"
+tools = ["CACTUS_KNIFE", "CACTUS_KNIFE_2", "CACTUS_KNIFE_3"]
+design = "cactus_layers"
+
+[[crops]]
+id = "INK_SACK:3"
+name = "Cocoa Beans"
+item = "INK_SACK:3"
+base_drops = 3
+npc_price = 3
+fortune_stat = "COCOA_BEANS_FORTUNE"
+tools = ["COCO_CHOPPER", "COCO_CHOPPER_2", "COCO_CHOPPER_3"]
+design = "cocoa_walls"
+
+[[crops]]
+id = "MUSHROOM_COLLECTION"
+name = "Mushroom"
+item = "RED_MUSHROOM"
+base_drops = 1
+npc_price = 10
+fortune_stat = "MUSHROOM_FORTUNE"
+tools = ["FUNGI_CUTTER", "FUNGI_CUTTER_2", "FUNGI_CUTTER_3"]
+design = "mushroom_terraces"
+
+[[crops]]
+id = "NETHER_STALK"
+name = "Nether Wart"
+item = "NETHER_STALK"
+base_drops = 2.5
+npc_price = 4
+fortune_stat = "NETHER_WART_FORTUNE"
+tools = ["THEORETICAL_HOE_WARTS_1", "THEORETICAL_HOE_WARTS_2", "THEORETICAL_HOE_WARTS_3"]
+design = "wart_horizontal"
+
+[[crops]]
+id = "DOUBLE_PLANT"
+name = "Sunflower"
+item = "DOUBLE_PLANT"
+base_drops = 2
+npc_price = 4
+fortune_stat = "SUNFLOWER_FORTUNE"
+tools = ["THEORETICAL_HOE_SUNFLOWER_1", "THEORETICAL_HOE_SUNFLOWER_2", "THEORETICAL_HOE_SUNFLOWER_3"]
+design = "wheat_horizontal"
+
+[[crops]]
+id = "MOONFLOWER"
+name = "Moonflower"
+item = "MOONFLOWER"
+base_drops = 2
+npc_price = 4
+fortune_stat = "MOONFLOWER_FORTUNE"
+tools = ["THEORETICAL_HOE_SUNFLOWER_1", "THEORETICAL_HOE_SUNFLOWER_2", "THEORETICAL_HOE_SUNFLOWER_3"]
+design = "wheat_horizontal"
+
+[[crops]]
+id = "WILD_ROSE"
+name = "Wild Rose"
+item = "WILD_ROSE"
+base_drops = 2
+npc_price = 4
+fortune_stat = "WILD_ROSE_FORTUNE"
+tools = ["THEORETICAL_HOE_WILD_ROSE_1", "THEORETICAL_HOE_WILD_ROSE_2", "THEORETICAL_HOE_WILD_ROSE_3"]
+design = "wheat_horizontal"
+
+# Generic farming-fortune armor/equipment candidates are discovered from the items resource
+# (any item with FARMING_FORTUNE / crop fortune stats); no list is hard-coded here.

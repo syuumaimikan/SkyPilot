@@ -1,0 +1,35 @@
+# Magical Power per accessory rarity and special cases.
+# Source: https://hypixelskyblock.minecraft.wiki/w/Magical_Power (checked 2026-10-05).
+source = "https://hypixelskyblock.minecraft.wiki/w/Magical_Power"
+# Items in the accessory bag that never count (bingo/event/rift-only); merged with NEU misc.ignored_talisman.
+extra_ignored = []
+# Accessory purchase recommendations skip items above this price per MP by default.
+max_coins_per_mp_default = 5_000_000
+
+[mp_per_rarity]
+COMMON = 3
+UNCOMMON = 5
+RARE = 8
+EPIC = 12
+LEGENDARY = 16
+MYTHIC = 22
+DIVINE = 28
+SPECIAL = 3
+VERY_SPECIAL = 5
+ULTIMATE = 1
+ADMIN = 22
+
+# Accessories whose MP is a multiple of their rarity value.
+[mp_multiplier]
+HEGEMONY_ARTIFACT = 2
+
+# Accessories with a fixed MP value under a condition.
+[[fixed_mp]]
+id = "RIFT_PRISM"
+mp = 11
+condition = "Imbued at Erihann (Rift). SkyPilot cannot verify imbuement from the API and uses the rarity value."
+applied = false
+
+[[special_notes]]
+id = "ABICASE"
+note = "Grants 1 MP per 2 Abiphone contacts; computed from nether_island_player_data.abiphone.active_contacts."

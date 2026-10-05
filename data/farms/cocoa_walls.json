@@ -1,0 +1,45 @@
+{
+  "id": "cocoa_walls",
+  "name": "Log walls (cocoa beans)",
+  "crops": [
+    "INK_SACK:3"
+  ],
+  "description": "Three-high jungle-log walls with cocoa on both faces; the player walks between two walls. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 24,
+  "palette": {
+    "L": "jungle_log",
+    "K": "cocoa",
+    "P": "stone_bricks"
+  },
+  "crop_codes": [
+    "K"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "KLK.",
+        "KLK.",
+        "KLK.",
+        "PLPP"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X between two walls",
+    "Move to the next gap (+Z by 4)",
+    "Walk back along -X"
+  ],
+  "harvest_direction": "Along X; cocoa on both walls next to you",
+  "water_notes": [],
+  "lighting_notes": [],
+  "build_order": [
+    "Cocoa can only be placed on the side of a jungle log: build the walls first."
+  ],
+  "seconds_per_block": 0.35
+}

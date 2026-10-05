@@ -1,0 +1,53 @@
+{
+  "id": "wart_horizontal",
+  "name": "Horizontal lanes (nether wart)",
+  "crops": [
+    "NETHER_STALK"
+  ],
+  "description": "Nether wart on soul sand, two rows each side of the path, two stacked layers. No water is needed. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 19,
+  "palette": {
+    "S": "soul_sand",
+    "N": "nether_wart",
+    "P": "stone_bricks",
+    "G": "glass"
+  },
+  "crop_codes": [
+    "N"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "NN.NN",
+        "SSPSS"
+      ]
+    },
+    {
+      "y": 4,
+      "cross_section": [
+        "NN.NN",
+        "SSPSS",
+        "GGGGG"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Move to the next path (+Z by 5)",
+    "Walk back along -X",
+    "Drop to the lower layer when the top is done"
+  ],
+  "harvest_direction": "Along X, both sides of the path",
+  "water_notes": [
+    "Nether wart does not need water."
+  ],
+  "lighting_notes": [],
+  "build_order": [],
+  "seconds_per_block": 0.35
+}

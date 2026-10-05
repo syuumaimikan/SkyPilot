@@ -1,0 +1,204 @@
+# SlayerDefinition registry. Adding a new slayer = adding a [[slayers]] entry here
+# (and its NEU boss drop files); no code changes are needed.
+#
+# Game facts:
+#   * tier_costs / tier_xp default to NEU constants (misc.slayer_cost, leveling.slayer_boss_xp)
+#     and can be overridden per slayer.
+#   * level thresholds come from NEU leveling.slayer_xp[<id>].
+#   * unlock rules from https://hypixelskyblock.minecraft.wiki/w/Slayer (checked 2026-10-05).
+# Heuristics (labelled in the UI as SkyPilot guidance):
+#   * recommended_combat / recommended_mp per tier
+#   * kill_minutes: average minutes per boss *including* spawning, per gear tier
+#   * gear tiers (REQUIRED / RECOMMENDED / LUXURY)
+
+[[slayers]]
+id = "zombie"
+name = "Revenant Horror"
+short = "Zombie"
+aliases = ["revenant", "rev", "zombie", "ゾンビ", "レブナント", "リベナント"]
+neu_boss_prefix = "REVENANT_HORROR"
+max_tier = 5
+area = "Hub - Graveyard / Coal Mine Crypts"
+unlock = "Unlocked by default"
+unlock_slayer = ""
+unlock_tier = 0
+recommended_combat = [5, 10, 18, 24, 30]
+recommended_mp = [0, 50, 150, 300, 550]
+kill_minutes = { required = [1.5, 2.0, 3.0, 4.5, 6.0], recommended = [1.0, 1.5, 2.0, 2.5, 3.5], luxury = [0.8, 1.0, 1.3, 1.6, 2.2] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["REVENANT_SWORD"]
+recommended = ["REAPER_SWORD", "AXE_OF_THE_SHREDDED"]
+luxury = ["HYPERION"]
+
+[[slayers.gear]]
+slot = "armor"
+required = ["REVENANT_CHESTPLATE"]
+recommended = ["REAPER_CHESTPLATE"]
+luxury = ["POWER_WITHER_CHESTPLATE"]
+
+[[slayers.gear]]
+slot = "pet"
+required = ["PET:WOLF"]
+recommended = ["PET:ENDER_DRAGON"]
+luxury = ["PET:GOLDEN_DRAGON"]
+
+[[slayers]]
+id = "spider"
+name = "Tarantula Broodfather"
+short = "Spider"
+aliases = ["tarantula", "tara", "spider", "スパイダー", "タランチュラ"]
+neu_boss_prefix = "TARANTULA_BROODFATHER"
+max_tier = 5
+area = "Spider's Den / Spider's Den Burning Desert"
+unlock = "Defeat Revenant Horror Tier II"
+unlock_slayer = "zombie"
+unlock_tier = 2
+recommended_combat = [5, 12, 20, 26, 32]
+recommended_mp = [0, 50, 200, 400, 650]
+kill_minutes = { required = [1.5, 2.0, 3.0, 4.0, 6.0], recommended = [1.0, 1.5, 2.0, 2.5, 3.5], luxury = [0.8, 1.0, 1.2, 1.5, 2.0] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["SCORPION_FOIL", "RECLUSE_FANG"]
+recommended = ["JUJU_SHORTBOW"]
+luxury = ["TERMINATOR"]
+
+[[slayers.gear]]
+slot = "armor"
+required = ["TARANTULA_CHESTPLATE"]
+recommended = ["SHADOW_ASSASSIN_CHESTPLATE"]
+luxury = ["POWER_WITHER_CHESTPLATE"]
+
+[[slayers.gear]]
+slot = "pet"
+required = ["PET:SPIDER"]
+recommended = ["PET:ENDER_DRAGON"]
+luxury = ["PET:GOLDEN_DRAGON"]
+
+[[slayers]]
+id = "wolf"
+name = "Sven Packmaster"
+short = "Wolf"
+aliases = ["sven", "wolf", "ウルフ", "スヴェン", "狼"]
+neu_boss_prefix = "SVEN_PACKMASTER"
+max_tier = 4
+area = "Hub - Ruins / The Park - Howling Cave"
+unlock = "Defeat Tarantula Broodfather Tier II"
+unlock_slayer = "spider"
+unlock_tier = 2
+recommended_combat = [8, 14, 22, 28]
+recommended_mp = [0, 100, 250, 450]
+kill_minutes = { required = [1.5, 2.5, 3.5, 5.0], recommended = [1.0, 1.5, 2.2, 3.0], luxury = [0.8, 1.0, 1.4, 1.8] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["SHAMAN_SWORD"]
+recommended = ["POOCH_SWORD"]
+luxury = ["HYPERION"]
+
+[[slayers.gear]]
+slot = "armor"
+required = ["MASTIFF_CHESTPLATE"]
+recommended = ["SHADOW_ASSASSIN_CHESTPLATE"]
+luxury = ["POWER_WITHER_CHESTPLATE"]
+
+[[slayers.gear]]
+slot = "pet"
+required = ["PET:WOLF"]
+recommended = ["PET:ENDER_DRAGON"]
+luxury = ["PET:GOLDEN_DRAGON"]
+
+[[slayers]]
+id = "enderman"
+name = "Voidgloom Seraph"
+short = "Enderman"
+aliases = ["voidgloom", "eman", "enderman", "ender", "エンダーマン", "ボイドグルーム", "エンダー"]
+neu_boss_prefix = "VOIDGLOOM_SERAPH"
+max_tier = 4
+area = "The End - Void Sepulture / Zealot Bruiser Hideout"
+unlock = "Defeat Sven Packmaster Tier IV"
+unlock_slayer = "wolf"
+unlock_tier = 4
+recommended_combat = [18, 22, 26, 32]
+recommended_mp = [150, 300, 500, 800]
+# Combat XP needed to spawn each tier (wiki Voidgloom Seraph infobox).
+spawn_combat_xp = [2750, 6600, 11000, 22000]
+kill_minutes = { required = [2.0, 3.0, 4.5, 7.0], recommended = [1.2, 1.8, 2.5, 4.0], luxury = [0.8, 1.0, 1.4, 2.2] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["VOIDEDGE_KATANA", "LIVID_DAGGER"]
+recommended = ["ATOMSPLIT_KATANA", "JUJU_SHORTBOW"]
+luxury = ["TERMINATOR"]
+
+[[slayers.gear]]
+slot = "armor"
+required = ["STRONG_DRAGON_CHESTPLATE"]
+recommended = ["FINAL_DESTINATION_CHESTPLATE"]
+luxury = ["POWER_WITHER_CHESTPLATE"]
+
+[[slayers.gear]]
+slot = "pet"
+required = ["PET:ENDERMAN"]
+recommended = ["PET:ENDER_DRAGON"]
+luxury = ["PET:GOLDEN_DRAGON"]
+
+[[slayers]]
+id = "blaze"
+name = "Inferno Demonlord"
+short = "Blaze"
+aliases = ["inferno", "blaze", "demonlord", "ブレイズ", "インフェルノ"]
+neu_boss_prefix = "INFERNO_DEMONLORD"
+max_tier = 4
+area = "Crimson Isle - Smoldering Tomb / Stronghold"
+unlock = "Defeat Voidgloom Seraph Tier III"
+unlock_slayer = "enderman"
+unlock_tier = 3
+recommended_combat = [22, 26, 30, 36]
+recommended_mp = [300, 450, 650, 900]
+kill_minutes = { required = [2.5, 4.0, 6.0, 9.0], recommended = [1.5, 2.5, 3.5, 5.0], luxury = [1.0, 1.5, 2.0, 3.0] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["FIREDUST_DAGGER", "MAWDUST_DAGGER"]
+recommended = ["BURSTFIRE_DAGGER", "BURSTMAW_DAGGER"]
+luxury = ["HEARTFIRE_DAGGER", "HEARTMAW_DAGGER"]
+
+[[slayers.gear]]
+slot = "armor"
+required = ["CRIMSON_CHESTPLATE", "AURORA_CHESTPLATE"]
+recommended = ["FIERY_CRIMSON_CHESTPLATE", "FIERY_AURORA_CHESTPLATE"]
+luxury = ["INFERNAL_CRIMSON_CHESTPLATE", "INFERNAL_AURORA_CHESTPLATE"]
+
+[[slayers.gear]]
+slot = "pet"
+required = ["PET:BLAZE"]
+recommended = ["PET:GOLDEN_DRAGON"]
+luxury = ["PET:GOLDEN_DRAGON"]
+
+[[slayers]]
+id = "vampire"
+name = "Riftstalker Bloodfiend"
+short = "Vampire"
+aliases = ["riftstalker", "vampire", "vamp", "ヴァンパイア", "吸血鬼"]
+neu_boss_prefix = "RIFTSTALKER_BLOODFIEND"
+max_tier = 5
+area = "The Rift - Stillgore Château"
+unlock = "Secure the Globulate Timecharm; higher tiers require higher Combat levels"
+unlock_slayer = ""
+unlock_tier = 0
+# Vampire uses its own XP per tier and costs Motes instead of coins.
+tier_xp = [10, 25, 60, 120, 150]
+tier_costs = [0, 0, 0, 0, 0]
+cost_currency = "motes"
+recommended_combat = [20, 25, 30, 35, 40]
+recommended_mp = [0, 0, 0, 0, 0]
+kill_minutes = { required = [1.5, 2.0, 3.0, 4.0, 5.0], recommended = [1.0, 1.5, 2.0, 2.5, 3.5], luxury = [1.0, 1.2, 1.5, 2.0, 2.8] }
+
+[[slayers.gear]]
+slot = "weapon"
+required = ["STEAK_STAKE"]
+recommended = ["SILVER_LACED_KARAMBIT"]
+luxury = ["SILVERTWIST_KARAMBIT"]

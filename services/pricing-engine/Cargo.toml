@@ -1,0 +1,21 @@
+[package]
+name = "skypilot-pricing"
+description = "Market engine: auction normalisation, fair value, flips, bazaar, craft/forge/kat, backtesting, networth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+skypilot-protocol.workspace = true
+skypilot-calc.workspace = true
+skypilot-items.workspace = true
+skypilot-data.workspace = true
+skypilot-hypixel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parking_lot.workspace = true
+tracing.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

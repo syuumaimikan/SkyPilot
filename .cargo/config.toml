@@ -1,0 +1,5 @@
+[env]
+# ts-rs writes TypeScript bindings when `cargo test` runs. Plain test runs write them to
+# target/ts-rs; `pnpm gen:types` overrides this to update packages/protocol/ts and then
+# post-processes them (see packages/protocol/ts/scripts/generate.mjs).
+TS_RS_EXPORT_DIR = { value = "target/ts-rs", relative = true }

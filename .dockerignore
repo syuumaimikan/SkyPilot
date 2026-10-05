@@ -1,0 +1,12 @@
+.git
+**/target
+**/node_modules
+**/.next
+**/.gradle
+**/build
+apps/mod
+data/cache
+fixtures
+.env
+*.log
+.claude

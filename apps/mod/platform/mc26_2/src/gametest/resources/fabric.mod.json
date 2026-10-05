@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "skypilot-gametest",
+	"version": "1.0.0",
+	"name": "SkyPilot client game tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.skypilot.mod.platform.SkyPilotClientGameTest"]
+	},
+	"depends": {
+		"skypilot": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}

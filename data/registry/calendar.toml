@@ -1,0 +1,80 @@
+# SkyBlock calendar. Event dates from https://hypixelskyblock.minecraft.wiki/w/Calendar_and_Events
+# (checked 2026-10-05). One SkyBlock day = 20 real minutes, 31 days per month, 12 months.
+# The epoch (Year 1, Early Spring 1) is 1560275700000 ms; this matches the live election
+# endpoint (election year N runs from Late Summer 27 of year N to Late Spring 27 of N+1).
+epoch_ms = 1560275700000
+day_ms = 1200000
+days_per_month = 31
+months = ["Early Spring", "Spring", "Late Spring", "Early Summer", "Summer", "Late Summer", "Early Autumn", "Autumn", "Late Autumn", "Early Winter", "Winter", "Late Winter"]
+
+[[events]]
+id = "hoppity"
+name = "Hoppity's Hunt"
+start = { month = 1, day = 1 }
+end = { month = 3, day = 31 }
+value = "Chocolate Factory rabbits and eggs"
+progression = ["chocolate_factory"]
+
+[[events]]
+id = "traveling_zoo_summer"
+name = "Traveling Zoo"
+start = { month = 4, day = 1 }
+end = { month = 4, day = 3 }
+value = "Buy legendary pets from Oringo"
+progression = ["pets"]
+
+[[events]]
+id = "traveling_zoo_winter"
+name = "Traveling Zoo"
+start = { month = 10, day = 1 }
+end = { month = 10, day = 3 }
+value = "Buy legendary pets from Oringo"
+progression = ["pets"]
+
+[[events]]
+id = "harvest_feast"
+name = "Harvest Feast"
+start = { month = 7, day = 1 }
+end = { month = 9, day = 31 }
+value = "Autumn farming event"
+progression = ["farming"]
+
+[[events]]
+id = "spooky_festival"
+name = "Spooky Festival"
+start = { month = 8, day = 29 }
+end = { month = 8, day = 31 }
+value = "Candy, Spooky pets/armor, Fear mongerer shop"
+progression = ["accessories", "pets"]
+
+[[events]]
+id = "season_of_jerry"
+name = "Season of Jerry"
+start = { month = 12, day = 24 }
+end = { month = 12, day = 26 }
+value = "Gifts and Jerry's Workshop rewards"
+progression = ["accessories"]
+
+[[events]]
+id = "new_year"
+name = "New Year Celebration"
+start = { month = 12, day = 29 }
+end = { month = 12, day = 31 }
+value = "Free New Year Cake (counts toward the New Year Cake Bag collection)"
+progression = ["museum"]
+
+[[events]]
+id = "election_booth"
+name = "Election Booth Opens"
+start = { month = 6, day = 27 }
+end = { month = 6, day = 27 }
+value = "Vote for next year's mayor"
+progression = []
+
+[[events]]
+id = "election_over"
+name = "Election Over"
+start = { month = 3, day = 27 }
+end = { month = 3, day = 27 }
+value = "New mayor takes office"
+progression = []

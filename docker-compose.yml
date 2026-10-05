@@ -1,0 +1,78 @@
+# SkyPilot full stack: TimescaleDB, Redis, Rust API (with the embedded market collector),
+# Next.js web and a Caddy front proxy on http://localhost:3000.
+#
+#   cp .env.example .env        # optional: HYPIXEL_API_KEY, ANTHROPIC_API_KEY, ...
+#   docker compose up --build
+name: skypilot
+
+services:
+  db:
+    image: timescale/timescaledb:2.30.2-pg17
+    environment:
+      POSTGRES_USER: skypilot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-skypilot-local-dev}
+      POSTGRES_DB: skypilot
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skypilot -d skypilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.2-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://skypilot:${POSTGRES_PASSWORD:-skypilot-local-dev}@db:5432/skypilot
+      REDIS_URL: redis://redis:6379
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:3000}
+      TRUST_PROXY: "1"
+    volumes:
+      - api-cache:/app/data/cache
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        SKYPILOT_API_URL: http://api:8080
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2.11-alpine
+    ports:
+      - "${SKYPILOT_PORT:-3000}:80"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  api-cache:

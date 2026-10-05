@@ -1,0 +1,46 @@
+{
+  "id": "cane_rows",
+  "name": "Water-channel rows (sugar cane)",
+  "crops": [
+    "SUGAR_CANE"
+  ],
+  "description": "Sand rows on both sides of each water channel (sugar cane must touch water); paths between pairs. Break the upper block and keep the base. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 24,
+  "palette": {
+    "S": "sand",
+    "W": "water",
+    "P": "stone_bricks",
+    "c": "sugar_cane",
+    "C": "sugar_cane"
+  },
+  "crop_codes": [
+    "C"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "C.C.",
+        "c.c.",
+        "SWSP"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Move to the next path (+Z by 4)",
+    "Walk back along -X"
+  ],
+  "harvest_direction": "Along X; break the top cane block, the base regrows",
+  "water_notes": [
+    "Every sand block touches the water channel next to it (required for sugar cane)."
+  ],
+  "lighting_notes": [],
+  "build_order": [],
+  "seconds_per_block": 0.35
+}

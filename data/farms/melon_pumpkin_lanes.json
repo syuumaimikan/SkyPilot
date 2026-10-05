@@ -1,0 +1,49 @@
+{
+  "id": "melon_pumpkin_lanes",
+  "name": "Stem lanes (melon / pumpkin)",
+  "crops": [
+    "MELON",
+    "PUMPKIN"
+  ],
+  "description": "Stem rows on farmland with a free dirt block on both sides for the fruit; the path runs between two stem rows. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 12,
+  "palette": {
+    "W": "water",
+    "D": "dirt",
+    "F": "farmland",
+    "S": "melon_stem",
+    "M": "melon",
+    "P": "stone_bricks"
+  },
+  "crop_codes": [
+    "M"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "WMSM.MSM",
+        "WDFDPDFD"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Move to the next path (+Z by 8)",
+    "Walk back along -X"
+  ],
+  "harvest_direction": "Along X, breaking the fruit next to the path on both sides",
+  "water_notes": [
+    "Water at z = 0, 8, 16, ... keeps every stem's farmland within 2 blocks of water."
+  ],
+  "lighting_notes": [],
+  "build_order": [
+    "Fruit only grows onto the free dirt blocks next to each stem: keep them empty."
+  ],
+  "seconds_per_block": 0.35
+}

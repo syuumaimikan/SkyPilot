@@ -1,0 +1,17 @@
+[package]
+name = "skypilot-items"
+description = "SkyBlock item decoding: NBT, Minecraft 26.2 data components, item fingerprints"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+flate2.workspace = true
+base64.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

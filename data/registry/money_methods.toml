@@ -1,0 +1,94 @@
+# Money-making methods evaluated per player. The coins/hour of every method is COMPUTED
+# at request time by its estimator (live market prices x the player's stats); nothing here
+# is a fixed "X M/h" number. `requirements` use the same mini-language as goal nodes:
+#   skill:<SKILL>>=N, slayer:<id>>=N, catacombs>=N, hotm>=N, garden>=N, floor:<F7|M3>, purse>=N
+
+[[methods]]
+id = "farming_best_crop"
+name = "Garden farming (best crop for you)"
+category = "Farming"
+estimator = "farming"
+risk = "VERY_LOW"
+requirements = ["garden>=1"]
+link = "/farming"
+
+[[methods]]
+id = "mining_best_target"
+name = "Mining (best ore/gemstone for your stats)"
+category = "Mining"
+estimator = "mining"
+risk = "LOW"
+requirements = ["skill:MINING>=12"]
+link = "/mining"
+
+[[methods]]
+id = "slayer_best"
+name = "Slayer bosses (expected value)"
+category = "Slayer"
+estimator = "slayer"
+risk = "MEDIUM"
+requirements = []
+link = "/combat/slayer"
+
+[[methods]]
+id = "dungeons_best_floor"
+name = "Dungeon runs (chest profit not modelled - XP focused)"
+category = "Dungeons"
+estimator = "dungeons"
+risk = "MEDIUM"
+requirements = ["catacombs>=1"]
+link = "/combat/dungeons"
+
+[[methods]]
+id = "ah_flipping"
+name = "Auction House flipping"
+category = "Market"
+estimator = "ah_flip"
+risk = "MEDIUM"
+requirements = ["purse>=5000000"]
+link = "/market/flips"
+
+[[methods]]
+id = "bazaar_flipping"
+name = "Bazaar order flipping"
+category = "Market"
+estimator = "bazaar_flip"
+risk = "LOW"
+requirements = ["purse>=1000000"]
+link = "/market/bazaar"
+
+[[methods]]
+id = "craft_flipping"
+name = "Craft flipping"
+category = "Market"
+estimator = "craft_flip"
+risk = "LOW"
+requirements = []
+link = "/market/craft"
+
+[[methods]]
+id = "forge_flipping"
+name = "Forge flipping"
+category = "Market"
+estimator = "forge_flip"
+risk = "LOW"
+requirements = ["hotm>=1"]
+link = "/market/craft?tab=forge"
+
+[[methods]]
+id = "kat_flipping"
+name = "Kat pet upgrade flipping"
+category = "Market"
+estimator = "kat_flip"
+risk = "MEDIUM"
+requirements = []
+link = "/market/craft?tab=kat"
+
+[[methods]]
+id = "minions"
+name = "Minions (passive)"
+category = "Passive"
+estimator = "minions"
+risk = "VERY_LOW"
+requirements = []
+link = "/minions"

@@ -1,0 +1,340 @@
+# Mining targets and planners.
+# Game facts (block strength, instant-break factors, powder per mithril block) from
+# https://hypixelskyblock.minecraft.wiki/w/Mining_Speed and /w/Mithril_Powder (checked 2026-10-05).
+# Items, drill stats and HOTM costs are NOT duplicated here: they come from the Hypixel items
+# resource and NEU hotmlayout.json.
+
+source = "https://hypixelskyblock.minecraft.wiki/w/Mining_Speed"
+default_uptime = 0.75
+# Powder Buff: +1% powder per level (wiki, Powder Buff perk), applied multiplicatively to the base.
+powder_buff_perk = "powder_buff"
+
+# fortune_stat: which lore/item stat applies ("MINING_FORTUNE", "GEMSTONE_FORTUNE", ...).
+# Since the 2024 mining update several specialised fortunes exist; SkyPilot sums the generic
+# Mining Fortune with the specialised one when both are present.
+[[targets]]
+id = "ruby"
+name = "Ruby Gemstone"
+block_strength = 2300
+instant_factor = 60
+drop_item = "ROUGH_RUBY_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows", "Dwarven Mines"]
+requirements = []
+
+[[targets]]
+id = "amber"
+name = "Amber Gemstone"
+block_strength = 3000
+instant_factor = 60
+drop_item = "ROUGH_AMBER_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Goblin Holdout"]
+requirements = []
+
+[[targets]]
+id = "amethyst"
+name = "Amethyst Gemstone"
+block_strength = 3000
+instant_factor = 60
+drop_item = "ROUGH_AMETHYST_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Jungle"]
+requirements = []
+
+[[targets]]
+id = "jade"
+name = "Jade Gemstone"
+block_strength = 3000
+instant_factor = 60
+drop_item = "ROUGH_JADE_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Mithril Deposits"]
+requirements = []
+
+[[targets]]
+id = "sapphire"
+name = "Sapphire Gemstone"
+block_strength = 3000
+instant_factor = 60
+drop_item = "ROUGH_SAPPHIRE_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Precursor Remnants"]
+requirements = []
+
+[[targets]]
+id = "opal"
+name = "Opal Gemstone"
+block_strength = 3000
+instant_factor = 60
+drop_item = "ROUGH_OPAL_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crimson Isle"]
+requirements = []
+
+[[targets]]
+id = "topaz"
+name = "Topaz Gemstone"
+block_strength = 3800
+instant_factor = 60
+drop_item = "ROUGH_TOPAZ_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Khazad-dûm"]
+requirements = []
+
+[[targets]]
+id = "jasper"
+name = "Jasper Gemstone"
+block_strength = 4800
+instant_factor = 60
+drop_item = "ROUGH_JASPER_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Crystal Hollows - Fairy Grotto"]
+requirements = []
+
+[[targets]]
+id = "onyx"
+name = "Onyx Gemstone"
+block_strength = 5200
+instant_factor = 60
+drop_item = "ROUGH_ONYX_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Glacite Tunnels", "Glacite Mineshafts"]
+requirements = []
+
+[[targets]]
+id = "aquamarine"
+name = "Aquamarine Gemstone"
+block_strength = 5200
+instant_factor = 60
+drop_item = "ROUGH_AQUAMARINE_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Glacite Tunnels", "Glacite Mineshafts"]
+requirements = []
+
+[[targets]]
+id = "citrine"
+name = "Citrine Gemstone"
+block_strength = 5200
+instant_factor = 60
+drop_item = "ROUGH_CITRINE_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Glacite Tunnels", "Glacite Mineshafts"]
+requirements = []
+
+[[targets]]
+id = "peridot"
+name = "Peridot Gemstone"
+block_strength = 5200
+instant_factor = 60
+drop_item = "ROUGH_PERIDOT_GEM"
+base_drops = 4
+pristine_ratio = 80
+fortune_stat = "GEMSTONE_FORTUNE"
+areas = ["Glacite Tunnels", "Glacite Mineshafts"]
+requirements = []
+
+[[targets]]
+id = "mithril"
+name = "Mithril (mixed variants)"
+# Weighted mix of cyan terracotta / gray wool (500), prismarine (800), light blue wool (1500).
+block_strength = 800
+instant_factor = 60
+drop_item = "MITHRIL_ORE"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+mithril_powder_per_block = 2
+areas = ["Dwarven Mines", "Crystal Hollows"]
+requirements = []
+
+[[targets]]
+id = "titanium"
+name = "Titanium"
+block_strength = 2000
+instant_factor = 60
+drop_item = "TITANIUM_ORE"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+areas = ["Dwarven Mines"]
+requirements = []
+
+[[targets]]
+id = "glacite"
+name = "Glacite"
+block_strength = 6000
+instant_factor = 60
+drop_item = "GLACITE"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+areas = ["Glacite Tunnels"]
+requirements = []
+
+[[targets]]
+id = "umber"
+name = "Umber"
+block_strength = 5600
+instant_factor = 60
+drop_item = "UMBER"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+areas = ["Glacite Tunnels"]
+requirements = []
+
+[[targets]]
+id = "tungsten"
+name = "Tungsten"
+block_strength = 5600
+instant_factor = 60
+drop_item = "TUNGSTEN"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+areas = ["Glacite Tunnels"]
+requirements = []
+
+[[targets]]
+id = "hard_stone"
+name = "Hard Stone"
+block_strength = 50
+instant_factor = 30
+drop_item = "HARD_STONE"
+base_drops = 1
+pristine_ratio = 0
+fortune_stat = "MINING_FORTUNE"
+areas = ["Crystal Hollows", "Glacite Tunnels"]
+requirements = []
+
+# Mining areas and their entry requirements (wiki Crystal Hollows / Glacite Tunnels pages,
+# checked 2026-10-05). Gemstones drop 3-5 Rough by default (wiki "Gemstone"), modelled as 4.
+[[areas]]
+id = "dwarven_mines"
+name = "Dwarven Mines"
+required_hotm = 0
+description = "Commissions, mithril and titanium. Entry via the Gold Mine."
+
+[[areas]]
+id = "crystal_hollows"
+name = "Crystal Hollows"
+required_hotm = 4
+required_mining = 12
+description = "Gemstones in five zones, treasure chests (gemstone powder) and the Crystal Nucleus."
+
+[[areas]]
+id = "glacite_tunnels"
+name = "Glacite Tunnels"
+required_hotm = 7
+description = "Glacite, umber, tungsten, onyx/aquamarine/citrine/peridot gemstones, frozen corpses."
+
+[[areas]]
+id = "glacite_mineshafts"
+name = "Glacite Mineshafts"
+required_hotm = 7
+description = "Instanced shafts with dense gemstone/ore and corpses; spawn with a 0.05% chance per block broken in the Glacite Tunnels."
+
+# ---- HOTM presets (SkyPilot heuristics). Values are target levels per perk id
+# (NEU hotmlayout perk ids). The planner computes the powder still needed from the player's
+# current tree, respecting HOTM tier unlocks and tree adjacency.
+[[hotm_presets]]
+id = "progression"
+name = "HOTM Progression"
+description = "Balanced tree that unlocks the most universally useful perks first."
+ability = "mining_speed_boost"
+targets = { core_of_the_mountain = 10, mining_speed = 50, mining_fortune = 50, efficient_miner = 100, quick_forge = 20, professional = 140, mole = 200, powder_buff = 50, seasoned_mineman = 100, great_explorer = 20, fortunate_mineman = 50, sky_mall = 1, mining_speed_boost = 1, daily_powder = 1, front_loaded = 1 }
+
+[[hotm_presets]]
+id = "powder"
+name = "Powder Grinding"
+description = "Maximise powder income (Powder Buff, Great Explorer chests, Front Loaded)."
+ability = "pickobulus"
+targets = { core_of_the_mountain = 10, powder_buff = 50, great_explorer = 20, mole = 200, efficient_miner = 100, mining_speed = 50, front_loaded = 1, daily_powder = 1, sky_mall = 1, pickobulus = 1 }
+
+[[hotm_presets]]
+id = "gemstone"
+name = "Gemstone Mining"
+description = "Gemstone throughput: Professional, Gem Lover, Strong Arm/Steady Hand, Crystalline."
+ability = "mining_speed_boost"
+targets = { core_of_the_mountain = 10, mining_speed = 50, professional = 140, gem_lover = 20, strong_arm = 100, steady_hand = 100, crystalline = 50, fortunate_mineman = 50, front_loaded = 1, mining_speed_boost = 1, sky_mall = 1 }
+
+[[hotm_presets]]
+id = "mithril"
+name = "Mithril"
+description = "Mithril and titanium mining with Titanium Insanium and Luck of the Cave."
+ability = "mining_speed_boost"
+targets = { mining_speed = 50, mining_fortune = 50, efficient_miner = 100, titanium_insanium = 50, luck_of_the_cave = 45, seasoned_mineman = 100, mining_speed_boost = 1 }
+
+[[hotm_presets]]
+id = "glacite"
+name = "Glacite"
+description = "Glacite Tunnels and Mineshafts (corpses, glacite powder)."
+ability = "mining_speed_boost"
+targets = { core_of_the_mountain = 10, mining_speed = 50, strong_arm = 100, steady_hand = 100, no_stone_unturned = 50, warm_heart = 50, surveyor = 20, eager_adventurer = 100, gifts_from_the_departed = 100, dead_mans_chest = 50, vanguard_seeker = 50, mining_master = 10, daily_grind = 1, mineshaft_mayhem = 1 }
+
+[[hotm_presets]]
+id = "commission"
+name = "Commission"
+description = "Fast commission clears in the Dwarven Mines and Glacite Tunnels."
+ability = "mining_speed_boost"
+targets = { mining_speed = 50, efficient_miner = 100, lonesome_miner = 45, seasoned_mineman = 100, daily_grind = 1, mining_speed_boost = 1, keep_it_cool = 50 }
+
+[[hotm_presets]]
+id = "money"
+name = "Money Making"
+description = "Forge speed and fortune for profitable materials."
+ability = "pickobulus"
+targets = { quick_forge = 20, mining_fortune = 50, titanium_insanium = 50, professional = 140, gem_lover = 20, fortunate_mineman = 50, pickobulus = 1, core_of_the_mountain = 10 }
+
+# ---- Powder planner methods. Verified per-block values are marked; everything else is an
+# editable SkyPilot assumption shown to the user with LOW confidence.
+[[powder_methods]]
+id = "mithril_mining"
+powder = "MITHRIL"
+name = "Mine mithril"
+kind = "per_block"
+target = "mithril"
+powder_per_block = 2.0
+verified = true
+note = "Wiki: 1 powder for basic variants, 2 for prismarine, 5 for light blue wool. 2 is a mixed average."
+
+[[powder_methods]]
+id = "gemstone_chests"
+powder = "GEMSTONE"
+name = "Crystal Hollows treasure chests"
+kind = "per_hour"
+per_hour = 120000
+verified = false
+note = "Assumption: chest farming with Great Explorer. Highly variable - adjust in the planner."
+
+[[powder_methods]]
+id = "glacite_mineshafts"
+powder = "GLACITE"
+name = "Glacite Tunnels / Mineshafts loop"
+kind = "per_hour"
+per_hour = 90000
+verified = false
+note = "Assumption: commissions + corpses + glacite mining. Adjust to your observed rate."

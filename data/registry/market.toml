@@ -1,0 +1,73 @@
+# Market fee model and freshness thresholds.
+# Source: https://hypixelskyblock.minecraft.wiki/w/Auction_House and /w/Bazaar (checked 2026-10-05).
+
+[auction_house]
+source = "https://hypixelskyblock.minecraft.wiki/w/Auction_House"
+auction_creation_rate = 0.05
+claim_tax_rate = 0.01
+claim_tax_threshold = 1_000_000
+# Mayor Derpy quadruples the collection fee (not creation/duration fees).
+derpy_claim_tax_multiplier = 4.0
+
+[[auction_house.bin_brackets]]
+min_price = 0
+rate = 0.01
+
+[[auction_house.bin_brackets]]
+min_price = 10_000_000
+rate = 0.02
+
+[[auction_house.bin_brackets]]
+min_price = 100_000_000
+rate = 0.025
+
+# Duration fees. Only the 336h (14 day) value is quoted on the wiki page; the shorter
+# presets are the in-game menu values and are negligible for flips (< 1,200 coins).
+[[auction_house.duration_fees]]
+hours = 1
+fee = 20
+
+[[auction_house.duration_fees]]
+hours = 6
+fee = 45
+
+[[auction_house.duration_fees]]
+hours = 12
+fee = 100
+
+[[auction_house.duration_fees]]
+hours = 24
+fee = 350
+
+[[auction_house.duration_fees]]
+hours = 48
+fee = 1200
+
+[[auction_house.duration_fees]]
+hours = 336
+fee = 55_200
+
+[bazaar]
+source = "https://hypixelskyblock.minecraft.wiki/w/Bazaar"
+# Base sales tax; Bazaar Flipper community upgrade lowers it by 0.125% per level (max 2 levels).
+tax_rate = 0.0125
+flipper_reduction_per_level = 0.00125
+flipper_max_level = 2
+max_orders = 14
+max_orders_with_flipper = 28
+order_expiry_days = 7
+
+[flip_defaults]
+# Default BIN listing duration assumed for resale.
+listing_hours = 24
+min_profit = 500_000
+min_roi = 0.05
+max_results = 200
+
+[freshness]
+# Seconds after which data is flagged STALE in the UI.
+auctions_stale_after = 180
+ended_auctions_stale_after = 180
+bazaar_stale_after = 180
+resources_stale_after = 172_800
+profile_stale_after = 600

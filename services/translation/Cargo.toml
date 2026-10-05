@@ -1,0 +1,23 @@
+[package]
+name = "skypilot-translation"
+description = "SkyBlock chat translation: protected tokens, dictionary, cache, optional providers with circuit breaker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+skypilot-protocol.workspace = true
+skypilot-hypixel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+moka.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+async-trait.workspace = true
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

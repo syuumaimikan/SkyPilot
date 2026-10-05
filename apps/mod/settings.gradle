@@ -1,0 +1,23 @@
+pluginManagement {
+	repositories {
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+plugins {
+	// Downloads the JDK 25 toolchain automatically (Minecraft 26.2 requires Java 25).
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'skypilot-mod'
+
+// Version-independent modules (plain Java, unit-tested without Minecraft).
+include 'core', 'network', 'translation', 'session', 'hud'
+// Minecraft-version-specific platform layer. A future Minecraft version gets its own
+// platform/mcXX_Y module that reuses every module above.
+include 'platform:mc26_2'

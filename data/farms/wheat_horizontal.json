@@ -1,0 +1,59 @@
+{
+  "id": "wheat_horizontal",
+  "name": "Horizontal lanes (wheat / flowers)",
+  "crops": [
+    "WHEAT",
+    "DOUBLE_PLANT",
+    "MOONFLOWER",
+    "WILD_ROSE"
+  ],
+  "description": "Two stacked layers of 96-block lanes: two crop rows on each side of a walking path, with a water channel every 6 blocks. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 16,
+  "palette": {
+    "W": "water",
+    "F": "farmland",
+    "P": "stone_bricks",
+    "C": "wheat",
+    "G": "glass"
+  },
+  "crop_codes": [
+    "C"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "WCC.CC",
+        "WFFPFF"
+      ]
+    },
+    {
+      "y": 4,
+      "cross_section": [
+        "WCC.CC",
+        "WFFPFF",
+        "GGGGGG"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "At the end, step one path over (+Z by 6)",
+    "Walk back along -X",
+    "Repeat; drop to the lower layer when the top layer is done"
+  ],
+  "harvest_direction": "Along X, breaking the two rows on each side of the path",
+  "water_notes": [
+    "Water channels at z = 0, 6, 12, ... keep every farmland block within 4 blocks of water (vanilla hydration rule)."
+  ],
+  "lighting_notes": [],
+  "build_order": [
+    "Place the glass ceiling of the lower layer before the upper layer's farmland so water cannot flow down."
+  ],
+  "seconds_per_block": 0.35
+}

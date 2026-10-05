@@ -1,0 +1,13 @@
+[package]
+name = "skypilot-calc"
+description = "Deterministic SkyBlock calculations: statistics, XP tables, fees, mining/farming/slayer math"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

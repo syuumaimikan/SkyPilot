@@ -1,0 +1,11 @@
+target/
+data/cache/
+node_modules/
+.next/
+.env
+*.log
+.gradle/
+build/
+apps/mod/platform/*/run/
+apps/mod/build/
+*.tsbuildinfo

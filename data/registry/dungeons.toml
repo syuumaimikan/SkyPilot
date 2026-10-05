@@ -1,0 +1,206 @@
+# Catacombs floors. Entry requirements are game rules from
+# https://hypixelskyblock.minecraft.wiki/w/The_Catacombs (checked 2026-10-05).
+# The [readiness] tables are SkyPilot heuristics (community guidance), NOT game requirements;
+# the UI labels them as such.
+source = "https://hypixelskyblock.minecraft.wiki/w/The_Catacombs"
+
+[[floors]]
+id = "E"
+tier = 0
+master = false
+boss = "The Watcher"
+required_catacombs = 0
+required_combat = 15
+requires_floor = ""
+
+[[floors]]
+id = "F1"
+tier = 1
+master = false
+boss = "Bonzo"
+required_catacombs = 1
+required_combat = 1
+requires_floor = ""
+
+[[floors]]
+id = "F2"
+tier = 2
+master = false
+boss = "Scarf"
+required_catacombs = 3
+required_combat = 3
+requires_floor = "F1"
+
+[[floors]]
+id = "F3"
+tier = 3
+master = false
+boss = "The Professor"
+required_catacombs = 5
+required_combat = 5
+requires_floor = "F2"
+
+[[floors]]
+id = "F4"
+tier = 4
+master = false
+boss = "Thorn"
+required_catacombs = 9
+required_combat = 9
+requires_floor = "F3"
+
+[[floors]]
+id = "F5"
+tier = 5
+master = false
+boss = "Livid"
+required_catacombs = 14
+required_combat = 14
+requires_floor = "F4"
+
+[[floors]]
+id = "F6"
+tier = 6
+master = false
+boss = "Sadan"
+required_catacombs = 19
+required_combat = 19
+requires_floor = "F5"
+
+[[floors]]
+id = "F7"
+tier = 7
+master = false
+boss = "Maxor, Storm, Goldor, Necron"
+required_catacombs = 24
+required_combat = 24
+requires_floor = "F6"
+
+[[floors]]
+id = "M1"
+tier = 1
+master = true
+boss = "Master Bonzo"
+required_catacombs = 24
+required_combat = 0
+requires_floor = "F7"
+
+[[floors]]
+id = "M2"
+tier = 2
+master = true
+boss = "Master Scarf"
+required_catacombs = 26
+required_combat = 0
+requires_floor = "M1"
+
+[[floors]]
+id = "M3"
+tier = 3
+master = true
+boss = "Master Professor"
+required_catacombs = 28
+required_combat = 0
+requires_floor = "M2"
+
+[[floors]]
+id = "M4"
+tier = 4
+master = true
+boss = "Master Thorn"
+required_catacombs = 30
+required_combat = 0
+requires_floor = "M3"
+
+[[floors]]
+id = "M5"
+tier = 5
+master = true
+boss = "Master Livid"
+required_catacombs = 32
+required_combat = 0
+requires_floor = "M4"
+
+[[floors]]
+id = "M6"
+tier = 6
+master = true
+boss = "Master Sadan"
+required_catacombs = 34
+required_combat = 0
+requires_floor = "M5"
+
+[[floors]]
+id = "M7"
+tier = 7
+master = true
+boss = "Master Maxor, Storm, Goldor, Necron"
+required_catacombs = 36
+required_combat = 0
+requires_floor = "M6"
+
+# --- SkyPilot heuristics: what a comfortable (not minimum) setup looks like per floor.
+# magical_power / class_average / secrets are soft targets used for readiness scoring.
+[readiness.F5]
+catacombs = 18
+magical_power = 250
+class_average = 15
+
+[readiness.F6]
+catacombs = 22
+magical_power = 350
+class_average = 18
+
+[readiness.F7]
+catacombs = 28
+magical_power = 500
+class_average = 25
+
+[readiness.M3]
+catacombs = 30
+magical_power = 650
+class_average = 30
+
+[readiness.M5]
+catacombs = 34
+magical_power = 800
+class_average = 35
+
+[readiness.M7]
+catacombs = 40
+magical_power = 1100
+class_average = 40
+
+# Approximate run times (minutes) for a competent party, used for time estimates only.
+[run_minutes]
+E = 5
+F1 = 6
+F2 = 7
+F3 = 8
+F4 = 10
+F5 = 9
+F6 = 10
+F7 = 13
+M1 = 7
+M2 = 8
+M3 = 8
+M4 = 12
+M5 = 8
+M6 = 10
+M7 = 15
+
+# Base Catacombs XP per completion, from each floor's wiki infobox ("Base XP"), checked
+# 2026-10-05. Floors whose value could not be confirmed are omitted on purpose; SkyPilot
+# then reports run counts for them as Unknown instead of guessing. Daily first-run bonuses,
+# boosts and score scaling are not applied, so estimates are conservative.
+[base_catacombs_xp]
+F1 = 80
+F2 = 160
+F3 = 400
+F5 = 2400
+F6 = 5000
+F7 = 30000
+M1 = 10000
+M2 = 15000
+M3 = 60000
+M5 = 70000

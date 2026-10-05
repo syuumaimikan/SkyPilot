@@ -1,0 +1,96 @@
+# SkyBlock chat translation dictionary (EN -> JA).
+# - protected: never translated (kept verbatim). Item names from the Hypixel items resource are
+#   added automatically at runtime; list here only jargon/proper nouns that are not item names.
+# - phrases: whole-token slang replacements (case-insensitive, word-boundary matched).
+# - patterns: full-message regex templates for very common party/guild messages. `{1}` etc.
+#   refer to capture groups. Evaluated before any external translation provider is called.
+version = "2026.10.05"
+
+protected = [
+  "SkyBlock", "Hypixel", "HOTM", "HOTF", "MP", "Magical Power", "Powder", "Mithril Powder", "Gemstone Powder",
+  "Glacite Powder", "Reforge", "Recombobulator", "Catacombs", "Cata", "Master Mode", "Kuudra", "Bazaar", "BZ",
+  "AH", "BIN", "Slayer", "Revenant", "Tarantula", "Sven", "Voidgloom", "Inferno", "Riftstalker", "Hyperion",
+  "Terminator", "Necron", "Storm", "Goldor", "Maxor", "Divan", "Juju", "Valkyrie", "Astraea", "Scylla",
+  "Wither Impact", "Mage", "Archer", "Berserk", "Tank", "Healer", "Dungeon", "Garden", "Rift", "Crimson Isle",
+  "Dwarven Mines", "Crystal Hollows", "Glacite Tunnels", "Mineshaft", "Jacob", "Mayor", "Diana", "Derpy",
+  "Marina", "Cole", "Paul", "Aatrox", "Foxy", "Diaz", "Finnegan", "Scorpius", "Jerry", "Galatea",
+  "Chocolate Factory", "Hoppity", "Pickobulus", "Fiesta", "Dark Auction", "Netherrack", "Commission",
+  "F1", "F2", "F3", "F4", "F5", "F6", "F7", "M1", "M2", "M3", "M4", "M5", "M6", "M7",
+  "T1", "T2", "T3", "T4", "T5", "S+", "EHP", "CD", "CC", "Ferocity", "Pristine",
+]
+
+[phrases]
+"ty" = "ありがとう"
+"tysm" = "本当にありがとう"
+"thx" = "ありがとう"
+"tyvm" = "本当にありがとう"
+"np" = "どういたしまして"
+"gg" = "GG"
+"ggs" = "GG"
+"gl" = "頑張って"
+"glhf" = "頑張って楽しんで"
+"wb" = "おかえり"
+"brb" = "すぐ戻る"
+"afk" = "離席中"
+"omw" = "向かってる"
+"idk" = "わからない"
+"imo" = "個人的には"
+"lf" = "募集"
+"lfm" = "メンバー募集"
+"lfg" = "パーティー募集"
+"wtb" = "買いたい"
+"wts" = "売りたい"
+"wtt" = "交換したい"
+"pm me" = "個チャして"
+"dm me" = "DMして"
+"p me" = "パーティーに招待して"
+"party me" = "パーティーに招待して"
+"carry" = "キャリー"
+"carries" = "キャリー"
+"ez" = "楽勝"
+"nvm" = "やっぱりなんでもない"
+"rn" = "今"
+"pls" = "お願い"
+"plz" = "お願い"
+"ofc" = "もちろん"
+"tbh" = "正直"
+"lol" = "（笑）"
+"lmao" = "（爆笑）"
+"xd" = "（笑）"
+"bruh" = "えぇ…"
+
+[[patterns]]
+regex = '^(?:anyone|any1|anybody|who)\s+(?:want|wanna|doing|down for|up for)\s+([fm][1-7]|kuudra|t[1-5])\s*\??$'
+template = "{1}行く人いる？"
+
+[[patterns]]
+regex = '^(?:lf|lfm|need)\s+(\d)\s*(?:more)?\s*(?:for\s+)?([fm][1-7])$'
+template = "{2}あと{1}人募集"
+
+[[patterns]]
+regex = '^(?:lf|lfm)\s+([fm][1-7]|kuudra\s*t?\d?)\s+(mage|archer|berserk|tank|healer)$'
+template = "{1}の{2}募集"
+
+[[patterns]]
+regex = '^(?:p|party)\s+(?:me|pls|plz)$'
+template = "パーティーに招待して"
+
+[[patterns]]
+regex = '^(?:how much|price)\s+(?:is|for)\s+(?:a\s+)?(.+?)\s*\??$'
+template = "{1}っていくら？"
+
+[[patterns]]
+regex = '^(?:selling|wts)\s+(.+?)\s+(?:for\s+)?([\d.,]+\s*[kmb]?)$'
+template = "{1}を{2}で売ります"
+
+[[patterns]]
+regex = '^(?:buying|wtb)\s+(.+?)\s+(?:for\s+)?([\d.,]+\s*[kmb]?)$'
+template = "{1}を{2}で買います"
+
+[[patterns]]
+regex = '^(?:gg|ggs|good game)\s*!*$'
+template = "GG"
+
+[[patterns]]
+regex = '^(?:ty|thx|thanks|thank you)\s+(?:for\s+(?:the\s+)?)?(carry|run|party)\s*!*$'
+template = "{1}ありがとう！"

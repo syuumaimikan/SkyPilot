@@ -1,0 +1,95 @@
+plugins {
+	id 'net.fabricmc.fabric-loom'
+}
+
+base {
+	archivesName = 'skypilot'
+}
+
+def sharedModules = [':core', ':network', ':translation', ':session', ':hud']
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// The version-independent modules are nested inside the mod jar (jar-in-jar).
+	sharedModules.each {
+		implementation project(it)
+		include project(it)
+	}
+}
+
+processResources {
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+java {
+	withSourcesJar()
+}
+
+// In-game verification: `gradlew :platform:mc26_2:runClientGameTest` launches Minecraft 26.2,
+// opens a singleplayer world and runs src/gametest (see SkyPilotClientGameTest).
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = 'skypilot-gametest'
+		enableGameTests = false
+		enableClientGameTests = true
+	}
+}
+
+// ---------------------------------------------------------------- release integrity
+// The mod never downloads or executes code. Releases are verified out-of-band:
+//  * build/libs/skypilot-<version>.jar.sha256 is published next to every jar;
+//  * when a code-signing keystore is provided (CI secrets SKYPILOT_SIGN_KEYSTORE,
+//    SKYPILOT_SIGN_ALIAS, SKYPILOT_SIGN_STOREPASS) the jar is signed with jarsigner and can be
+//    checked with `jarsigner -verify -strict skypilot-<version>.jar`.
+
+def releaseJar = tasks.named('jar').flatMap { it.archiveFile }
+def signKeystore = providers.environmentVariable('SKYPILOT_SIGN_KEYSTORE')
+def signAlias = providers.environmentVariable('SKYPILOT_SIGN_ALIAS')
+def signStorepass = providers.environmentVariable('SKYPILOT_SIGN_STOREPASS')
+def jarsigner = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }.map {
+	it.metadata.installationPath.file('bin/jarsigner' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : '')).asFile.absolutePath
+}
+
+def signJar = tasks.register('signJar', Exec) {
+	description = 'Signs the release jar with jarsigner (keystore from SKYPILOT_SIGN_* environment variables).'
+	group = 'build'
+	dependsOn 'jar'
+	onlyIf { signKeystore.isPresent() && signAlias.isPresent() && signStorepass.isPresent() }
+	def jarPath = releaseJar
+	doFirst {
+		executable jarsigner.get()
+		args '-keystore', signKeystore.get(), '-storepass:env', 'SKYPILOT_SIGN_STOREPASS', '-tsa', 'http://timestamp.digicert.com', jarPath.get().asFile.absolutePath, signAlias.get()
+	}
+}
+
+def checksum = tasks.register('checksum') {
+	description = 'Writes the SHA-256 checksum of the release jar.'
+	group = 'build'
+	dependsOn 'jar'
+	mustRunAfter signJar
+	def input = releaseJar
+	inputs.file(input)
+	outputs.file(input.map { it.asFile.absolutePath + '.sha256' })
+	doLast {
+		def f = input.get().asFile
+		def md = java.security.MessageDigest.getInstance('SHA-256')
+		f.withInputStream { s ->
+			byte[] buf = new byte[65536]
+			int n
+			while ((n = s.read(buf)) > 0) md.update(buf, 0, n)
+		}
+		new File(f.absolutePath + '.sha256').text = md.digest().encodeHex().toString() + '  ' + f.name + '\n'
+	}
+}
+
+tasks.named('build') {
+	dependsOn signJar, checksum
+}

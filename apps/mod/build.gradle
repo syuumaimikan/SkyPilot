@@ -1,0 +1,32 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+}
+
+allprojects {
+	group = 'dev.skypilot'
+	version = project.property('mod_version')
+}
+
+subprojects {
+	repositories {
+		mavenCentral()
+	}
+
+	plugins.withType(JavaPlugin).configureEach {
+		extensions.configure(JavaPluginExtension) {
+			it.toolchain.languageVersion = JavaLanguageVersion.of(25)
+		}
+		tasks.withType(JavaCompile).configureEach {
+			options.encoding = 'UTF-8'
+			options.release = 25
+			options.compilerArgs.addAll(['-Xlint:all', '-Xlint:-serial', '-Xlint:-processing', '-Xlint:-classfile'])
+		}
+		tasks.withType(Test).configureEach {
+			useJUnitPlatform()
+			testLogging {
+				events 'failed'
+				exceptionFormat 'full'
+			}
+		}
+	}
+}

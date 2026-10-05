@@ -1,0 +1,16 @@
+{
+  "name": "skypilot",
+  "private": true,
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @skypilot/web dev",
+    "build": "pnpm --filter @skypilot/web build",
+    "start": "pnpm --filter @skypilot/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "gen:types": "pnpm --filter @skypilot/protocol generate"
+  }
+}

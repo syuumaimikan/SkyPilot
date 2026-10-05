@@ -1,0 +1,23 @@
+{
+	"schemaVersion": 1,
+	"id": "skypilot",
+	"version": "${version}",
+	"name": "SkyPilot",
+	"description": "Hypixel SkyBlock progression co-pilot: roadmap HUD, context advisor, price check, session tracking and optional chat translation. Information only - it never plays, clicks, moves, buys or sells for you.",
+	"authors": ["SkyPilot"],
+	"contact": {
+		"sources": "https://github.com/skypilot-sb/skypilot"
+	},
+	"license": "MIT",
+	"icon": "assets/skypilot/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.skypilot.mod.platform.SkyPilotClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

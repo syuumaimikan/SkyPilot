@@ -1,0 +1,54 @@
+{
+  "id": "carrot_potato_horizontal",
+  "name": "Horizontal lanes (carrot / potato)",
+  "crops": [
+    "CARROT_ITEM",
+    "POTATO_ITEM"
+  ],
+  "description": "Same lane geometry as the wheat layout, planted with carrots or potatoes. SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 16,
+  "palette": {
+    "W": "water",
+    "F": "farmland",
+    "P": "stone_bricks",
+    "C": "carrots",
+    "G": "glass"
+  },
+  "crop_codes": [
+    "C"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "WCC.CC",
+        "WFFPFF"
+      ]
+    },
+    {
+      "y": 4,
+      "cross_section": [
+        "WCC.CC",
+        "WFFPFF",
+        "GGGGGG"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Step to the next path (+Z by 6)",
+    "Walk back along -X"
+  ],
+  "harvest_direction": "Along X, both sides of the path",
+  "water_notes": [
+    "One water channel per 6 blocks keeps all farmland hydrated (vanilla rule)."
+  ],
+  "lighting_notes": [],
+  "build_order": [],
+  "seconds_per_block": 0.35
+}

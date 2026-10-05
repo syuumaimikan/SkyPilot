@@ -1,0 +1,10 @@
+packages:
+  - apps/web
+  - packages/ui
+  - packages/protocol/ts
+# unrs-resolver ships prebuilt native bindings as optional dependencies; its postinstall
+# script only re-checks them, so dependency build scripts stay disabled.
+allowBuilds:
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - lucide-react@1.52.0

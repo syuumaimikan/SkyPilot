@@ -1,0 +1,20 @@
+[package]
+name = "skypilot-profile"
+description = "Player Analyzer: turns a Hypixel SkyBlock profile into a structured, honest PlayerAnalysis"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+skypilot-protocol.workspace = true
+skypilot-calc.workspace = true
+skypilot-items.workspace = true
+skypilot-data.workspace = true
+skypilot-pricing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+skypilot-hypixel.workspace = true

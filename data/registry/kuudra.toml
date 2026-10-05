@@ -1,0 +1,55 @@
+# Kuudra tiers. Requirements from https://hypixelskyblock.minecraft.wiki/w/Kuudra (checked 2026-10-05).
+source = "https://hypixelskyblock.minecraft.wiki/w/Kuudra"
+
+[[tiers]]
+id = "none"
+name = "Basic"
+order = 1
+required_reputation = 0
+requires_tier = ""
+key = "KUUDRA_TIER_KEY"
+skyblock_xp = 20
+
+[[tiers]]
+id = "hot"
+name = "Hot"
+order = 2
+required_reputation = 1000
+requires_tier = "none"
+key = "KUUDRA_HOT_TIER_KEY"
+skyblock_xp = 40
+
+[[tiers]]
+id = "burning"
+name = "Burning"
+order = 3
+required_reputation = 3000
+requires_tier = "hot"
+key = "KUUDRA_BURNING_TIER_KEY"
+skyblock_xp = 60
+
+[[tiers]]
+id = "fiery"
+name = "Fiery"
+order = 4
+required_reputation = 7000
+requires_tier = "burning"
+key = "KUUDRA_FIERY_TIER_KEY"
+skyblock_xp = 80
+
+[[tiers]]
+id = "infernal"
+name = "Infernal"
+order = 5
+required_reputation = 12000
+requires_tier = "fiery"
+key = "KUUDRA_INFERNAL_TIER_KEY"
+skyblock_xp = 100
+
+# SkyPilot heuristic: comfortable magical power per tier.
+[readiness]
+none = 100
+hot = 300
+burning = 500
+fiery = 750
+infernal = 1000

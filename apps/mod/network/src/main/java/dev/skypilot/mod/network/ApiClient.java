@@ -1,0 +1,208 @@
+package dev.skypilot.mod.network;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
+
+/**
+ * Client for the SkyPilot backend. Every call is asynchronous with a hard timeout, guarded by
+ * a circuit breaker and (for reads) a short TTL cache, so it can never stall the render thread.
+ *
+ * <p>The mod only ever talks to the configured SkyPilot server. It never contacts Hypixel,
+ * Mojang or Microsoft and never handles Minecraft/Microsoft credentials.
+ */
+public final class ApiClient {
+	private static final Gson GSON = new Gson();
+	private static final Duration TIMEOUT = Duration.ofSeconds(6);
+
+	private final Transport transport;
+	private final URI base;
+	private final Supplier<String> token;
+	private final LongSupplier clock;
+	private final CircuitBreaker breaker;
+	private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
+
+	private record CacheEntry(long expiresAt, Object value) {
+	}
+
+	public ApiClient(Transport transport, String baseUrl, Supplier<String> token, LongSupplier clock) {
+		this.transport = transport;
+		this.base = validateBaseUrl(baseUrl);
+		this.token = token;
+		this.clock = clock;
+		this.breaker = new CircuitBreaker(4, 30_000, clock);
+	}
+
+	/** https everywhere; plain http only for a server on this machine. */
+	public static URI validateBaseUrl(String url) {
+		URI u;
+		try {
+			u = new URI(url.strip().replaceAll("/+$", ""));
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException("invalid SkyPilot server URL: " + url);
+		}
+		String scheme = u.getScheme() == null ? "" : u.getScheme().toLowerCase(Locale.ROOT);
+		String host = u.getHost() == null ? "" : u.getHost().toLowerCase(Locale.ROOT);
+		boolean local = host.equals("localhost") || host.equals("127.0.0.1") || host.equals("[::1]") || host.equals("::1");
+		if (!(scheme.equals("https") || (scheme.equals("http") && local))) {
+			throw new IllegalArgumentException("SkyPilot server URL must use https (http is only allowed for localhost)");
+		}
+		if (u.getUserInfo() != null || u.getQuery() != null || u.getFragment() != null) {
+			throw new IllegalArgumentException("SkyPilot server URL must not contain credentials, a query or a fragment");
+		}
+		return u;
+	}
+
+	public URI base() {
+		return base;
+	}
+
+	public CircuitBreaker.State circuit() {
+		return breaker.state();
+	}
+
+	public void clearCache() {
+		cache.clear();
+	}
+
+	public static String enc(String s) {
+		return URLEncoder.encode(s, StandardCharsets.UTF_8);
+	}
+
+	// ---------------------------------------------------------------- endpoints
+
+	public CompletableFuture<Dto.HudState> hud(String area, String lang) {
+		String q = "?lang=" + enc(lang) + (area == null || area.isEmpty() ? "" : "&area=" + enc(area));
+		return getCached("/api/mod/hud" + q, Dto.HudState.class, 20_000);
+	}
+
+	public CompletableFuture<Dto.TextResponse> text(String kind, String lang) {
+		return getCached("/api/mod/text/" + enc(kind) + "?lang=" + enc(lang), Dto.TextResponse.class, 15_000);
+	}
+
+	/** Price for a SkyBlock item; {@code customData} is the stack's custom_data as JSON (may be null). */
+	public CompletableFuture<Dto.PriceResponse> price(String skyblockId, JsonElement customData) {
+		JsonObject body = new JsonObject();
+		body.addProperty("skyblockId", skyblockId);
+		if (customData != null) body.add("customData", customData);
+		String json = GSON.toJson(body);
+		String key = "price:" + Integer.toHexString(json.hashCode()) + ":" + skyblockId;
+		CacheEntry hit = cache.get(key);
+		if (hit != null && hit.expiresAt > clock.getAsLong()) return CompletableFuture.completedFuture((Dto.PriceResponse) hit.value);
+		return request("POST", "/api/mod/price", json, true).thenApply(r -> {
+			Dto.PriceResponse p = parse(r, Dto.PriceResponse.class);
+			cache.put(key, new CacheEntry(clock.getAsLong() + 60_000, p));
+			return p;
+		});
+	}
+
+	public CompletableFuture<Void> uploadSession(JsonObject stats) {
+		return request("POST", "/api/mod/session", GSON.toJson(stats), true).thenApply(r -> null);
+	}
+
+	public CompletableFuture<Dto.TranslateResponse> translate(String text, String sourceLang, String targetLang, String channel) {
+		JsonObject body = new JsonObject();
+		body.addProperty("text", text);
+		body.addProperty("sourceLang", sourceLang);
+		body.addProperty("targetLang", targetLang);
+		if (channel != null) body.addProperty("channel", channel);
+		return request("POST", "/api/translate", GSON.toJson(body), true).thenApply(r -> parse(r, Dto.TranslateResponse.class));
+	}
+
+	public CompletableFuture<Dto.TranslationDictionary> dictionary() {
+		return getCached("/api/translate/dictionary", Dto.TranslationDictionary.class, 6 * 3600_000L);
+	}
+
+	public CompletableFuture<Dto.DeviceCodeResponse> deviceCode(String deviceName) {
+		JsonObject body = new JsonObject();
+		body.addProperty("deviceName", deviceName);
+		return request("POST", "/api/device/code", GSON.toJson(body), false).thenApply(r -> parse(r, Dto.DeviceCodeResponse.class));
+	}
+
+	public CompletableFuture<Dto.DeviceTokenResponse> deviceToken(String deviceCode) {
+		JsonObject body = new JsonObject();
+		body.addProperty("deviceCode", deviceCode);
+		return request("POST", "/api/device/token", GSON.toJson(body), false).thenApply(r -> parse(r, Dto.DeviceTokenResponse.class));
+	}
+
+	// ---------------------------------------------------------------- plumbing
+
+	private <T> CompletableFuture<T> getCached(String path, Class<T> type, long ttlMillis) {
+		long now = clock.getAsLong();
+		CacheEntry hit = cache.get(path);
+		if (hit != null && hit.expiresAt > now) return CompletableFuture.completedFuture(type.cast(hit.value));
+		return request("GET", path, null, true).thenApply(r -> {
+			T v = parse(r, type);
+			cache.put(path, new CacheEntry(clock.getAsLong() + ttlMillis, v));
+			return v;
+		});
+	}
+
+	private CompletableFuture<Transport.Response> request(String method, String path, String body, boolean authenticated) {
+		if (!breaker.allow()) {
+			return CompletableFuture.failedFuture(new ApiException(0, "CIRCUIT_OPEN", "SkyPilot server unavailable; retrying in " + (breaker.retryInMillis() / 1000 + 1) + "s"));
+		}
+		Map<String, String> headers = new HashMap<>();
+		if (authenticated) {
+			String t = token.get();
+			if (t == null || t.isEmpty()) {
+				return CompletableFuture.failedFuture(new ApiException(401, "NOT_LINKED", "Not linked - run /skypilot link"));
+			}
+			headers.put("Authorization", "Bearer " + t);
+		}
+		URI uri = base.resolve(base.getPath() + path);
+		return transport.send(method, uri, headers, body, TIMEOUT).handle((r, err) -> {
+			if (err != null) {
+				breaker.failure();
+				Throwable cause = err instanceof CompletionException && err.getCause() != null ? err.getCause() : err;
+				throw new ApiException(0, "NETWORK", "SkyPilot server unreachable (" + cause.getClass().getSimpleName() + ")");
+			}
+			if (r.status() >= 500 || r.status() == 429) {
+				breaker.failure();
+			} else {
+				breaker.success();
+			}
+			if (r.status() >= 200 && r.status() < 300) return r;
+			throw toError(r);
+		});
+	}
+
+	private static ApiException toError(Transport.Response r) {
+		String code = "HTTP_" + r.status();
+		String message = "request failed (" + r.status() + ")";
+		try {
+			JsonObject o = JsonParser.parseString(r.body()).getAsJsonObject();
+			if (o.has("code")) code = o.get("code").getAsString();
+			if (o.has("message")) message = o.get("message").getAsString();
+		} catch (RuntimeException ignored) {
+			// not a JSON error body
+		}
+		return new ApiException(r.status(), code, message);
+	}
+
+	private static <T> T parse(Transport.Response r, Class<T> type) {
+		try {
+			T v = GSON.fromJson(r.body(), type);
+			if (v == null) throw new ApiException(r.status(), "DECODE", "empty response");
+			return v;
+		} catch (JsonParseException e) {
+			throw new ApiException(r.status(), "DECODE", "unexpected response from SkyPilot server");
+		}
+	}
+}

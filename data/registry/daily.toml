@@ -1,0 +1,74 @@
+# Daily Advisor task catalog. `priority_tags` let the recommendation engine re-order tasks
+# by the player's goals (e.g. a Mining goal pushes forge/commission tasks up).
+
+[[tasks]]
+id = "experimentation"
+name = "Experimentation Table"
+detail = "Superpairs/Chronomatron/Ultrasequencer for enchanting XP and Titanic/Grand Experience Bottles."
+requires = "skill:ENCHANTING>=10"
+tags = ["enchanting", "money"]
+minutes = 10
+
+[[tasks]]
+id = "forge"
+name = "Collect & restart Forge slots"
+detail = "Forge processes keep running offline; keep every slot busy with profitable recipes."
+requires = "hotm>=1"
+tags = ["mining", "money"]
+minutes = 3
+
+[[tasks]]
+id = "garden_visitors"
+name = "Garden visitors & composter"
+detail = "Serve profitable visitors for copper/garden XP and refill the composter."
+requires = "garden>=1"
+tags = ["farming", "garden"]
+minutes = 10
+
+[[tasks]]
+id = "minions"
+name = "Empty minion storage / refuel"
+detail = "Collect minion output (or rely on hoppers) and refresh fuel."
+requires = ""
+tags = ["passive", "money"]
+minutes = 5
+
+[[tasks]]
+id = "commissions"
+name = "Dwarven / Glacite commissions"
+detail = "Daily commissions give Mithril/Glacite powder and HOTM XP."
+requires = "hotm>=1"
+tags = ["mining", "hotm"]
+minutes = 25
+
+[[tasks]]
+id = "kuudra_dailies"
+name = "Crimson Isle daily quests"
+detail = "Faction quests for reputation (gates Kuudra tiers)."
+requires = "skill:COMBAT>=24"
+tags = ["kuudra", "crimson"]
+minutes = 20
+
+[[tasks]]
+id = "dungeon_daily_runs"
+name = "Dungeon daily runs"
+detail = "The first runs of the day give bonus Catacombs XP."
+requires = "catacombs>=1"
+tags = ["dungeons", "catacombs"]
+minutes = 40
+
+[[tasks]]
+id = "chocolate_factory"
+name = "Chocolate Factory check-in"
+detail = "Spend chocolate on employee upgrades and activate Time Tower charges."
+requires = ""
+tags = ["chocolate_factory"]
+minutes = 3
+
+[[tasks]]
+id = "goal_progress"
+name = "Goal progression block"
+detail = "Spend your main session on the top 'What should I do now?' action."
+requires = ""
+tags = ["goal"]
+minutes = 60

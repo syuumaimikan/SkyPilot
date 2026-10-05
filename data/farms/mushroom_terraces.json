@@ -1,0 +1,45 @@
+{
+  "id": "mushroom_terraces",
+  "name": "Mycelium terraces (mushrooms)",
+  "crops": [
+    "MUSHROOM_COLLECTION"
+  ],
+  "description": "Two mushroom rows on mycelium per path (mushrooms stay on mycelium at any light level in vanilla). SkyPilot reference layout derived from vanilla block-placement rules; it is not a copy of any community design. Check the Garden rules in-game before committing materials.",
+  "plot": [
+    96,
+    96
+  ],
+  "length": 96,
+  "repeat": 32,
+  "palette": {
+    "M": "mycelium",
+    "R": "red_mushroom",
+    "P": "stone_bricks"
+  },
+  "crop_codes": [
+    "R"
+  ],
+  "levels": [
+    {
+      "y": 0,
+      "cross_section": [
+        "RR.",
+        "MMP"
+      ]
+    }
+  ],
+  "movement": [
+    "Walk along +X on the path",
+    "Move to the next path (+Z by 3)",
+    "Walk back along -X"
+  ],
+  "harvest_direction": "Along X; both mushroom rows next to the path",
+  "water_notes": [],
+  "lighting_notes": [
+    "Mycelium lets mushrooms stay at any light level (vanilla rule), so no lighting changes are needed."
+  ],
+  "build_order": [
+    "Alternate red and brown mushrooms by row if you farm both."
+  ],
+  "seconds_per_block": 0.35
+}

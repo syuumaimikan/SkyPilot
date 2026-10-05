@@ -1,0 +1,101 @@
+# Natural-language goal parsing vocabulary (English + Japanese).
+# Item names are matched against the live Hypixel items resource; this file only adds
+# community nicknames and words that map to structured goal kinds.
+
+[item_aliases]
+"hype" = "HYPERION"
+"hyp" = "HYPERION"
+"ハイペ" = "HYPERION"
+"ハイペリオン" = "HYPERION"
+"term" = "TERMINATOR"
+"ターミ" = "TERMINATOR"
+"ターミネーター" = "TERMINATOR"
+"juju" = "JUJU_SHORTBOW"
+"ジュジュ" = "JUJU_SHORTBOW"
+"aotv" = "ASPECT_OF_THE_VOID"
+"aote" = "ASPECT_OF_THE_END"
+"aots" = "AXE_OF_THE_SHREDDED"
+"divan drill" = "DIVAN_DRILL"
+"ディバンドリル" = "DIVAN_DRILL"
+"necron chestplate" = "POWER_WITHER_CHESTPLATE"
+"necron chest" = "POWER_WITHER_CHESTPLATE"
+"ネクロン" = "POWER_WITHER_CHESTPLATE"
+"valk" = "VALKYRIE"
+"gs" = "GIANTS_SWORD"
+"ragna" = "RAGNAROCK_AXE"
+"fd" = "FINAL_DESTINATION_CHESTPLATE"
+"atomsplit" = "ATOMSPLIT_KATANA"
+"livid" = "LIVID_DAGGER"
+"shadow fury" = "SHADOW_FURY"
+"sf" = "SHADOW_FURY"
+"daedalus" = "DAEDALUS_AXE"
+"pickonimbus" = "PICKONIMBUS"
+"gauntlet" = "GEMSTONE_GAUNTLET"
+
+# Skill words -> skill id (Hypixel SKILL_* keys without prefix)
+[skill_aliases]
+"farming" = "FARMING"
+"farm" = "FARMING"
+"農業" = "FARMING"
+"ファーミング" = "FARMING"
+"mining" = "MINING"
+"採掘" = "MINING"
+"マイニング" = "MINING"
+"combat" = "COMBAT"
+"戦闘" = "COMBAT"
+"コンバット" = "COMBAT"
+"foraging" = "FORAGING"
+"伐採" = "FORAGING"
+"フォージング" = "FORAGING"
+"fishing" = "FISHING"
+"釣り" = "FISHING"
+"フィッシング" = "FISHING"
+"enchanting" = "ENCHANTING"
+"エンチャント" = "ENCHANTING"
+"alchemy" = "ALCHEMY"
+"錬金" = "ALCHEMY"
+"carpentry" = "CARPENTRY"
+"木工" = "CARPENTRY"
+"taming" = "TAMING"
+"テイミング" = "TAMING"
+"hunting" = "HUNTING"
+"狩猟" = "HUNTING"
+"ハンティング" = "HUNTING"
+"runecrafting" = "RUNECRAFTING"
+"social" = "SOCIAL"
+
+[class_aliases]
+"mage" = "mage"
+"メイジ" = "mage"
+"archer" = "archer"
+"アーチャー" = "archer"
+"berserk" = "berserk"
+"バーサーク" = "berserk"
+"tank" = "tank"
+"タンク" = "tank"
+"healer" = "healer"
+"ヒーラー" = "healer"
+
+[keywords]
+catacombs = ["catacombs", "cata", "カタコンベ", "カタ", "dungeon level", "ダンジョンレベル"]
+hotm = ["hotm", "heart of the mountain", "ホットム"]
+hotf = ["hotf", "heart of the forest"]
+magical_power = ["mp", "magical power", "マジカルパワー", "魔力"]
+slayer = ["slayer", "スレイヤー"]
+coins = ["coins", "coin", "コイン", "金", "お金"]
+networth = ["networth", "nw", "ネットワース", "資産"]
+skyblock_level = ["skyblock level", "sb level", "sblvl", "スカイブロックレベル", "sbレベル"]
+garden = ["garden", "ガーデン"]
+kuudra = ["kuudra", "クードラ"]
+floor = ["floor", "フロア"]
+master = ["master", "マスター", "m"]
+acquire = ["get", "obtain", "buy", "craft", "want", "欲しい", "ほしい", "入手", "手に入れ", "買い", "作り", "使えるように", "使いたい"]
+powder = ["powder", "パウダー"]
+
+# Magnitude suffixes for coin amounts ("500m", "1.5b", "5億")
+[magnitudes]
+"k" = 1_000
+"m" = 1_000_000
+"b" = 1_000_000_000
+"万" = 10_000
+"億" = 100_000_000
