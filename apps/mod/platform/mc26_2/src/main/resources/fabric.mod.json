@@ -14,6 +14,7 @@
 	"entrypoints": {
 		"client": ["dev.skypilot.mod.platform.SkyPilotClient"]
 	},
+	"mixins": ["skypilot.mixins.json"],
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~26.2",

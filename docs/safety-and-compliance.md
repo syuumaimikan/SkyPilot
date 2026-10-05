@@ -15,6 +15,7 @@ combat automation. Every in-game action is performed by the player.
 | Price check | the hovered/held item's own `custom_data` | tooltip lines, chat (command) | on |
 | Session tracker | sidebar purse, action-bar XP messages | local statistics; upload only if enabled | tracking on, **upload off** |
 | Chat translation | incoming chat lines | an extra client-side chat line below the original | **off** (needs consent) |
+| Click to translate | the line the player clicks | a `[訳]` button on chat lines; the clicked line is shown translated in place (`[原文]` restores it); the button runs a client-side command only | **off** (consent on first use) |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |
 
 The mod sends no packets to the game server, simulates no input, never opens or clicks

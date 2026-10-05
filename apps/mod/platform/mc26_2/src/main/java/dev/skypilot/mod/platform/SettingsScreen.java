@@ -14,6 +14,9 @@ final class SettingsScreen extends Screen {
 	private static final int W = 300;
 	private final Screen parent;
 	private boolean showDisclosure;
+	/** What "I agree" turns on (a translation mode or click to translate). */
+	private Runnable afterAgree = () -> {
+	};
 
 	SettingsScreen(Screen parent) {
 		super(Component.literal("SkyPilot"));
@@ -34,7 +37,7 @@ final class SettingsScreen extends Screen {
 		if (showDisclosure) {
 			addRenderableWidget(Button.builder(Component.literal(l.t("I agree", "同意する")), b -> {
 				c.translation.disclosureAccepted = true;
-				c.translation.mode = SkyPilotConfig.TranslationModeSetting.PARTY;
+				afterAgree.run();
 				showDisclosure = false;
 				sp.saveConfig();
 				rebuildWidgets();
@@ -60,6 +63,15 @@ final class SettingsScreen extends Screen {
 		toggle(right, row, colW, onOff(l, l.t("Upload sessions", "セッション送信"), c.session.upload), b -> c.session.upload = !c.session.upload);
 		row += 24;
 		toggle(left, row, W, Component.literal(l.t("Chat translation: ", "チャット翻訳: ") + c.translation.mode), b -> cycleTranslation(c));
+		row += 24;
+		toggle(left, row, W, onOff(l, l.t("Click to translate ([→JA] button)", "クリック翻訳（[訳]ボタン）"), c.translation.clickToTranslate), b -> {
+			if (!c.translation.clickToTranslate && !c.translation.disclosureAccepted) {
+				afterAgree = () -> c.translation.clickToTranslate = true;
+				showDisclosure = true;
+				return;
+			}
+			c.translation.clickToTranslate = !c.translation.clickToTranslate;
+		});
 		row += 24;
 		addRenderableWidget(Button.builder(Component.literal(l.t("Move / resize HUD…", "HUDの位置・サイズ…")), b -> minecraft.gui.setScreen(new HudEditorScreen(this)))
 				.bounds(left, row, colW, 20).build());
@@ -92,6 +104,7 @@ final class SettingsScreen extends Screen {
 		SkyPilotConfig.TranslationModeSetting next = all[(c.translation.mode.ordinal() + 1) % all.length];
 		boolean automatic = next != SkyPilotConfig.TranslationModeSetting.OFF && next != SkyPilotConfig.TranslationModeSetting.MANUAL;
 		if (automatic && !c.translation.disclosureAccepted) {
+			afterAgree = () -> c.translation.mode = next;
 			showDisclosure = true;
 			return;
 		}

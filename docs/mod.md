@@ -38,6 +38,16 @@ unit-tested without the game, and nested into the mod jar (jar-in-jar).
   restored; a translation that loses a placeholder is discarded. The original chat line is
   never changed - the translation is added below it with the original prefix components
   (rank, name with its hover/click events) preserved.
+- Click to translate (`translation.clickToTranslate`, off by default; `/skypilot translate click on`
+  or the settings screen): single-line messages with text worth translating get a ` [訳]` button
+  appended after the server's component (`ClientReceiveMessageEvents.MODIFY_GAME`), so the
+  message's own hover/click events keep working. The button runs the client command
+  `/skypilot tr <id>`; Fabric executes it locally (chat clicks go through
+  `ClientPacketListener.sendUnattendedCommand`, which Fabric's command API intercepts), so nothing
+  reaches the game server. The clicked line is translated (after the one-time disclosure) and
+  replaced in the chat history in place (`ChatComponentAccessor`: `allMessages` +
+  `refreshTrimmedMessages`, scroll position kept); `[原文]` switches back. Up to 300 recent
+  lines are kept in memory for this and cleared on disconnect.
 - Config: `config/skypilot/config.json`; token: `config/skypilot/token.json` (SkyPilot token only).
 
 ## Adding a Minecraft version

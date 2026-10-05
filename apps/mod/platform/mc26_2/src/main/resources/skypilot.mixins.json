@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "dev.skypilot.mod.platform.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ChatComponentAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

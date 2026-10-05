@@ -36,6 +36,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 
 		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD, Identifier.fromNamespaceAndPath("skypilot", "hud"), HudRenderer::render);
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> Commands.register(dispatcher));
+		ClientReceiveMessageEvents.MODIFY_GAME.register(ClickTranslate::decorate);
 		ClientReceiveMessageEvents.GAME.register(ChatHook::onGameMessage);
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, flag, lines) -> PriceCheck.tooltip(stack, lines));
 
@@ -45,7 +46,10 @@ public final class SkyPilotClient implements ClientModInitializer {
 			if (++ticks % 20 == 0) SkyPilot.get().tickSecond(mc);
 		});
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SkyPilot.get().refreshHud(System.currentTimeMillis(), true));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> SkyPilot.get().endSession());
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+			SkyPilot.get().endSession();
+			ClickTranslate.clear();
+		});
 		ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> SkyPilot.get().shutdown());
 
 		SkyPilot.LOG.info("SkyPilot loaded for Minecraft 26.2 (server: {})", SkyPilot.get().config().apiBaseUrl);

@@ -1,12 +1,15 @@
 package dev.skypilot.mod.platform;
 
 import dev.skypilot.mod.core.SkyBlockContext;
+import dev.skypilot.mod.platform.mixin.ChatComponentAccessor;
 import dev.skypilot.mod.translation.StyledLine;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ClickEvent;
@@ -32,6 +35,30 @@ import java.util.List;
 public final class SkyPilotClientGameTest implements FabricClientGameTest {
 	private static void check(boolean condition, String message) {
 		if (!condition) throw new AssertionError(message);
+	}
+
+	private static List<GuiMessage> history(Minecraft mc) {
+		return ((ChatComponentAccessor) mc.gui.hud.getChat()).skypilot$allMessages();
+	}
+
+	/** The chat line (as currently shown) whose text contains {@code needle}, or null. */
+	private static Component shown(Minecraft mc, String needle) {
+		for (GuiMessage m : history(mc)) {
+			if (m.content().getString().contains(needle)) return m.content();
+		}
+		return null;
+	}
+
+	/** The click-to-translate command of that line's button, or null. */
+	private static String buttonCommand(Minecraft mc, String needle) {
+		Component c = shown(mc, needle);
+		if (c == null) return null;
+		String[] cmd = new String[1];
+		c.visit((style, text) -> {
+			if (style.getClickEvent() instanceof ClickEvent.RunCommand(String command) && command.startsWith(ClickTranslate.COMMAND)) cmd[0] = command;
+			return java.util.Optional.empty();
+		}, Style.EMPTY);
+		return cmd[0];
 	}
 
 	@Override
@@ -115,10 +142,57 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			world.getServer().runOnServer(server -> server.getPlayerList().broadcastSystemMessage(Component.literal("Alex: anyone selling a hyperion"), false));
 			ctx.waitTicks(10);
 			check(ctx.computeOnClient(mc -> SkyPilot.get().translator().stats().requested()) == requested, "PARTY mode ignores public chat");
+			ctx.runOnClient(mc -> SkyPilot.get().config().translation.mode = dev.skypilot.mod.core.SkyPilotConfig.TranslationModeSetting.OFF);
+
+			// Click to translate: the line gets a "[訳]" button. Using it the way a chat click does
+			// (sendUnattendedCommand → Fabric client command, nothing reaches the server) replaces
+			// the line with its translation in place, keeps the server's click events, and
+			// "[原文]" switches back.
 			ctx.runOnClient(mc -> {
 				SkyPilot sp = SkyPilot.get();
-				sp.config().translation.mode = dev.skypilot.mod.core.SkyPilotConfig.TranslationModeSetting.OFF;
+				sp.config().translation.clickToTranslate = true;
+				sp.config().language = "ja";
+				sp.translator().setDictionary(List.of("Steve"), java.util.Map.of("where do i buy a terminator", "ターミネーターはどこで買えますか"));
+			});
+			world.getServer().runOnServer(server -> {
+				Component party = Component.literal("Party > ").withStyle(ChatFormatting.BLUE)
+						.append(Component.literal("[MVP+] Steve").setStyle(Style.EMPTY.withColor(ChatFormatting.AQUA).withClickEvent(new ClickEvent.SuggestCommand("/msg Steve "))))
+						.append(Component.literal(": where do I buy a terminator?").withStyle(ChatFormatting.WHITE));
+				server.getPlayerList().broadcastSystemMessage(party, false);
+			});
+			ctx.waitFor(mc -> buttonCommand(mc, "Steve: where do I buy a terminator?") != null, 100);
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-click-button"));
+			int historySize = ctx.computeOnClient(mc -> history(mc).size());
+			String translateCmd = ctx.computeOnClient(mc -> buttonCommand(mc, "Steve: where do I buy a terminator?"));
+			check(translateCmd.startsWith(ClickTranslate.COMMAND), "button runs the client command: " + translateCmd);
+			ctx.runOnClient(mc -> mc.player.connection.sendUnattendedCommand(translateCmd.substring(1), null));
+			ctx.waitFor(mc -> shown(mc, "Steve: ターミネーターはどこで買えますか") != null, 100);
+			ctx.runOnClient(mc -> {
+				check(history(mc).size() == historySize, "translation replaces the line instead of adding one");
+				check(shown(mc, "Steve: where do I buy a terminator?") == null, "original text is swapped out");
+				List<Style> nameStyles = new ArrayList<>();
+				shown(mc, "Steve: ターミネーターはどこで買えますか").visit((style, text) -> {
+					if (text.contains("Steve")) nameStyles.add(style);
+					return java.util.Optional.empty();
+				}, Style.EMPTY);
+				check(nameStyles.size() == 1 && nameStyles.get(0).getClickEvent() instanceof ClickEvent.SuggestCommand, "server click event kept on the translated line");
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-click-translate"));
+			String backCmd = ctx.computeOnClient(mc -> buttonCommand(mc, "Steve: ターミネーターはどこで買えますか"));
+			check(backCmd != null && backCmd.equals(translateCmd), "[原文] toggles the same line");
+			ctx.runOnClient(mc -> mc.player.connection.sendUnattendedCommand(backCmd.substring(1), null));
+			ctx.waitFor(mc -> shown(mc, "Steve: where do I buy a terminator?") != null && shown(mc, "Steve: ターミネーターはどこで買えますか") == null, 100);
+			// Lines with nothing to translate get no button.
+			world.getServer().runOnServer(server -> server.getPlayerList().broadcastSystemMessage(Component.literal("Party > Alex: gg"), false));
+			ctx.waitFor(mc -> shown(mc, "Alex: gg") != null, 100);
+			check(ctx.computeOnClient(mc -> buttonCommand(mc, "Alex: gg")) == null, "no button on lines without text to translate");
+			ctx.runOnClient(mc -> {
+				SkyPilot sp = SkyPilot.get();
+				sp.config().translation.clickToTranslate = false;
 				sp.config().translation.disclosureAccepted = false;
+				sp.config().language = "auto";
 			});
 
 			// SkyBlock item id from the 26.2 custom_data component.

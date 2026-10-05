@@ -1,6 +1,7 @@
 package dev.skypilot.mod.platform;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import dev.skypilot.mod.core.Lang;
@@ -64,6 +65,7 @@ final class Commands {
 				.then(literal("upload").then(literal("on").executes(c -> setUpload(true))).then(literal("off").executes(c -> setUpload(false)))));
 		root.then(literal("translate")
 				.then(literal("consent").executes(c -> consent()))
+				.then(literal("click").then(literal("on").executes(c -> setClick(true))).then(literal("off").executes(c -> setClick(false))))
 				.then(literal("mode").then(argument("mode", StringArgumentType.word())
 						.suggests((c, b) -> {
 							for (SkyPilotConfig.TranslationModeSetting m : SkyPilotConfig.TranslationModeSetting.values()) b.suggest(m.name().toLowerCase(Locale.ROOT));
@@ -71,6 +73,10 @@ final class Commands {
 						})
 						.executes(c -> setMode(StringArgumentType.getString(c, "mode")))))
 				.then(argument("text", StringArgumentType.greedyString()).executes(c -> translate(StringArgumentType.getString(c, "text")))));
+		// Target of the click-to-translate buttons in chat ("ok" = accept the disclosure first).
+		root.then(literal("tr").then(argument("id", IntegerArgumentType.integer(1))
+				.executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), false))
+				.then(literal("ok").executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), true)))));
 		root.then(literal("server").then(argument("url", StringArgumentType.greedyString()).executes(c -> setServer(StringArgumentType.getString(c, "url")))));
 		d.register(root);
 	}
@@ -100,6 +106,7 @@ final class Commands {
 				{"/skypilot price", l.t("price of the held item", "手に持っているアイテムの価格")},
 				{"/skypilot translate <text>", l.t("translate text to Japanese", "テキストを日本語に翻訳")},
 				{"/skypilot translate mode <off|manual|npc_only|party|guild|auto>", l.t("chat translation mode", "チャット翻訳モード")},
+				{"/skypilot translate click on | off", l.t("[→JA] button on chat lines: click to translate", "チャットに[訳]ボタンを表示（クリックで翻訳）")},
 				{"/skypilot hud edit | on | off", l.t("move / toggle the HUD", "HUDの移動・表示切替")},
 				{"/skypilot session [reset | upload on|off]", l.t("session statistics", "セッション統計")},
 				{"/skypilot settings", l.t("settings screen", "設定画面")},
@@ -117,7 +124,8 @@ final class Commands {
 		ApiClient api = sp.api();
 		McText.info(l.t("Server: ", "サーバー: ") + (api != null ? api.base() : sp.apiError()) + (api != null ? " (" + api.circuit() + ")" : ""));
 		McText.info(l.t("Linked: ", "連携: ") + (sp.linked() ? l.t("yes", "はい") : l.t("no - /skypilot link", "いいえ - /skypilot link")));
-		McText.info(l.t("Area: ", "エリア: ") + (sp.context().hasArea() ? sp.context().area() : "-") + " · " + l.t("Translation: ", "翻訳: ") + sp.translationMode());
+		McText.info(l.t("Area: ", "エリア: ") + (sp.context().hasArea() ? sp.context().area() : "-") + " · " + l.t("Translation: ", "翻訳: ") + sp.translationMode()
+				+ " · " + l.t("click to translate: ", "クリック翻訳: ") + (sp.config().translation.clickToTranslate ? l.t("on", "オン") : l.t("off", "オフ")));
 		return 1;
 	}
 
@@ -247,6 +255,15 @@ final class Commands {
 		sp.config().translation.disclosureAccepted = true;
 		sp.saveConfig();
 		MccLang.info("Thanks. Choose a mode with /skypilot translate mode <npc_only|party|guild|auto>.", "同意しました。/skypilot translate mode <npc_only|party|guild|auto> でモードを選んでください。");
+		return 1;
+	}
+
+	private static int setClick(boolean on) {
+		SkyPilot sp = SkyPilot.get();
+		sp.config().translation.clickToTranslate = on;
+		sp.saveConfig();
+		MccLang.info(on ? "Click to translate: on. New chat lines get a [→JA] button." : "Click to translate: off.",
+				on ? "クリック翻訳: オン。新しいチャット行に[訳]ボタンが付きます。" : "クリック翻訳: オフ。");
 		return 1;
 	}
 

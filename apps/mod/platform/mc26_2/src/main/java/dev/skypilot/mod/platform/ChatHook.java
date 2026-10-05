@@ -6,9 +6,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 /**
- * Receives server chat / action-bar messages. The original message is never modified, delayed
- * or hidden: the action bar feeds the session tracker, and (only when the player enabled a
- * translation mode) a translated copy is added below the original line once it is ready.
+ * Receives server chat / action-bar messages. The original message is never delayed or hidden:
+ * the action bar feeds the session tracker, and (only when the player enabled a translation
+ * mode) a translated copy is added below the original line once it is ready. The only change
+ * to a server line is the optional click-to-translate button ({@link ClickTranslate}).
  */
 final class ChatHook {
 	private static final String MARKER = "[JA] ";
@@ -23,6 +24,7 @@ final class ChatHook {
 			if (sp.config().session.enabled) sp.session().onActionBar(message.getString());
 			return;
 		}
+		message = ClickTranslate.undecorated(message);
 		TranslationMode mode = sp.translationMode();
 		if (!mode.sendsAutomatically() || !sp.config().translation.disclosureAccepted || !sp.context().inSkyBlock()) return;
 		McText.Flattened flat = McText.flatten(message);

@@ -34,6 +34,11 @@ public final class SkyPilotConfig {
 		public TranslationModeSetting mode = TranslationModeSetting.OFF;
 		/** The user has seen the notice that chat text is sent to the SkyPilot server / translator. */
 		public boolean disclosureAccepted = false;
+		/**
+		 * Adds a small "[訳]" button to chat lines; clicking it replaces that line with its
+		 * translation (click "[原文]" to switch back). Only clicked lines are sent anywhere.
+		 */
+		public boolean clickToTranslate = false;
 	}
 
 	public static final class Session {
