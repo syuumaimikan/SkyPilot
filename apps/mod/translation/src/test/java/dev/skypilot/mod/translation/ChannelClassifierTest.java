@@ -26,4 +26,17 @@ class ChannelClassifierTest {
 		check("You earned 1,234 coins!", Channel.SYSTEM, null, "You earned 1,234 coins!");
 		check("", Channel.SYSTEM, null, "");
 	}
+
+	/** Real formats from SkyHanni's PlayerChatManager patterns (beta, Sept 2026). */
+	@Test
+	void emblemsGuestsAndSystemLookalikes() {
+		check("[312] ♲ [MVP+] Steve: anyone selling a hype", Channel.PLAYER, "Steve", "anyone selling a hype");
+		check("[287] Ⓑ Alex: bingo card?", Channel.PLAYER, "Alex", "bingo card?");
+		check("[105] ☀ [VIP] Bob: stranded gang", Channel.PLAYER, "Bob", "stranded gang");
+		check("[✌] [MVP+] Steve: nice island", Channel.PLAYER, "Steve", "nice island");
+		check("From [PIG+++] Technoblade: hi", Channel.PRIVATE, "Technoblade", "hi");
+		check("From stash: You picked up 64 items", Channel.SYSTEM, null, "From stash: You picked up 64 items");
+		check("Guild > [MVP++] Notch [GM]: welcome", Channel.GUILD, "Notch", "welcome");
+		check("☠ Mana: 120/500", Channel.SYSTEM, null, "☠ Mana: 120/500");
+	}
 }
