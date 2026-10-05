@@ -64,7 +64,7 @@ final class PriceCheck {
 	/** Tooltip hook: append cached price lines; fetch in the background when missing. */
 	static void tooltip(ItemStack stack, List<Component> lines) {
 		SkyPilot sp = SkyPilot.get();
-		if (sp == null || !sp.config().priceTooltip || !sp.linked() || !sp.context().inSkyBlock()) return;
+		if (sp == null || !sp.config().priceTooltip || !sp.context().inSkyBlock()) return;
 		Item item = item(stack);
 		if (item == null) return;
 		Cached c;

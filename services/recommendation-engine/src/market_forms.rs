@@ -11,7 +11,7 @@ pub fn compactions(ctx: &Ctx, raw: &str) -> Vec<(String, f64)> {
     let mut out = Vec::new();
     for (out_id, recipes) in &ctx.registry.neu.recipes {
         for r in recipes {
-            if let Recipe::Crafting { output, inputs } = r {
+            if let Recipe::Crafting { output, inputs, .. } = r {
                 if inputs.len() == 1 && inputs[0].id == raw && output.amount > 0.0 {
                     out.push((out_id.clone(), inputs[0].amount / output.amount));
                 }

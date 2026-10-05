@@ -105,6 +105,24 @@ async fn failing_provider_opens_the_circuit_and_fails_open() {
     assert_eq!(t.status().circuit, "OPEN");
 }
 
+#[tokio::test]
+async fn own_provider_failures_do_not_trip_the_shared_breaker() {
+    // A user's own (e.g. mistyped) key failing must not switch translation off for everyone.
+    let t = Translator::new(dict(), Some(Arc::new(Echo("サーバー", AtomicU32::new(0)))));
+    let mine: Arc<dyn Provider> = Arc::new(Failing);
+    for i in 0..6 {
+        let r = t.translate_with(&req(&format!("another random sentence {i} here")), skypilot_translation::ProviderChoice::Own(&mine)).await;
+        assert!(r.unchanged);
+    }
+    assert_eq!(t.status().circuit, "CLOSED");
+    // dictionary-only never calls a provider
+    let r = t.translate_with(&req("some brand new sentence here"), skypilot_translation::ProviderChoice::DictionaryOnly).await;
+    assert!(r.unchanged);
+    // the server's provider still works
+    let r = t.translate(&req("yet another sentence for the server")).await;
+    assert!(!r.unchanged);
+}
+
 #[test]
 fn japanese_detection_and_protection() {
     assert!(is_japanese("F7行く人いる？"));

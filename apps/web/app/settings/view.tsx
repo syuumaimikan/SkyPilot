@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { PlayStyle, TranslateResponse, TranslationStatus } from "@skypilot/protocol";
+import type { PlayStyle, TranslateResponse, TranslationSettingsView, TranslationStatus, TranslationTestResult, UserSettings } from "@skypilot/protocol";
 import { Alert, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, NativeSelect, Textarea } from "@skypilot/ui";
 import { parseCoins, PLAY_STYLES } from "@/components/analyze-form";
 import { ErrorView, Loading, PageHeader } from "@/components/common";
@@ -153,6 +153,141 @@ function Account() {
   );
 }
 
+const PROVIDERS: Record<string, [string, string]> = {
+  server: ["SkyPilot server (default)", "SkyPilotサーバー（既定）"],
+  deepl: ["DeepL — your own key", "DeepL（自分のキー）"],
+  claude: ["Claude (Anthropic) — your own key", "Claude（Anthropic・自分のキー）"],
+  none: ["Dictionary only — nothing sent", "辞書のみ（外部送信なし）"],
+};
+
+function TranslationProvider() {
+  const { t } = useI18n();
+  const s = useApi<UserSettings>("/api/me/settings");
+  if (s.isLoading) return <Loading rows={1} />;
+  if (s.error) return <ErrorView error={s.error} />;
+  const v = s.data!.translation;
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+      <span className="text-sm font-medium">{t("Translation provider", "翻訳プロバイダ")}</span>
+      <ProviderForm key={`${v.provider}-${v.deepl.configured}-${v.anthropic.configured}`} view={v} />
+    </div>
+  );
+}
+
+function ProviderForm({ view }: { view: TranslationSettingsView }) {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const [provider, setProvider] = useState(view.provider);
+  const [key, setKey] = useState("");
+  const refresh = () => qc.invalidateQueries({ queryKey: ["/api/me/settings"] });
+  type Update = { provider: string; deeplKey: string | null; anthropicKey: string | null };
+  const save = useMutation<UserSettings, ApiError, Update>({
+    mutationFn: (u) => api.put<UserSettings>("/api/me/settings/translation", u),
+    onSuccess: () => {
+      setKey("");
+      void refresh();
+    },
+  });
+  const test = useMutation<TranslationTestResult, ApiError, void>({ mutationFn: () => api.post<TranslationTestResult>("/api/me/settings/translation/test") });
+  const own = provider === "deepl" || provider === "claude";
+  const info = provider === "deepl" ? view.deepl : view.anthropic;
+  const typed = key.trim();
+  const canSave = !own || info.configured || typed.length >= 16;
+  const server = view.serverProvider ?? t("none (dictionary only)", "なし（辞書のみ）");
+  const name = provider === "deepl" ? "DeepL" : "Anthropic";
+  const notice =
+    provider === "none"
+      ? t("Only the SkyPilot dictionary is used; nothing is sent to an external translator. Sentences outside the dictionary stay in English.", "SkyPilot辞書のみを使い、外部の翻訳サービスには送信しません。辞書にない文は英語のままです。")
+      : own
+        ? t(
+            `Lines you translate go from this SkyPilot server to ${name} with your own key (your account and bill). The key is stored encrypted on the server, used only for your translations and never shown again. Translations are not stored.`,
+            `翻訳する行は、このSkyPilotサーバーからあなたのキーで ${name} へ送られます（あなたのアカウント・料金）。キーはサーバーに暗号化して保存され、あなたの翻訳にだけ使われ、再表示されません。翻訳内容は保存されません。`,
+          )
+        : t(`Lines you translate are sent to this SkyPilot server, which uses its own provider (${server}). Translations are not stored.`, `翻訳する行はこのSkyPilotサーバーへ送られ、サーバーのプロバイダ（${server}）で翻訳されます。翻訳内容は保存されません。`);
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,16rem)_1fr]">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="tr-provider">{t("Provider", "プロバイダ")}</Label>
+          <NativeSelect
+            id="tr-provider"
+            value={provider}
+            onChange={(e) => {
+              setProvider(e.target.value);
+              setKey("");
+              test.reset();
+            }}
+          >
+            {(view.providers.length ? view.providers : Object.keys(PROVIDERS)).map((p) => (
+              <option key={p} value={p}>
+                {PROVIDERS[p] ? t(...PROVIDERS[p]) : p}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        {own ? (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="tr-key">{t(`${name} API key`, `${name} のAPIキー`)}</Label>
+            <Input
+              id="tr-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={200}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder={info.configured ? t(`saved ${info.hint ?? ""} — paste to replace`, `保存済み ${info.hint ?? ""}・貼り付けで置換`) : t("paste your API key", "APIキーを貼り付け")}
+            />
+          </div>
+        ) : null}
+      </div>
+      <Alert tone="info">{notice}</Alert>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          disabled={save.isPending || !canSave}
+          onClick={() =>
+            save.mutate({ provider, deeplKey: provider === "deepl" && typed ? typed : null, anthropicKey: provider === "claude" && typed ? typed : null })
+          }
+        >
+          {t("Save", "保存")}
+        </Button>
+        {own && info.configured ? (
+          <Button
+            variant="outline"
+            disabled={save.isPending}
+            onClick={() =>
+              save.mutate({
+                provider: provider === view.provider ? "server" : view.provider,
+                deeplKey: provider === "deepl" ? "" : null,
+                anthropicKey: provider === "claude" ? "" : null,
+              })
+            }
+          >
+            {t("Remove key", "キーを削除")}
+          </Button>
+        ) : null}
+        <Button variant="secondary" disabled={test.isPending || provider !== view.provider} onClick={() => test.mutate()}>
+          {t("Test translation", "接続テスト")}
+        </Button>
+        {save.isSuccess ? <span className="text-xs text-emerald-600">{t("Saved", "保存しました")}</span> : null}
+        {provider !== view.provider ? <span className="text-xs text-muted-foreground">{t("Not saved yet", "未保存")}</span> : null}
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <Badge>{t("Server's provider", "サーバーのプロバイダ")}: {server}</Badge>
+        <Badge tone={view.deepl.configured ? "good" : undefined}>DeepL: {view.deepl.configured ? `${t("saved", "保存済み")} ${view.deepl.hint ?? ""}` : t("no key", "未設定")}</Badge>
+        <Badge tone={view.anthropic.configured ? "good" : undefined}>Claude: {view.anthropic.configured ? `${t("saved", "保存済み")} ${view.anthropic.hint ?? ""}` : t("no key", "未設定")}</Badge>
+      </div>
+      {test.data ? (
+        <Alert tone={test.data.ok ? "good" : "warn"}>
+          {test.data.ok ? `${t("Test OK", "テスト成功")} (${test.data.provider}): ${test.data.translated ?? ""}` : `${t("Test failed", "テスト失敗")}: ${test.data.message}`}
+        </Alert>
+      ) : null}
+      {save.error ? <ErrorView error={save.error} /> : null}
+      {test.error ? <ErrorView error={test.error} /> : null}
+    </>
+  );
+}
+
 function Translation() {
   const { t } = useI18n();
   const st = useApi<TranslationStatus>("/api/translate/status");
@@ -176,6 +311,7 @@ function Translation() {
         ) : st.error ? (
           <ErrorView error={st.error} />
         ) : null}
+        <TranslationProvider />
         <div className="flex flex-col gap-2">
           <Label htmlFor="tr-text">{t("Try it", "試す")}</Label>
           <Textarea id="tr-text" value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />

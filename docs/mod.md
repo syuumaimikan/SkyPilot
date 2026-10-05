@@ -50,6 +50,32 @@ unit-tested without the game, and nested into the mod jar (jar-in-jar).
   lines are kept in memory for this and cleared on disconnect.
 - Config: `config/skypilot/config.json`; token: `config/skypilot/token.json` (SkyPilot token only).
 
+## In-game GUI
+
+Everything is display only: no clicks, purchases, movement or packets on the player's behalf.
+Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestCommand`).
+
+- **Menu** (`J`, `/skypilot menu`): Now / Roadmap / Guides / Advice / Gear / AH / Bazaar / Alerts
+  tabs with item icons (`/api/mod/{plan,market,alerts,guides,gear,icons}`).
+- **Side panels** (`ScreenOverlays`): AH/Bazaar flips beside Hypixel's market windows
+  (`market.containerPanel`), the item browser right of inventory windows
+  (`inventory.itemBrowser`: search, click for value / recipes with a 3×3 grid / drop sources /
+  uses), and the chest value list left of chests, backpacks and the ender chest
+  (`inventory.chestValue`: total and items by value; clicking a name outlines the slot). Item
+  tooltips get a value line (`priceTooltip`).
+- **Guides**: steps from `/api/mod/guides`; following one draws a box, a straight line and a
+  HUD arrow to the step's public place (Gizmos in `LevelRenderEvents.BEFORE_GIZMOS`). Only on the
+  matching island; no pathfinding.
+- **Farm build guide** (`/skypilot farm start <id>`): outlines the next layer's blocks that are
+  not placed yet (checked every 5 ticks).
+- **Settings** (`/skypilot settings`, Mod Menu-free): pages General (language, server URL —
+  changing it deletes the token — link/unlink), HUD (toggles, scale, opacity, position),
+  Translate (mode, click to translate, provider: SkyPilot server / own DeepL key / own
+  Claude key / dictionary only, a masked key field, connection test), Market, Inventory, and
+  Session & guides (tracking, upload, stop guide / farm guide). The provider and key are stored
+  per user on the SkyPilot server (`/api/me/settings`); the key is never written to the config
+  or shown again.
+
 ## Adding a Minecraft version
 
 Create `platform/mcXX_Y` with its own Loom configuration and copy the platform classes,

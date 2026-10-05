@@ -77,6 +77,13 @@ public final class TranslationService {
 		this.protector = new Protector(protectedTerms);
 	}
 
+	/** Forget remembered translations (e.g. after switching translation provider). */
+	public void clearCache() {
+		synchronized (cache) {
+			cache.clear();
+		}
+	}
+
 	public CircuitBreaker.State circuit() {
 		return breaker.state();
 	}

@@ -166,6 +166,26 @@ public final class SkyPilot {
 		lastHudRequest = 0;
 	}
 
+	/**
+	 * Point the client at another SkyPilot server. Returns an error message, or null when applied.
+	 * A different server means a new link: the old token is deleted so it is never sent there.
+	 */
+	public String setServer(String url) {
+		String old = config.apiBaseUrl;
+		config.apiBaseUrl = url;
+		config.sanitize();
+		rebuildApi();
+		if (api == null) {
+			String err = apiError;
+			config.apiBaseUrl = old;
+			rebuildApi();
+			return err;
+		}
+		if (!old.equals(config.apiBaseUrl)) unlink();
+		saveConfig();
+		return null;
+	}
+
 	public void unlink() {
 		try {
 			tokens.clear();

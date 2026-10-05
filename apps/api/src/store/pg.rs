@@ -660,4 +660,18 @@ impl Store for PgStore {
             .await?;
         Ok(())
     }
+
+    async fn user_settings(&self, user_id: Uuid) -> StoreResult<Option<serde_json::Value>> {
+        let row = sqlx::query("SELECT settings FROM user_settings WHERE user_id = $1").bind(user_id).fetch_optional(&self.pool).await?;
+        Ok(row.map(|r| r.get::<Json<serde_json::Value>, _>("settings").0))
+    }
+
+    async fn save_user_settings(&self, user_id: Uuid, settings: &serde_json::Value) -> StoreResult<()> {
+        sqlx::query("INSERT INTO user_settings (user_id, settings, updated_at) VALUES ($1, $2, now()) ON CONFLICT (user_id) DO UPDATE SET settings = EXCLUDED.settings, updated_at = now()")
+            .bind(user_id)
+            .bind(Json(settings))
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }

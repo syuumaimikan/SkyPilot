@@ -60,6 +60,7 @@ strsim = "0.11"
 sha2 = "0.10"
 hex = "0.4"
 rand = "0.8"
+aes-gcm = "0.10"
 argon2 = "0.5"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "chrono", "uuid", "json"] }
 redis = { version = "0.32", default-features = false, features = ["tokio-comp", "aio", "connection-manager"] }

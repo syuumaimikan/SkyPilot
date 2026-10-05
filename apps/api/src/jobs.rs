@@ -83,6 +83,9 @@ pub fn spawn_data_refresh(state: Arc<AppState>, paths: DataPaths) {
         loop {
             tokio::time::sleep(Duration::from_secs(hours * 3600)).await;
             let ok = skypilot_data::sync::sync_hypixel_resources(&paths).await.and(skypilot_data::sync::sync_neu(&paths).await);
+            if let Err(e) = skypilot_data::sync::sync_skyhanni(&paths).await {
+                tracing::warn!(error = %e, "SkyHanni location data not refreshed");
+            }
             match ok {
                 Ok(()) => match tokio::task::spawn_blocking({
                     let p = paths.clone();

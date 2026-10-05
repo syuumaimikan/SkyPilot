@@ -169,3 +169,26 @@ fn item_icons_for_the_mod_gui() {
     assert!(pet.texture.is_some());
     assert_eq!(r.icon("NOT_AN_ITEM").item, "minecraft:paper");
 }
+
+#[test]
+fn guide_waypoints_resolve_to_skyhanni_locations() {
+    let r = registry();
+    assert!(r.locations.len() > 300, "fixture island graphs load: {}", r.locations.len());
+    assert!(r.locations.find("DWARVEN_MINES", "Emissary Wilson").is_some());
+    assert!(r.locations.on("HUB").iter().all(|l| !l.tags.iter().any(|t| t == "fairy_soul" || t == "hoppity")), "collectibles are never waypoints");
+    assert!(!r.curated.guides.is_empty());
+    let mut ids = std::collections::HashSet::new();
+    for g in &r.curated.guides {
+        assert!(ids.insert(g.id.clone()), "duplicate guide id {}", g.id);
+        assert!(g.source.starts_with("https://hypixelskyblock.minecraft.wiki/"), "{} cites the wiki", g.id);
+        for s in &g.steps {
+            if let Some(name) = &s.location {
+                let island = s.island.as_deref().unwrap_or(&g.island);
+                assert!(r.locations.find(island, name).is_some(), "guide {}: {name} not found on {island}", g.id);
+            }
+            if let Some(done) = &s.done {
+                assert!(done.contains(">="), "guide {}: done must be a requirement expression", g.id);
+            }
+        }
+    }
+}

@@ -43,6 +43,16 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 	/** Minimal skin texture (only the texture URL of the Ender Dragon pet head). */
 	private static final String HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWVjM2ZmNTYzMjkwYjEzZmYzYmNjMzY4OThhZjdlYWE5ODhiNmNjMThkYzI1NDE0N2Y1ODM3NGFmZTliMjFiOSJ9fX0=";
 
+	/** A stack with a SkyBlock id in custom_data, like Hypixel sends. */
+	private static ItemStack skyblockItem(net.minecraft.world.item.Item item, String id, int count) {
+		ItemStack s = new ItemStack(item, count);
+		CompoundTag tag = new CompoundTag();
+		tag.putString("id", id);
+		CustomData.set(DataComponents.CUSTOM_DATA, s, tag);
+		s.set(DataComponents.CUSTOM_NAME, Component.literal(id.equals("HYPERION") ? "Hyperion" : id.equals("ENCHANTED_DIAMOND") ? "Enchanted Diamond" : "Lapis Armor Leggings"));
+		return s;
+	}
+
 	private static Dto.FlipRow flip(String id, String name, String rarity, Dto.ItemIcon icon, double buy, double sell, double profit, boolean doNotFlip) {
 		return new Dto.FlipRow(id, "AH", name.toUpperCase().replace(' ', '_'), name, rarity, List.of(), buy, sell, profit, profit / buy, null, null, doNotFlip ? 0.3 : 0.82,
 				doNotFlip ? "LOW" : "HIGH", "MEDIUM", "30m–2h", doNotFlip, doNotFlip ? List.of("Lowest BIN far below recent sales") : List.of(), "/viewauction " + id, icon);
@@ -105,9 +115,30 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(5);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-chat"));
 
-			ctx.setScreen(() -> new SettingsScreen(null));
+			ctx.setScreen(() -> new SettingsScreen(null, SettingsScreen.Page.GENERAL));
 			ctx.waitTicks(2);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-settings"));
+			// Translation page with server settings (a DeepL key saved); a typed key is drawn masked.
+			ctx.setScreen(() -> {
+				SettingsScreen s = new SettingsScreen(null, SettingsScreen.Page.TRANSLATION);
+				s.showRemote(new Dto.TranslationSettings("deepl", new Dto.KeyInfo(true, "…f3a9"), new Dto.KeyInfo(false, null), "claude",
+						List.of("server", "deepl", "claude", "none")));
+				return s;
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				var box = mc.gui.screen().children().stream().filter(w -> w instanceof net.minecraft.client.gui.components.EditBox).map(w -> (net.minecraft.client.gui.components.EditBox) w)
+						.findFirst().orElse(null);
+				check(box != null, "key field on the translation page");
+				box.setValue("abcdef0123456789-test:fx");
+				check(SettingsScreen.plausibleKey(box.getValue()) && !SettingsScreen.plausibleKey("short") && !SettingsScreen.plausibleKey("has spaces in it 12345"),
+						"key shape check");
+			});
+			ctx.waitTicks(1);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-settings-translation"));
+			ctx.setScreen(() -> new SettingsScreen(null, SettingsScreen.Page.MARKET));
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-settings-market"));
 			ctx.setScreen(() -> new HudEditorScreen(null));
 			ctx.waitTicks(2);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-hud-editor"));
@@ -280,6 +311,142 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				check(events.stream().anyMatch(e -> e instanceof ClickEvent.SuggestCommand(String c) && c.equals("/viewauction a1")), "[入力欄へ] only suggests the command");
 				check(events.stream().noneMatch(e -> e instanceof ClickEvent.RunCommand(String c) && c.startsWith("/viewauction")), "never runs /viewauction");
 				SkyPilot.get().config().market.containerPanel = false;
+				SkyPilot.get().config().language = "auto";
+			});
+
+			// Item browser (right of the inventory), item page with a crafting grid, and chest value.
+			Dto.ItemIcon sword = new Dto.ItemIcon("minecraft:iron_sword", null, null, false);
+			Dto.ItemIcon eye = new Dto.ItemIcon("minecraft:player_head", HEAD_TEXTURE, null, false);
+			ctx.runOnClient(mc -> {
+				SkyPilot.get().config().language = "ja";
+				List<Dto.ItemEntry> entries = new ArrayList<>();
+				entries.add(new Dto.ItemEntry("HYPERION", "Hyperion", "LEGENDARY", sword, 4.7e8));
+				entries.add(new Dto.ItemEntry("PET:ENDER_DRAGON:LEGENDARY", "Ender Dragon", "LEGENDARY", head, 5.2e8));
+				entries.add(new Dto.ItemEntry("LAPIS_ARMOR_LEGGINGS", "Lapis Armor Leggings", "UNCOMMON", leggings, 1.0e5));
+				entries.add(new Dto.ItemEntry("ENCHANTMENT_SHARPNESS_6", "Sharpness VI", "COMMON", book, 3.1e6));
+				for (int i = 0; i < 40; i++) entries.add(new Dto.ItemEntry("X" + i, "Item " + i, "RARE", i % 2 == 0 ? book : sword, 1000.0 * i));
+				ItemBrowser.setData(new Dto.ItemPage(entries.size(), 0, entries), "");
+			});
+			ctx.setScreen(() -> new net.minecraft.client.gui.screens.inventory.InventoryScreen(Minecraft.getInstance().player));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-item-browser"));
+			Dto.ItemStackInfo laser = new Dto.ItemStackInfo("GIANT_FRAGMENT_LASER", "L.A.S.R.'s Eye", 8, eye, 5.6e7);
+			Dto.ItemStackInfo blade = new Dto.ItemStackInfo("NECRON_BLADE", "Necron's Blade (Unrefined)", 1, sword, 6.4e7);
+			Dto.ItemStackInfo one = new Dto.ItemStackInfo("GIANT_FRAGMENT_LASER", "L.A.S.R.'s Eye", 1, eye, 5.6e7);
+			Dto.ItemDetail hyperion = new Dto.ItemDetail(new Dto.ItemEntry("HYPERION", "Hyperion", "LEGENDARY", sword, 4.7e8), "SWORD",
+					List.of("§7Gear Score: §d615", "§7Damage: §c+260", "§6Ability: Wither Impact §e§lRIGHT CLICK"), "Sales", 4.85e8, 6.5, null, null, 1.0e5, 5.1e8,
+					List.of(new Dto.Recipe("CRAFTING", new Dto.ItemStackInfo("HYPERION", "Hyperion", 1, sword, 4.85e8), List.of(laser, blade),
+							java.util.Arrays.asList(one, one, one, one, blade, one, one, one, one), null, null, null, 5.12e8)),
+					List.of(), List.of(), "https://hypixelskyblock.minecraft.wiki/w/Hyperion");
+			ctx.setScreen(() -> {
+				ItemDetailScreen s = new ItemDetailScreen(null, "HYPERION");
+				s.setDetail(hyperion);
+				return s;
+			});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-item-recipe"));
+
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.sixRows(2, mc.player.getInventory());
+				menu.getSlot(0).set(skyblockItem(Items.IRON_SWORD, "HYPERION", 1));
+				menu.getSlot(1).set(skyblockItem(Items.DIAMOND, "ENCHANTED_DIAMOND", 64));
+				menu.getSlot(9).set(skyblockItem(Items.DIAMOND, "ENCHANTED_DIAMOND", 32));
+				menu.getSlot(20).set(skyblockItem(Items.LEATHER_LEGGINGS, "LAPIS_ARMOR_LEGGINGS", 1));
+				menu.getSlot(30).set(new ItemStack(Items.GLASS_PANE));
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Large Chest"));
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc -> {
+				check(ChestValue.isStorage("Large Chest") && ChestValue.isStorage("Jumbo Backpack (Slot #3)") && ChestValue.isStorage("Ender Chest (1/9)")
+						&& !ChestValue.isStorage("Auction House") && !ChestValue.isStorage("SkyBlock Menu"), "storage windows are recognised");
+				var screen = (ContainerScreen) mc.gui.screen();
+				ChestValue cv = ScreenOverlays.chestOf(screen);
+				check(cv != null, "chest value panel attached");
+				List<net.minecraft.world.inventory.Slot> slots = ChestValue.slotsOf(screen).stream().filter(s -> PriceCheck.item(s.getItem()) != null).toList();
+				check(slots.size() == 4, "4 SkyBlock items in the chest (the glass pane has no SkyBlock id)");
+				cv.apply(slots, new Dto.Values(List.of(new Dto.Value("HYPERION", "Hyperion", 4.7e8, 0.8), new Dto.Value("ENCHANTED_DIAMOND", "Enchanted Diamond", 7.9e4, 0.95),
+						new Dto.Value("ENCHANTED_DIAMOND", "Enchanted Diamond", 3.9e4, 0.95), new Dto.Value("LAPIS_ARMOR_LEGGINGS", "Lapis Armor Leggings", 1.0e5, 0.3)), 4.70218e8));
+				List<ChestValue.Group> groups = cv.groups();
+				check(groups.size() == 3 && groups.get(0).name.contains("Hyperion"), "grouped and sorted by value");
+				ChestValue.Group diamonds = groups.stream().filter(gr -> gr.name.contains("Diamond")).findFirst().orElseThrow();
+				check(diamonds.count == 96 && diamonds.slots.size() == 2 && Math.abs(diamonds.value - 1.18e5) < 1, "same item in two slots is one row");
+				cv.highlight(diamonds.key);
+			});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-chest-value"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				ItemBrowser.setData(null, "");
+				SkyPilot.get().config().language = "auto";
+			});
+
+			// Guides: menu tabs, a waypoint with guide line in the world, and the farm build guide.
+			Dto.Guide[] guideRef = new Dto.Guide[1];
+			ctx.runOnClient(mc -> {
+				SkyPilot.get().config().language = "ja";
+				net.minecraft.core.BlockPos p = mc.player.blockPosition();
+				Dto.Waypoint rhys = new Dto.Waypoint("HUB", "Rhys", p.getX() + 6.5, p.getY(), p.getZ() + 14.5);
+				Dto.Guide g = new Dto.Guide("dwarven_mines", "HUB", "ドワーフ鉱山とHeart of the Mountain", "https://hypixelskyblock.minecraft.wiki/w/Dwarven_Mines", List.of(
+						new Dto.GuideStep("採掘レベル12にする", "ドワーフ鉱山には採掘レベル12が必要です。", true, null),
+						new Dto.GuideStep("Rhysのクエスト「There are Dwarves?」", "Rhysにエンチャント鉱石を15個渡します。", false, rhys),
+						new Dto.GuideStep("リフトで降りる", "Lift Operatorに話しかけます。", null, new Dto.Waypoint("DEEP_CAVERNS", "Lift Operator", 45, 67, 15))));
+				guideRef[0] = g;
+				MenuScreen.setGuides(new Dto.Guides(List.of(g), "Waypoints: SkyHanni-REPO (MIT). Facts: Hypixel SkyBlock Wiki."),
+						new Dto.FarmSummary[]{new Dto.FarmSummary("cane_rows", "Water-channel rows (sugar cane)", List.of("SUGAR_CANE"), "Sand rows on both sides of each water channel.", List.of(96, 3, 96))});
+				MenuScreen.setGear(new Dto.Gear(List.of(new Dto.GearSection("Voidgloom Seraph用の装備", List.of(
+						new Dto.GearItem("VOIDEDGE_KATANA", "Voidedge Katana", sword, "weapon", "REQUIRED", false, 1.4e6, null),
+						new Dto.GearItem("ATOMSPLIT_KATANA", "Atomsplit Katana", sword, "weapon", "RECOMMENDED", false, 2.3e7, null),
+						new Dto.GearItem("FINAL_DESTINATION_CHESTPLATE", "Final Destination Chestplate", leggings, "armor", "LUXURY", true, 4.1e7, null)))), null));
+				Waypoints.setIslandOverride("HUB");
+			});
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.PROGRESS));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-progress"));
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.GEAR));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-gear"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				Waypoints.follow(guideRef[0], 1);
+				check(Waypoints.target() != null && Waypoints.target().name().equals("Rhys"), "following the Rhys step");
+				check(Waypoints.onTargetIsland(), "waypoint is on the current island");
+				check("↑".equals(Waypoints.arrow(0f, 0, 10)) && "→".equals(Waypoints.arrow(0f, -10, 0)), "direction arrows (yaw 0 = south, west is to the right)");
+			});
+			ctx.waitTicks(5);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-waypoint"));
+			ctx.runOnClient(mc -> {
+				Waypoints.clear();
+				Waypoints.setIslandOverride(null);
+				net.minecraft.core.BlockPos p = mc.player.blockPosition().offset(2, -1, 3);
+				List<Dto.FarmBlock> blocks = new ArrayList<>();
+				for (int x = 0; x < 6; x++) {
+					for (int z = 0; z < 6; z++) blocks.add(new Dto.FarmBlock(x, 0, z, x == 2 ? "water" : "sand"));
+				}
+				for (int x = 0; x < 6; x++) {
+					for (int z = 0; z < 6; z++) if (x != 2) blocks.add(new Dto.FarmBlock(x, 1, z, "sugar_cane"));
+				}
+				Dto.FarmDesign d = new Dto.FarmDesign(new Dto.FarmSummary("test", "テスト用サトウキビ", List.of("SUGAR_CANE"), "", List.of(6, 2, 6)), blocks, java.util.Map.of(), List.of(0, 1), List.of(), "",
+						List.of(), List.of(), List.of(), 1, null);
+				FarmBuilder.start(d, p, net.minecraft.core.Direction.SOUTH);
+			});
+			ctx.waitTicks(10);
+			int farmBefore = ctx.computeOnClient(mc -> FarmBuilder.remaining());
+			check(farmBefore == 36, "whole first layer is missing at first: " + farmBefore);
+			// place two sand blocks of the layer on the server: the guide notices
+			world.getServer().runOnServer(server -> {
+				var level = server.overworld();
+				var pl = server.getPlayerList().getPlayers().get(0);
+				net.minecraft.core.BlockPos o = pl.blockPosition().offset(2, -1, 3);
+				level.setBlockAndUpdate(o, net.minecraft.world.level.block.Blocks.SAND.defaultBlockState());
+				level.setBlockAndUpdate(o.offset(0, 0, 1), net.minecraft.world.level.block.Blocks.SAND.defaultBlockState());
+			});
+			ctx.waitTicks(15);
+			int farmAfter = ctx.computeOnClient(mc -> FarmBuilder.remaining());
+			check(farmAfter == 34, "placed blocks are no longer outlined: " + farmAfter);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-farm-guide"));
+			ctx.runOnClient(mc -> {
+				FarmBuilder.stop();
 				SkyPilot.get().config().language = "auto";
 			});
 

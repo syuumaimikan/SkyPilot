@@ -110,6 +110,28 @@ class LiveApiIT {
 			assertNotNull(plan.message(), "a fresh account has no analysis yet");
 			Dto.Alerts alerts = api.alerts(System.currentTimeMillis() - 60_000, "ja").join();
 			assertFalse(alerts.rules().isEmpty(), "default rule when the player has none");
+
+			// Item browser, chest value, guides and gear.
+			Dto.ItemPage found = api.items("hyperion", 0, 5).join();
+			assertTrue(found.items().stream().anyMatch(i -> i.id().equals("HYPERION")));
+			Dto.ItemDetail hyperion = api.item("HYPERION").join();
+			assertFalse(hyperion.recipes().isEmpty(), "Hyperion has a crafting recipe");
+			com.google.gson.JsonArray stacks = com.google.gson.JsonParser.parseString("[{\"customData\":{\"id\":\"ENCHANTED_DIAMOND\"},\"count\":64}]").getAsJsonArray();
+			Dto.Values values = api.values(stacks).join();
+			assertTrue(values.total() > 0);
+			Dto.Guides guides = api.guides("ja").join();
+			assertTrue(guides.guides().size() >= 3);
+			assertNotNull(api.gear("ja").join().sections());
+
+			// Per-user translation provider: the key goes in, only "…last4" comes back.
+			Dto.UserSettings before = api.userSettings().join();
+			assertEquals("server", before.translation().provider());
+			Dto.UserSettings saved = api.saveTranslationSettings("deepl", "liveapiit-0000-1111-2222:fx", null).join();
+			assertEquals("deepl", saved.translation().provider());
+			assertTrue(saved.translation().deepl().configured());
+			assertEquals("…2:fx", saved.translation().deepl().hint());
+			Dto.UserSettings reset = api.saveTranslationSettings("server", "", null).join();
+			assertFalse(reset.translation().deepl().configured());
 		} finally {
 			sched.shutdownNow();
 			transport.close();

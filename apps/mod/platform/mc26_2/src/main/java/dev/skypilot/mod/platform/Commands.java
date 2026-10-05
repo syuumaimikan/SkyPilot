@@ -59,7 +59,39 @@ final class Commands {
 						})
 						.executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.parse(StringArgumentType.getString(c, "tab")))))));
 		root.then(literal("flips").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.AH))));
-		root.then(literal("guide").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.GUIDE))));
+		root.then(literal("guide").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.PROGRESS)))
+				.then(literal("next").executes(c -> {
+					Waypoints.next();
+					return 1;
+				}))
+				.then(literal("prev").executes(c -> {
+					Waypoints.prev();
+					return 1;
+				}))
+				.then(literal("stop").executes(c -> {
+					Waypoints.clear();
+					MccLang.info("Guide stopped.", "ガイドを終了しました。");
+					return 1;
+				})));
+		root.then(literal("advice").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.GUIDE))));
+		root.then(literal("gear").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.GEAR))));
+		root.then(literal("item").then(argument("id", StringArgumentType.greedyString())
+				.executes(c -> openLater(() -> new ItemDetailScreen(null, StringArgumentType.getString(c, "id").strip().toUpperCase(Locale.ROOT).replace(' ', '_'))))));
+		root.then(literal("farm")
+				.then(literal("next").executes(c -> {
+					FarmBuilder.next();
+					return 1;
+				}))
+				.then(literal("prev").executes(c -> {
+					FarmBuilder.prev();
+					return 1;
+				}))
+				.then(literal("stop").executes(c -> {
+					FarmBuilder.stop();
+					MccLang.info("Farm guide stopped.", "ファーム建築ガイドを終了しました。");
+					return 1;
+				}))
+				.then(literal("start").then(argument("design", StringArgumentType.word()).executes(c -> startFarm(StringArgumentType.getString(c, "design"))))));
 		root.then(literal("alerts").then(literal("on").executes(c -> setAlerts(true))).then(literal("off").executes(c -> setAlerts(false))));
 		root.then(literal("panel").then(literal("on").executes(c -> setPanel(true))).then(literal("off").executes(c -> setPanel(false))));
 		root.then(literal("hud")
@@ -113,8 +145,11 @@ final class Commands {
 		String[][] rows = {
 				{"/skypilot link", l.t("link this client to your SkyPilot workspace", "このクライアントをSkyPilotと連携")},
 				{"/skypilot menu [now|roadmap|guide|ah|bazaar|alerts]", l.t("SkyPilot menu (default key: J)", "SkyPilotメニュー（初期キー: J）")},
-				{"/skypilot flips | guide", l.t("menu: AH flips / guide for this area", "メニュー: AHフリップ / 現在地のガイド")},
+				{"/skypilot flips | advice", l.t("menu: AH flips / advice for this area", "メニュー: AHフリップ / 現在地のアドバイス")},
 				{"/skypilot alerts on | off", l.t("flip alerts (toast + chat)", "フリップ通知（トースト+チャット）")},
+				{"/skypilot guide [next | prev | stop]", l.t("progression guides with waypoints", "進め方ガイド（ウェイポイント）")},
+				{"/skypilot farm start <design> | next | prev | stop", l.t("farm build guide in the world", "ファーム建築ガイド（ワールド上に表示）")},
+				{"/skypilot gear", l.t("recommended gear and how to make it", "推奨装備と作り方")},
 				{"/skypilot panel on | off", l.t("flip panel beside the AH / Bazaar windows", "AH・バザー画面横のフリップパネル")},
 				{"/skypilot goal | next | roadmap", l.t("your goal, next actions, roadmap", "目標・次の行動・ロードマップ")},
 				{"/skypilot market | mining | slayer | farming", l.t("advisor panels", "アドバイザー")},
@@ -273,6 +308,22 @@ final class Commands {
 		return 1;
 	}
 
+	private static int startFarm(String id) {
+		SkyPilot sp = SkyPilot.get();
+		if (sp.api() == null) {
+			McText.error(sp.apiError());
+			return 0;
+		}
+		sp.api().farm(id, lang().code()).whenComplete((d, err) -> Minecraft.getInstance().execute(() -> {
+			if (d == null) {
+				MccLang.error("Unknown farm design: " + id, "不明なファーム設計: " + id);
+			} else {
+				FarmBuilder.start(d);
+			}
+		}));
+		return 1;
+	}
+
 	private static int setAlerts(boolean on) {
 		SkyPilot sp = SkyPilot.get();
 		sp.config().market.alerts = on;
@@ -344,19 +395,11 @@ final class Commands {
 
 	private static int setServer(String url) {
 		SkyPilot sp = SkyPilot.get();
-		String old = sp.config().apiBaseUrl;
-		sp.config().apiBaseUrl = url;
-		sp.config().sanitize();
-		sp.rebuildApi();
-		if (sp.api() == null) {
-			String err = sp.apiError();
-			sp.config().apiBaseUrl = old;
-			sp.rebuildApi();
+		String err = sp.setServer(url);
+		if (err != null) {
 			McText.error(err);
 			return 0;
 		}
-		if (!old.equals(sp.config().apiBaseUrl)) sp.unlink();
-		sp.saveConfig();
 		MccLang.info("Server set to " + sp.api().base() + ". Run /skypilot link to link this client.", "サーバーを " + sp.api().base() + " に設定しました。/skypilot link で連携してください。");
 		return 1;
 	}

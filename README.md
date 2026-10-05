@@ -31,7 +31,7 @@ Minecraft ユーザー名と目標（日本語・英語の自然文）を入力�
 | マーケット | AH 全ページ巡回 → NBT/Data Component 解析 → アイテム指紋（星・HPB・エンチャント・宝石・属性・ペットLv など）→ **最安BINだけに頼らない適正価格**（売買中央値・トリム平均・外れ値除去・流動性・ボラティリティ）→ フリップ（手数料・最大購入価格・売却時間・信頼度・リスク）。相場操作の疑いは **DO NOT FLIP**。バザー注文フリップ（約定時間推定）、クラフト / フォージ / Kat フリップ、価格履歴（1H〜90D）、バックテスト、通知ルール（タブ内通知 + Web Push）。**自動購入・自動出品は一切なし** |
 | アドバイザー | 採掘（HOTM プランナー・パウダー計画・時給計算・装備/ドリル）、スレイヤー（ティア別期待値・必要装備 Required/Recommended/Luxury）、ダンジョン（フロア準備度）、クードラ、装備オプティマイザー（予算内でコスト効率順）、農業（作物別収入）+ **ファームビルダー**（上面図・側面図・3D・材料・手順）、釣り、伐採、リフト、アクセサリー（1MPあたりコスト順）、ペット、ミニオン（回収期間）、コレクション、博物館、デイリー、イベント/市長、資産内訳と売却アドバイザー |
 | アシスタント | 構造化データ → 決定的な計算 → 回答。LLM（任意、Claude）は**言い換えのみ**で、価格・条件・レシピ・ドロップ率・XP を記憶から答えさせません。データにない場合は「確認できません」 |
-| Fabric MOD (MC 26.2) | ロードマップ/進捗 HUD（位置・サイズ・不透明度を編集可）、状況アドバイザー（エリア連動）、価格チェック（ツールチップ・`/skypilot price`）、セッション記録、EN→JA チャット翻訳（初期値 OFF。自動モード、または各行の **[訳] ボタンをクリックしてその場で翻訳**・[原文] で戻す）、`/skypilot` コマンド群。連携は Device Authorization 方式 |
+| Fabric MOD (MC 26.2) | ロードマップ/進捗 HUD（位置・サイズ・不透明度を編集可）、状況アドバイザー（エリア連動）、価格チェック（ツールチップ・`/skypilot price`）、セッション記録、EN→JA チャット翻訳（初期値 OFF。自動モード、または各行の **[訳] ボタンをクリックしてその場で翻訳**・[原文] で戻す）、**ゲーム内メニュー（J キー）**（今やること・ロードマップ・進め方ガイド・アドバイス・推奨装備と作り方・AH/バザーフリップ・通知）、AH/バザー画面横のフリップパネルとフリップ通知（トースト）、**JEI 風アイテム一覧**（インベントリ右側・検索・レシピ/ドロップ/用途・説明欄に価値）、**チェスト/バックパックの価値合計**（高い順、名前クリックでスロットを縁取り）、ドワーフ鉱山・クリムゾン島・リフトの**進め方ガイド**（公開されている場所へのウェイポイントと直線ガイド）、農場の**建築ガイド**（未設置ブロックを表示）、ページ分けされた**設定画面**（翻訳プロバイダ・自分の API キー・接続テストなど）、`/skypilot` コマンド群。すべて表示のみで自動操作なし。連携は Device Authorization 方式 |
 
 ## クイックスタート（Docker）
 
@@ -130,7 +130,7 @@ MOD の構成はバージョン分離しています: `core` / `network` / `tran
 | スタック全体の E2E スモークテスト | `node tests/e2e/smoke.mjs http://localhost:3000` |
 | TypeScript 型の再生成（Rust → TS） | `pnpm gen:types` |
 
-`runClientGameTest` はウィンドウを開いて 26.2 クライアントを起動し、シングルプレイのワールドで SkyBlock 形式のサイドバー読取り・HUD 描画・コマンド・設定/HUD 編集画面・Text Component の保持・パーティーチャットの翻訳（元の行はそのまま、プレフィックスの色とクリックイベントを保持した翻訳行を追加、パーティー以外は無視）・クリック翻訳（[訳] ボタンをチャットのクリックと同じ経路で押すと、その行が翻訳に置き換わり、サーバー側のクリックイベントを保持、[原文] で元に戻る）・アイテムの custom_data 解析を検証し、スクリーンショットを `apps/mod/platform/mc26_2/build/run/clientGameTest/screenshots` に保存します。
+`runClientGameTest` はウィンドウを開いて 26.2 クライアントを起動し、シングルプレイのワールドで SkyBlock 形式のサイドバー読取り・HUD 描画・コマンド・設定/HUD 編集画面・Text Component の保持・パーティーチャットの翻訳（元の行はそのまま、プレフィックスの色とクリックイベントを保持した翻訳行を追加、パーティー以外は無視）・クリック翻訳（[訳] ボタンをチャットのクリックと同じ経路で押すと、その行が翻訳に置き換わり、サーバー側のクリックイベントを保持、[原文] で元に戻る）・アイテムの custom_data 解析・ゲーム内メニュー/フリップパネル/通知・アイテム一覧とレシピ・チェスト価値・ガイドのウェイポイント・農場建築ガイド・設定画面（翻訳ページのキー入力欄が伏せ字になること）を検証し、スクリーンショットを `apps/mod/platform/mc26_2/build/run/clientGameTest/screenshots` に保存します。
 
 Web Push はローカルのプッシュサービスを立てて送信し、VAPID JWT の署名検証と RFC 8291（aes128gcm）ペイロードの復号まで確認するテストがあります（`cargo test -p skypilot-api`）。
 
@@ -179,12 +179,13 @@ SkyPilot は次の機能を**実装していません**（今後も実装しま�
 - 要求しない情報: Microsoft パスワード、Minecraft パスワード、Microsoft リフレッシュトークン、Minecraft セッショントークン
 - Web: HttpOnly / SameSite=Lax の Cookie（https では Secure）、ダブルサブミット CSRF トークン、nonce ベースの CSP（`strict-dynamic`）、`X-Frame-Options: DENY`、入力検証、IP ごとのレート制限、パスワードは argon2id。MOD トークンは SHA-256 で保存し、Web から失効可能
 - チャット翻訳: 翻訳した行だけが SkyPilot サーバー（設定によりその翻訳プロバイダ）に送られます。クリック翻訳ではクリックした行だけが送られ、[訳] ボタンはクライアント内のコマンドを実行するだけでゲームサーバーには何も送りません。初回有効化時に MOD・Web の両方で明示し、同意が必要です。翻訳内容とアシスタントの会話はサーバーに保存しません
+- 翻訳プロバイダはユーザーごとに選べます（サーバー既定 / 自分の DeepL キー / 自分の Claude キー / 辞書のみ）。自分のキーは SkyPilot サーバーにだけ送られ、AES-256-GCM で暗号化して保存（`SKYPILOT_SECRET_KEY`、未設定時は `data/cache/secret.key` を自動生成）、画面には末尾 4 文字しか表示しません。自分のキーの失敗は他のユーザーの翻訳（共有サーキットブレーカー）に影響しません
 - 秘密情報は環境変数（本番ではシークレットマネージャー）からのみ読み込み、リポジトリには含めません
 - MOD はコードをダウンロードしたり実行したりしません。リリースは SHA-256 と署名で検証します
 
 ## データの出典と「不明」の扱い
 
-- Hypixel API（items / skills / collections / election / auctions / bazaar / profiles など）、[NotEnoughUpdates-REPO](https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO)（MIT: XP 表、HOTM コスト式、レシピ、ドロップ率）、Hypixel SkyBlock Wiki（監修 TOML に URL と確認日を記載）、[EliteFarmers](https://github.com/EliteFarmers)（作物定数）
+- Hypixel API（items / skills / collections / election / auctions / bazaar / profiles など）、[NotEnoughUpdates-REPO](https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO)（MIT: XP 表、HOTM コスト式、レシピ、ドロップ率）、Hypixel SkyBlock Wiki（監修 TOML に URL と確認日を記載）、[EliteFarmers](https://github.com/EliteFarmers)（作物定数）、[SkyHanni-REPO](https://github.com/hannibal2/SkyHanni-REPO)（MIT: ガイドのウェイポイントに使う公開場所の名前と座標。収集物の位置は除外）
 - 監修値には出典を付け、確認できない値（例: 一部フロアのカタコンベ XP）は**載せずに「不明」**として扱います。SkyPilot 独自の推定（準備度・収益の幅など）は UI 上で「推定（Heuristic）」と表示します
 - 金策の時給は固定値ではなく、プロフィールと最新価格からの**幅のある推定**です。スレイヤーのドロップ利益は**期待値**であり保証ではありません
 

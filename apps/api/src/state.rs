@@ -72,6 +72,19 @@ pub struct AppState {
     pub collector_health: RwLock<Option<Arc<Health>>>,
     pub limiters: Limiters,
     pub players: Cache<Uuid, Arc<LoadedPlayer>>,
+    pub secrets: crate::secrets::SecretBox,
+    /// Each user's own translation provider choice (built from their encrypted settings).
+    pub user_translation: Cache<Uuid, Arc<UserTranslation>>,
+}
+
+/// Which translator a user's chat lines go through.
+pub enum UserTranslation {
+    /// The server's provider from the environment (default).
+    Server,
+    /// Dictionary only - nothing is sent to an external service.
+    DictionaryOnly,
+    /// The user's own provider with their own API key.
+    Own(Arc<dyn skypilot_translation::providers::Provider>),
 }
 
 pub fn gzip(bytes: &[u8]) -> Vec<u8> {
@@ -88,7 +101,18 @@ pub fn gunzip(bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
 
 impl AppState {
     #[allow(clippy::too_many_arguments)]
-    pub fn new(config: Config, registry: Arc<Registry>, market: Arc<MarketEngine>, hypixel: HypixelClient, store: Arc<dyn Store>, translator: Translator, llm: Option<AnthropicClient>, bus: Bus, push: Option<WebPush>) -> Self {
+    pub fn new(
+        config: Config,
+        registry: Arc<Registry>,
+        market: Arc<MarketEngine>,
+        hypixel: HypixelClient,
+        store: Arc<dyn Store>,
+        translator: Translator,
+        llm: Option<AnthropicClient>,
+        bus: Bus,
+        push: Option<WebPush>,
+        secrets: crate::secrets::SecretBox,
+    ) -> Self {
         AppState {
             config,
             registry: RwLock::new(registry),
@@ -103,6 +127,8 @@ impl AppState {
             collector_health: RwLock::new(None),
             limiters: Limiters::new(),
             players: Cache::builder().max_capacity(512).time_to_live(Duration::from_secs(1800)).build(),
+            secrets,
+            user_translation: Cache::builder().max_capacity(2048).time_to_live(Duration::from_secs(600)).build(),
         }
     }
 

@@ -188,6 +188,13 @@ pub fn phrase_only(text: &str, dict: &Dictionary) -> Option<String> {
     (!out.is_empty()).then(|| out.join(" "))
 }
 
+/// Which external provider a translation may use.
+pub enum ProviderChoice<'a> {
+    Server,
+    DictionaryOnly,
+    Own(&'a Arc<dyn Provider>),
+}
+
 pub struct Translator {
     dict: Arc<Dictionary>,
     cache: Cache<String, String>,
@@ -221,6 +228,12 @@ impl Translator {
     }
 
     pub async fn translate(&self, req: &TranslateRequest) -> TranslateResponse {
+        self.translate_with(req, ProviderChoice::Server).await
+    }
+
+    /// Translate with a chosen provider: the server's, none (dictionary only) or a user's own.
+    /// A user's own provider does not trip the shared circuit breaker.
+    pub async fn translate_with(&self, req: &TranslateRequest, choice: ProviderChoice<'_>) -> TranslateResponse {
         let text: String = req.text.nfc().collect();
         let unchanged = |provider: &str| TranslateResponse { translated: text.clone(), provider: provider.into(), cached: false, unchanged: true };
         if text.trim().is_empty() || text.chars().count() > 600 || req.target_lang != "ja" || is_japanese(&text) {
@@ -242,28 +255,43 @@ impl Translator {
         if let Some(hit) = self.cache.get(&key) {
             return TranslateResponse { translated: unprotect(&hit, &map), provider: "cache".into(), cached: true, unchanged: false };
         }
-        let Some(provider) = &self.provider else { return unchanged("passthrough") };
-        if self.breaker.allow().is_err() {
+        let (provider, shared) = match choice {
+            ProviderChoice::Server => match &self.provider {
+                Some(p) => (p, true),
+                None => return unchanged("passthrough"),
+            },
+            ProviderChoice::DictionaryOnly => return unchanged("passthrough"),
+            ProviderChoice::Own(p) => (p, false),
+        };
+        if shared && self.breaker.allow().is_err() {
             return unchanged("circuit-open");
         }
         match tokio::time::timeout(self.timeout, provider.translate(&protected, &req.source_lang, &req.target_lang)).await {
             Ok(Ok(out)) => {
                 // Every placeholder must survive, otherwise names/items could be garbled.
                 if placeholders(&out) != placeholders(&protected) || out.trim().is_empty() {
-                    self.breaker.record_success();
+                    if shared {
+                        self.breaker.record_success();
+                    }
                     return unchanged("passthrough");
                 }
-                self.breaker.record_success();
+                if shared {
+                    self.breaker.record_success();
+                }
                 self.cache.insert(key, out.clone());
                 TranslateResponse { translated: unprotect(&out, &map), provider: provider.name().into(), cached: false, unchanged: false }
             }
             Ok(Err(e)) => {
-                tracing::warn!(error = %e, provider = provider.name(), "translation provider failed");
-                self.breaker.record_failure();
+                tracing::warn!(error = %e, provider = provider.name(), own = !shared, "translation provider failed");
+                if shared {
+                    self.breaker.record_failure();
+                }
                 unchanged("passthrough")
             }
             Err(_) => {
-                self.breaker.record_failure();
+                if shared {
+                    self.breaker.record_failure();
+                }
                 unchanged("timeout")
             }
         }

@@ -15,6 +15,7 @@ public final class SkyPilotConfig {
 	public Translation translation = new Translation();
 	public Session session = new Session();
 	public Market market = new Market();
+	public Inventory inventory = new Inventory();
 	/** Adds a SkyPilot price line to SkyBlock item tooltips (display only). */
 	public boolean priceTooltip = true;
 
@@ -51,6 +52,14 @@ public final class SkyPilotConfig {
 		public boolean alertSound = true;
 	}
 
+	/** Panels beside inventory windows. Display only; nothing is clicked or moved for you. */
+	public static final class Inventory {
+		/** Item list with search, recipes, drop sources and uses (right of the window). */
+		public boolean itemBrowser = true;
+		/** Total and per-item value of chests, backpacks and the ender chest (left of the window). */
+		public boolean chestValue = true;
+	}
+
 	public static final class Session {
 		public boolean enabled = true;
 		/** Upload session statistics to the linked SkyPilot account when a session ends. */
@@ -71,6 +80,7 @@ public final class SkyPilotConfig {
 		if (translation == null) translation = new Translation();
 		if (session == null) session = new Session();
 		if (market == null) market = new Market();
+		if (inventory == null) inventory = new Inventory();
 		if (translation.mode == null) translation.mode = TranslationModeSetting.OFF;
 		hud.scale = clamp(hud.scale, 0.5, 2.5);
 		hud.opacity = clamp(hud.opacity, 0.0, 1.0);

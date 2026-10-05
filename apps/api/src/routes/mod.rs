@@ -4,6 +4,7 @@ pub mod auth_routes;
 pub mod market;
 pub mod misc;
 pub mod modapi;
+pub mod settings;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -87,6 +88,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/notifications/push/test", post(misc::push_test))
         // assistant & translation
         .route("/assistant/chat", post(misc::chat))
+        .route("/me/settings", get(settings::get))
+        .route("/me/settings/translation", put(settings::put_translation))
+        .route("/me/settings/translation/test", post(settings::test_translation))
         .route("/translate", post(misc::translate))
         .route("/translate/dictionary", get(misc::dictionary))
         .route("/translate/status", get(misc::translation_status))
@@ -99,6 +103,12 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/plan", get(modapi::plan))
         .route("/mod/alerts", get(modapi::alerts))
         .route("/mod/icons", get(modapi::icons))
+        .route("/mod/items", get(modapi::items))
+        .route("/mod/item/{id}", get(modapi::item))
+        .route("/mod/values", post(modapi::values))
+        .route("/mod/guides", get(modapi::guides))
+        .route("/mod/locations", get(modapi::locations))
+        .route("/mod/gear", get(modapi::gear))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
     let origin: HeaderValue = state.config.public_web_url.trim_end_matches('/').parse().unwrap_or(HeaderValue::from_static("http://localhost:3000"));

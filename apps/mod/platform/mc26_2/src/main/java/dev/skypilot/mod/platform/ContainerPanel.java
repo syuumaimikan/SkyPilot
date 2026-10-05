@@ -4,12 +4,10 @@ import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.network.Dto;
 import dev.skypilot.mod.platform.mixin.ContainerScreenAccessor;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
@@ -25,15 +23,6 @@ final class ContainerPanel {
 	private static final int MAX_W = 200;
 
 	private ContainerPanel() {
-	}
-
-	static void register() {
-		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
-			if (!(screen instanceof AbstractContainerScreen<?>)) return;
-			String kind = kindOf(screen.getTitle().getString());
-			if (kind == null) return;
-			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> render(s, kind, g, mouseX, mouseY));
-		});
 	}
 
 	/** Which flip list belongs to a window title ("Auction House", "Auctions Browser", "Bazaar ➜ Mining"…). */

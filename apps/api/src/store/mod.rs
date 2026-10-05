@@ -131,6 +131,10 @@ pub trait Store: Send + Sync {
     async fn push_subscriptions(&self, user_id: Uuid) -> StoreResult<Vec<PushSubscription>>;
     async fn delete_push_subscription(&self, endpoint: &str) -> StoreResult<()>;
     async fn save_session_stats(&self, user_id: Uuid, device_id: &str, started_ms: i64, ended_ms: i64, stats: &serde_json::Value) -> StoreResult<()>;
+
+    // settings
+    async fn user_settings(&self, user_id: Uuid) -> StoreResult<Option<serde_json::Value>>;
+    async fn save_user_settings(&self, user_id: Uuid, settings: &serde_json::Value) -> StoreResult<()>;
 }
 
 pub fn ms_to_dt(ms: i64) -> DateTime<Utc> {

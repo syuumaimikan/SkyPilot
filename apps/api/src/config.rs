@@ -26,6 +26,8 @@ pub struct Config {
     pub warm_start_days: i64,
     pub skip_data_sync: bool,
     pub vapid_private_key: Option<String>,
+    /// Base64 32-byte key for encrypting user API keys (generated into data/cache when unset).
+    pub secret_key: Option<String>,
     pub vapid_subject: String,
     pub web_push: bool,
     /// Development only: serve the anonymised fixture profile for the name "SampleUser".
@@ -59,6 +61,7 @@ impl Config {
             warm_start_days: env("WARM_START_DAYS").and_then(|v| v.parse().ok()).unwrap_or(7),
             skip_data_sync: env("SKIP_DATA_SYNC").is_some_and(|v| v == "1" || v == "true"),
             vapid_private_key: env("VAPID_PRIVATE_KEY"),
+            secret_key: env("SKYPILOT_SECRET_KEY"),
             vapid_subject: env("VAPID_SUBJECT").unwrap_or_else(|| public_web_url.clone()),
             web_push: !env("WEB_PUSH").is_some_and(|v| v == "0" || v == "false"),
             dev_sample_profile: env("SKYPILOT_DEV_SAMPLE_PROFILE").is_some_and(|v| v == "1" || v == "true"),

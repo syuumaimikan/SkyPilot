@@ -32,15 +32,17 @@ public final class ContextParser {
 				bits = Text.parseLong(line.substring(5));
 			}
 		}
-		if (area.isEmpty() && tabLines != null) {
+		String island = "";
+		if (tabLines != null) {
 			for (String raw : tabLines) {
-				String line = Text.strip(raw);
+				String line = Text.strip(raw).strip();
 				if (line.startsWith("Area:") || line.startsWith("Dungeon:")) {
-					area = line.substring(line.indexOf(':') + 1).strip();
+					island = line.substring(line.indexOf(':') + 1).strip();
 					break;
 				}
 			}
 		}
-		return new SkyBlockContext(true, area, purse, bits, profileType);
+		if (area.isEmpty()) area = island;
+		return new SkyBlockContext(true, area, purse, bits, profileType, island);
 	}
 }

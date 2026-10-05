@@ -1,0 +1,229 @@
+# Progression guides shown in the mod (menu → Guide) with in-game waypoints.
+#
+# Facts come from the official Hypixel SkyBlock Wiki pages in `source` (checked on `checked`).
+# `location` names a place in SkyHanni-REPO's island graphs (MIT, synced to
+# data/cache/skyhanni); `island` on a step overrides the guide's island for that waypoint.
+# `done` uses the requirement syntax of money_methods.toml and is evaluated against the last
+# analysed profile (skill:X>=N, hotm>=N, faction>=1, crimson_rep>=N, rift_timecharms>=N).
+# Waypoints point at fixed, public places (NPCs, areas, warps) - never at hidden blocks or
+# collectibles - and the mod draws a straight line only; it never moves the player.
+
+[[guides]]
+id = "dwarven_mines"
+island = "DWARVEN_MINES"
+title = "Dwarven Mines & Heart of the Mountain"
+title_ja = "ドワーフ鉱山とHeart of the Mountain"
+source = "https://hypixelskyblock.minecraft.wiki/w/Dwarven_Mines ; https://hypixelskyblock.minecraft.wiki/w/Heart_of_the_Mountain"
+checked = "2026-10-06"
+
+[[guides.steps]]
+title = "Reach Mining XII"
+title_ja = "採掘レベル12にする"
+text = "The Dwarven Mines need Mining XII. Mine in the Gold Mine and the Deep Caverns."
+text_ja = "ドワーフ鉱山には採掘レベル12が必要です。金鉱山やディープ洞窟で採掘しましょう。"
+done = "skill:MINING>=12"
+
+[[guides.steps]]
+title = "Rhys: “There are Dwarves?”"
+title_ja = "Rhysのクエスト「There are Dwarves?」"
+text = "Talk to Rhys in the Obsidian Sanctuary (bottom of the Deep Caverns) and give him 15 of any enchanted ore. This also unlocks the Heart of the Mountain."
+text_ja = "ディープ洞窟の最下層（Obsidian Sanctuary）にいるRhysに、エンチャント鉱石を15個渡します。これでHeart of the Mountainも解放されます。"
+island = "DEEP_CAVERNS"
+location = "Rhys"
+done = "hotm>=1"
+
+[[guides.steps]]
+title = "Take the Lift"
+title_ja = "リフトで降りる"
+text = "The Lift Operator at The Lift takes you down to the Dwarven Mines."
+text_ja = "The LiftにいるLift Operatorに話しかけてドワーフ鉱山へ降ります。"
+island = "DEEP_CAVERNS"
+location = "Lift Operator"
+
+[[guides.steps]]
+title = "Commissions for HOTM XP"
+title_ja = "コミッションでHOTM XPを稼ぐ"
+text = "Commissions come from the King and the Emissaries around the mines. Each gives HOTM XP (+100 at HOTM 1, +200 at HOTM 2, +400 from HOTM 3); the first 4 each day give +900 more."
+text_ja = "コミッションは王（King）や鉱山各地のEmissaryから受けます。報酬はHOTM XP（HOTM1で+100、HOTM2で+200、HOTM3以上で+400）で、1日最初の4回は+900が追加されます。"
+location = "King"
+done = "hotm>=3"
+
+[[guides.steps]]
+title = "The Forge"
+title_ja = "フォージ"
+text = "The Forger at The Forge turns materials into gear over time (see an item's Forge recipe in the item browser)."
+text_ja = "The ForgeのForgerで素材から装備を時間をかけて作れます（アイテムブラウザのフォージレシピを参照）。"
+location = "Forger"
+
+[[guides.steps]]
+title = "Crystal Hollows (HOTM 4)"
+title_ja = "クリスタル洞窟（HOTM 4）"
+text = "With Heart of the Mountain IV, Gwendolyn lets you into the Crystal Hollows for a coin fee."
+text_ja = "Heart of the Mountain IV になると、Gwendolynにコインを払ってクリスタル洞窟へ入れます。"
+location = "Gwendolyn"
+done = "hotm>=5"
+
+[[guides.steps]]
+title = "Glacite Tunnels (HOTM 7)"
+title_ja = "グレイサイトトンネル（HOTM 7）"
+text = "The Glacite Tunnels need Heart of the Mountain VII and Dulin's quest “Beyond the Wall”."
+text_ja = "グレイサイトトンネルにはHeart of the Mountain VIIと、Dulinのクエスト「Beyond the Wall」の完了が必要です。"
+location = "Dulin"
+done = "hotm>=8"
+
+[[guides]]
+id = "crimson_isle"
+island = "CRIMSON_ISLE"
+title = "Crimson Isle (Nether)"
+title_ja = "クリムゾン島（ネザー）"
+source = "https://hypixelskyblock.minecraft.wiki/w/Crimson_Isle"
+checked = "2026-10-06"
+
+[[guides.steps]]
+title = "Reach Combat XXII"
+title_ja = "戦闘レベル22にする"
+text = "The Crimson Isle needs Combat XXII."
+text_ja = "クリムゾン島には戦闘レベル22が必要です。"
+done = "skill:COMBAT>=22"
+
+[[guides.steps]]
+title = "Launch Pad in the Spider's Den"
+title_ja = "スパイダーの巣の発射台"
+text = "The Launch Pad at the back of the Spider's Den sends you to the Crimson Isle."
+text_ja = "スパイダーの巣の奥にある発射台（Launch Pad）でクリムゾン島へ移動します。"
+island = "SPIDER_DEN"
+location = "CRIMSON_ISLE"
+
+[[guides.steps]]
+title = "Elle's questline"
+title_ja = "Elleのメインクエスト"
+text = "Elle's main questline and mob kills earn faction reputation."
+text_ja = "Elleのメインクエストやモブ討伐で派閥の評判を稼ぎます。"
+location = "Elle"
+done = "crimson_rep>=1000"
+
+[[guides.steps]]
+title = "Barbarians: Chief Scorn (Dragontail)"
+title_ja = "バーバリアン派: Chief Scorn（Dragontail）"
+text = "The Barbarian Faction is led by Chief Scorn at the Chief's Hut; its hub town is Dragontail."
+text_ja = "バーバリアン派閥のリーダーはChief's HutのChief Scornで、拠点はDragontailです。"
+location = "Chief Scorn"
+done = "faction>=1"
+
+[[guides.steps]]
+title = "Mages: Queen Nyx (Scarleton)"
+title_ja = "メイジ派: Queen Nyx（Scarleton）"
+text = "The Mage Faction is led by Queen Nyx in the Throne Room; its hub town is Scarleton."
+text_ja = "メイジ派閥のリーダーは玉座の間のQueen Nyxで、拠点はScarletonです。"
+location = "Queen Nyx (Mage)"
+done = "faction>=1"
+
+[[guides.steps]]
+title = "Dojo"
+title_ja = "道場（Dojo）"
+text = "Master Tao's Dojo Challenges upgrade your belt from White to Black."
+text_ja = "Master Taoの道場チャレンジで帯を白から黒へ上げられます。"
+location = "Dojo"
+
+[[guides.steps]]
+title = "Kuudra"
+title_ja = "クードラ"
+text = "Kuudra is a 4-player boss fight in Kuudra's Hollow. Keys are bought from the faction Emissaries with Nether Stars (dropped by Vanquishers)."
+text_ja = "クードラはKuudra's Hollowでの4人用ボス戦です。鍵は派閥のEmissaryからNether Star（Vanquisherのドロップ）で購入します。"
+location = "/warp kuudra"
+
+[[guides]]
+id = "the_rift"
+island = "THE_RIFT"
+title = "The Rift"
+title_ja = "リフト"
+source = "https://hypixelskyblock.minecraft.wiki/w/The_Rift"
+checked = "2026-10-06"
+
+[[guides.steps]]
+title = "Enter through the Wizard Tower"
+title_ja = "ウィザードタワーから入る"
+text = "Use the Wizard Portal at the Wizard Tower with a Dimensional Infusion (free every 4 hours, up to 3 stored; only used up when you leave)."
+text_ja = "ウィザードタワーのWizard PortalからDimensional Infusionを使って入ります（4時間ごとに無料・最大3回分。出るときに消費）。"
+island = "HUB"
+location = "Wizard"
+
+[[guides.steps]]
+title = "Wyld Woods: Tel Kar"
+title_ja = "Wyld Woods: Tel Kar"
+text = "Talking to Tel Kar in the Wyld Woods unlocks the Black Lagoon."
+text_ja = "Wyld WoodsのTel Karに話しかけるとBlack Lagoonが解放されます。"
+location = "Tel Kar"
+
+[[guides.steps]]
+title = "Black Lagoon → Supreme Timecharm"
+title_ja = "Black Lagoon → Supreme Timecharm"
+text = "Costs 4:00 Rift Time and grants the Supreme Timecharm, which opens the West Village."
+text_ja = "リフト時間4:00を使い、Supreme Timecharmを入手します（West Villageが解放）。"
+location = "Black Lagoon"
+done = "rift_timecharms>=1"
+
+[[guides.steps]]
+title = "West Village"
+title_ja = "West Village"
+text = "Needs the Supreme Timecharm; costs 3:00 Rift Time."
+text_ja = "Supreme Timecharmが必要。リフト時間3:00を使います。"
+location = "West Village"
+
+[[guides.steps]]
+title = "Dreadfarm → Chicken N Egg Timecharm"
+title_ja = "Dreadfarm → Chicken N Egg Timecharm"
+text = "The Dreadfarm grants the Chicken N Egg Timecharm."
+text_ja = "DreadfarmでChicken N Egg Timecharmを入手します。"
+location = "Dreadfarm"
+
+[[guides.steps]]
+title = "Mirrorverse"
+title_ja = "Mirrorverse"
+text = "Costs 3:00 Rift Time and grants its (reversed) Timecharm."
+text_ja = "リフト時間3:00を使い、反転したTimecharmを入手します。"
+location = "Mirrorverse"
+
+[[guides.steps]]
+title = "Village Plaza → SkyBlock Citizen Timecharm"
+title_ja = "Village Plaza → SkyBlock Citizen Timecharm"
+text = "Needs the Chicken N Egg and Mirrorverse Timecharms; costs 8:00 Rift Time."
+text_ja = "Chicken N EggとMirrorverseのTimecharmが必要。リフト時間8:00を使います。"
+location = "Village Plaza"
+done = "rift_timecharms>=4"
+
+[[guides.steps]]
+title = "Living Cave"
+title_ja = "Living Cave"
+text = "Needs the SkyBlock Citizen Timecharm; costs 5:00 Rift Time."
+text_ja = "SkyBlock Citizen Timecharmが必要。リフト時間5:00を使います。"
+location = "Living Cave"
+
+[[guides.steps]]
+title = "Colosseum → Globulate Timecharm"
+title_ja = "Colosseum → Globulate Timecharm"
+text = "Needs the Living Timecharm; costs 15:00 Rift Time and grants the Globulate Timecharm."
+text_ja = "Living Timecharmが必要。リフト時間15:00を使い、Globulate Timecharmを入手します。"
+location = "Colosseum"
+done = "rift_timecharms>=6"
+
+[[guides.steps]]
+title = "Barrier Street"
+title_ja = "Barrier Street"
+text = "Needs the Globulate Timecharm; costs 10:00 Rift Time."
+text_ja = "Globulate Timecharmが必要。リフト時間10:00を使います。"
+location = "Barrier Street"
+
+[[guides.steps]]
+title = "Stillgore Château: Vampire Slayer"
+title_ja = "Stillgore Château: ヴァンパイアスレイヤー"
+text = "Reached with the Rift Boat; Maddox the Slayer there unlocks the Vampire Slayer."
+text_ja = "Rift Boatで行けます。そこのMaddox the Slayerでヴァンパイアスレイヤーが解放されます。"
+location = "Maddox the Slayer"
+
+[[guides.steps]]
+title = "The Mountaintop"
+title_ja = "The Mountaintop"
+text = "The final area; needs the Vampiric Timecharm."
+text_ja = "最終エリア。Vampiric Timecharmが必要です。"
+location = "Mountaintop"

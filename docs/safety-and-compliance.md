@@ -16,6 +16,14 @@ combat automation. Every in-game action is performed by the player.
 | Session tracker | sidebar purse, action-bar XP messages | local statistics; upload only if enabled | tracking on, **upload off** |
 | Chat translation | incoming chat lines | an extra client-side chat line below the original | **off** (needs consent) |
 | Click to translate | the line the player clicks | a `[訳]` button on chat lines; the clicked line is shown translated in place (`[原文]` restores it); the button runs a client-side command only | **off** (consent on first use) |
+| SkyPilot menu (J) | the SkyPilot server (plan, report, guides, gear, flips) | its own screen; buttons only open screens or put a command into the chat box (never sent) | on (opens on key press) |
+| AH / Bazaar side panel | the open container's title | a panel beside Hypixel's window; nothing is clicked | **off** |
+| Flip alerts | the SkyPilot server's alert feed (your rules) | a toast + chat line; never buys | **off** |
+| Item browser | the SkyPilot item registry | a list right of inventory windows; recipes/drops/uses screen | on |
+| Chest value | the open container's item stacks (as rendered) | a value list left of the window; clicking a name outlines that slot | on |
+| Guides and waypoints | the SkyPilot server (public SkyHanni place names) | a marker, a straight line and a HUD arrow to a fixed public place; no routes, no collectibles, the player walks | started by the player |
+| Farm build guide | blocks the player can see near the chosen origin | coloured outlines of blocks still to place; nothing is placed | started by the player |
+| Translation provider (settings) | - | sends the chosen provider and, if entered, the player's own DeepL/Anthropic key to the SkyPilot server only (stored encrypted, shown back as `…last4`) | server's provider |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |
 
 The mod sends no packets to the game server, simulates no input, never opens or clicks

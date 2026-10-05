@@ -34,8 +34,8 @@ import java.util.function.Supplier;
  */
 final class MenuScreen extends Screen {
 	enum Tab {
-		NOW("Now", "今やること"), ROADMAP("Roadmap", "ロードマップ"), GUIDE("Guide", "ガイド"), AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"),
-		ALERTS("Alerts", "通知・表示");
+		NOW("Now", "今やること"), ROADMAP("Roadmap", "ロードマップ"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"), GEAR("Gear", "装備"),
+		AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), ALERTS("Alerts", "通知・表示");
 
 		final String en;
 		final String ja;
@@ -70,6 +70,11 @@ final class MenuScreen extends Screen {
 	private static final Map<String, String> REPORT_ERRORS = new HashMap<>();
 	private static String guideDomain;
 	private static int dataVersion;
+	private static Dto.Guides guides;
+	private static String guidesError;
+	private static Dto.FarmSummary[] farms;
+	private static Dto.Gear gear;
+	private static String gearError;
 
 	private record Line(int height, Drawer drawer, IntConsumer onClick, Supplier<Component> tooltip) {
 	}
@@ -109,13 +114,16 @@ final class MenuScreen extends Screen {
 		Lang l = SkyPilot.get().lang();
 		panelW = Math.min(width - 16, 460);
 		panelX = (width - panelW) / 2;
-		contentY = 48;
+		contentY = 70;
 		contentH = Math.max(40, height - contentY - 30);
 		Tab[] tabs = Tab.values();
-		int tabW = (panelW - (tabs.length - 1) * 2) / tabs.length;
+		int perRow = (tabs.length + 1) / 2;
+		int tabW = (panelW - (perRow - 1) * 2) / perRow;
 		for (int i = 0; i < tabs.length; i++) {
 			Tab t = tabs[i];
-			Button b = Button.builder(Component.literal(l.t(t.en, t.ja)), btn -> switchTo(t)).bounds(panelX + i * (tabW + 2), 22, tabW, 20).build();
+			int col = i % perRow;
+			int row = i / perRow;
+			Button b = Button.builder(Component.literal(l.t(t.en, t.ja)), btn -> switchTo(t)).bounds(panelX + col * (tabW + 2), 22 + row * 22, tabW, 20).build();
 			b.active = t != tab;
 			addRenderableWidget(b);
 		}
@@ -158,6 +166,36 @@ final class MenuScreen extends Screen {
 				}
 			}
 			case GUIDE -> loadReport(domain(), force);
+			case PROGRESS -> {
+				if (api != null && (force || guides == null)) {
+					api.guides(lang).whenComplete((g, err) -> minecraft.execute(() -> {
+						if (g != null) {
+							guides = g;
+							guidesError = null;
+						} else {
+							guidesError = errorText(err);
+						}
+						dataVersion++;
+					}));
+					api.farms().whenComplete((f, err) -> minecraft.execute(() -> {
+						if (f != null) farms = f;
+						dataVersion++;
+					}));
+				}
+			}
+			case GEAR -> {
+				if (api != null && (force || gear == null)) {
+					api.gear(lang).whenComplete((g, err) -> minecraft.execute(() -> {
+						if (g != null) {
+							gear = g;
+							gearError = null;
+						} else {
+							gearError = errorText(err);
+						}
+						dataVersion++;
+					}));
+				}
+			}
 			case AH -> MarketData.refresh(MarketData.AH, force);
 			case BAZAAR -> MarketData.refresh(MarketData.BAZAAR, force);
 			case ALERTS -> {
@@ -219,6 +257,8 @@ final class MenuScreen extends Screen {
 			case NOW -> buildNow(l);
 			case ROADMAP -> buildRoadmap(l);
 			case GUIDE -> buildGuide(l);
+			case PROGRESS -> buildProgress(l);
+			case GEAR -> buildGear(l);
 			case AH -> buildMarket(l, MarketData.AH);
 			case BAZAAR -> buildMarket(l, MarketData.BAZAAR);
 			case ALERTS -> buildAlerts(l);
@@ -545,6 +585,84 @@ final class MenuScreen extends Screen {
 		}
 	}
 
+	private void buildProgress(Lang l) {
+		Dto.Waypoint active = Waypoints.target();
+		if (active != null) {
+			para(l.t("Following: ", "案内中: ") + active.name() + " (" + dev.skypilot.mod.core.Islands.name(active.island(), l) + ")", Ui.GREEN, 0);
+			link(l.t("[Stop guiding]", "[案内を終了]"), Ui.YELLOW, () -> {
+				Waypoints.clear();
+				dataVersion++;
+			}, null);
+		}
+		if (guides == null) {
+			notLinkedOrError(l, guidesError);
+		} else {
+			String here = Waypoints.currentIsland();
+			for (Dto.Guide g : guides.guides()) {
+				heading(g.title(), Ui.GOLD);
+				for (int i = 0; i < g.steps().size(); i++) {
+					Dto.GuideStep s = g.steps().get(i);
+					boolean done = Boolean.TRUE.equals(s.done());
+					gap(2);
+					para((done ? "✔ " : (i + 1) + ". ") + s.title(), done ? Ui.GREEN : Ui.WHITE, 0);
+					para(s.text(), Ui.GRAY, 12);
+					if (s.waypoint() != null) {
+						int index = i;
+						boolean there = s.waypoint().island().equals(here);
+						String where = dev.skypilot.mod.core.Islands.name(s.waypoint().island(), l);
+						link("   ➜ " + l.t("Show the way to ", "ここへ案内: ") + s.waypoint().name() + (there ? "" : " (" + where + ")"), there ? Ui.AQUA : Ui.PURPLE, () -> {
+							Waypoints.follow(g, index);
+							onClose();
+						}, l.t("A marker, its distance and a straight line appear in the world. You walk there yourself.", "目印・距離・直線のガイド線がワールドに表示されます。移動はご自身で行います。"));
+					}
+				}
+				para(l.t("Source: ", "出典: ") + g.source(), Ui.DARK_GRAY, 0);
+			}
+			para(guides.attribution(), Ui.DARK_GRAY, 0);
+		}
+		heading(l.t("Farm build guide (Garden)", "ファーム建築ガイド（ガーデン）"), Ui.PURPLE);
+		para(l.t("Stand on the corner block where the farm should start, face along the farm, then pick a design. Missing blocks of each layer are outlined in the world.",
+				"ファームを始める角のブロックに立ち、ファームを伸ばす方向を向いてから設計を選びます。各層の未設置ブロックがワールド上に枠で表示されます。"), Ui.GRAY, 0);
+		if (FarmBuilder.active()) {
+			para(l.t("Building: ", "建築中: ") + FarmBuilder.design().summary().name() + " · /skypilot farm next | prev | stop", Ui.GREEN, 0);
+		}
+		if (farms == null) {
+			para(l.t("Loading designs…", "設計を読み込み中…"), Ui.GRAY, 0);
+		} else {
+			for (Dto.FarmSummary f : farms) {
+				link("➜ " + f.name() + " (" + f.size().get(0) + "×" + f.size().get(2) + ")", Ui.AQUA, () -> {
+					var api = SkyPilot.get().api();
+					if (api == null) return;
+					api.farm(f.id(), SkyPilot.get().lang().code()).whenComplete((d, err) -> minecraft.execute(() -> {
+						if (d != null) FarmBuilder.start(d);
+						else McText.error(SkyPilot.shortError(err));
+					}));
+					onClose();
+				}, f.description());
+			}
+		}
+	}
+
+	private void buildGear(Lang l) {
+		if (gear == null) {
+			notLinkedOrError(l, gearError);
+			return;
+		}
+		if (gear.message() != null) {
+			para(gear.message(), Ui.YELLOW, 0);
+			return;
+		}
+		para(l.t("Click an item to see how to make it (recipes, Forge, drops) and its price.", "アイテムをクリックすると作り方（レシピ・フォージ・ドロップ）と価格を表示します。"), Ui.GRAY, 0);
+		for (Dto.GearSection sec : gear.sections()) {
+			heading(sec.title(), Ui.GOLD);
+			for (Dto.GearItem it : sec.items()) {
+				String sub = it.slot() + " · " + it.tier() + (it.price() != null ? " · " + Text.coins(it.price()) : "") + (it.owned() ? l.t(" · owned ✔", " · 所持 ✔") : "");
+				itemRow(() -> ItemIcons.of(it.icon()), it.name(), it.owned() ? Ui.GREEN : Ui.WHITE, sub, Ui.GRAY, it.note(), Ui.DARK_GRAY,
+						() -> minecraft.gui.setScreen(new ItemDetailScreen(this, it.id())), () -> Component.literal(l.t("Click: how to make it", "クリック: 作り方")));
+			}
+		}
+	}
+
 	private void buildAlerts(Lang l) {
 		SkyPilot sp = SkyPilot.get();
 		var m = sp.config().market;
@@ -679,6 +797,17 @@ final class MenuScreen extends Screen {
 	static void setPlan(Dto.Plan p) {
 		plan = p;
 		planError = null;
+		dataVersion++;
+	}
+
+	static void setGuides(Dto.Guides g, Dto.FarmSummary[] f) {
+		guides = g;
+		farms = f;
+		dataVersion++;
+	}
+
+	static void setGear(Dto.Gear g) {
+		gear = g;
 		dataVersion++;
 	}
 

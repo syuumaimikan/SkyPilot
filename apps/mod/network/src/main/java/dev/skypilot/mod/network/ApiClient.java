@@ -105,7 +105,7 @@ public final class ApiClient {
 		String key = "price:" + Integer.toHexString(json.hashCode()) + ":" + skyblockId;
 		CacheEntry hit = cache.get(key);
 		if (hit != null && hit.expiresAt > clock.getAsLong()) return CompletableFuture.completedFuture((Dto.PriceResponse) hit.value);
-		return request("POST", "/api/mod/price", json, true).thenApply(r -> {
+		return request("POST", "/api/mod/price", json, false).thenApply(r -> {
 			Dto.PriceResponse p = parse(r, Dto.PriceResponse.class);
 			cache.put(key, new CacheEntry(clock.getAsLong() + 60_000, p));
 			return p;
@@ -175,7 +175,90 @@ public final class ApiClient {
 		});
 	}
 
+	/** Item list for the browser: everything by name ({@code query} empty) or search results. */
+	public CompletableFuture<Dto.ItemPage> items(String query, int offset, int limit) {
+		return getPublic("/api/mod/items?q=" + enc(query) + "&offset=" + offset + "&limit=" + limit, Dto.ItemPage.class, 120_000);
+	}
+
+	/** Recipes, drop sources, uses, value and description of one item. */
+	public CompletableFuture<Dto.ItemDetail> item(String id) {
+		return getPublic("/api/mod/item/" + enc(id), Dto.ItemDetail.class, 60_000);
+	}
+
+	/** Values of item stacks: each element is {@code {customData, count}}. */
+	public CompletableFuture<Dto.Values> values(com.google.gson.JsonArray items) {
+		JsonObject body = new JsonObject();
+		body.add("items", items);
+		String json = GSON.toJson(body);
+		String key = "values:" + Integer.toHexString(json.hashCode()) + ":" + json.length();
+		CacheEntry hit = cache.get(key);
+		if (hit != null && hit.expiresAt > clock.getAsLong()) return CompletableFuture.completedFuture((Dto.Values) hit.value);
+		return request("POST", "/api/mod/values", json, false).thenApply(r -> {
+			Dto.Values v = parse(r, Dto.Values.class);
+			cache.put(key, new CacheEntry(clock.getAsLong() + 30_000, v));
+			return v;
+		});
+	}
+
+	/** The linked account's server-side settings (translation provider; keys are never returned). */
+	public CompletableFuture<Dto.UserSettings> userSettings() {
+		return request("GET", "/api/me/settings", null, true).thenApply(r -> parse(r, Dto.UserSettings.class));
+	}
+
+	/**
+	 * Save the translation provider. A key argument of null keeps the stored key, "" deletes it.
+	 * Keys go only to the player's own SkyPilot server, which stores them encrypted.
+	 */
+	public CompletableFuture<Dto.UserSettings> saveTranslationSettings(String provider, String deeplKey, String anthropicKey) {
+		JsonObject body = new JsonObject();
+		body.addProperty("provider", provider);
+		if (deeplKey != null) body.addProperty("deeplKey", deeplKey);
+		if (anthropicKey != null) body.addProperty("anthropicKey", anthropicKey);
+		return request("PUT", "/api/me/settings/translation", GSON.toJson(body), true).thenApply(r -> parse(r, Dto.UserSettings.class));
+	}
+
+	public CompletableFuture<Dto.TranslationTest> testTranslation() {
+		return request("POST", "/api/me/settings/translation/test", "{}", true).thenApply(r -> parse(r, Dto.TranslationTest.class));
+	}
+
+	/** Progression guides with waypoints; marks steps done when this client is linked. */
+	public CompletableFuture<Dto.Guides> guides(String lang) {
+		String path = "/api/mod/guides?lang=" + enc(lang);
+		String t = token.get();
+		boolean auth = t != null && !t.isEmpty();
+		return getCachedAuth(path, Dto.Guides.class, 60_000, auth);
+	}
+
+	/** Recommended gear for the goals and per activity (needs a linked account and an analysis). */
+	public CompletableFuture<Dto.Gear> gear(String lang) {
+		return getCached("/api/mod/gear?lang=" + enc(lang), Dto.Gear.class, 60_000);
+	}
+
+	public CompletableFuture<Dto.FarmSummary[]> farms() {
+		return getPublic("/api/farms", Dto.FarmSummary[].class, 3_600_000);
+	}
+
+	public CompletableFuture<Dto.FarmDesign> farm(String id, String lang) {
+		return getPublic("/api/farms/" + enc(id) + "?lang=" + enc(lang), Dto.FarmDesign.class, 3_600_000);
+	}
+
+	public CompletableFuture<Dto.Waypoint[]> locations(String island, String query) {
+		return getPublic("/api/mod/locations?island=" + enc(island) + "&q=" + enc(query), Dto.Waypoint[].class, 300_000);
+	}
+
 	// ---------------------------------------------------------------- plumbing
+
+	private <T> CompletableFuture<T> getCachedAuth(String path, Class<T> type, long ttlMillis, boolean authenticated) {
+		long now = clock.getAsLong();
+		String key = (authenticated ? "auth:" : "anon:") + path;
+		CacheEntry hit = cache.get(key);
+		if (hit != null && hit.expiresAt > now) return CompletableFuture.completedFuture(type.cast(hit.value));
+		return request("GET", path, null, authenticated).thenApply(r -> {
+			T v = parse(r, type);
+			cache.put(key, new CacheEntry(clock.getAsLong() + ttlMillis, v));
+			return v;
+		});
+	}
 
 	private <T> CompletableFuture<T> getPublic(String path, Class<T> type, long ttlMillis) {
 		long now = clock.getAsLong();

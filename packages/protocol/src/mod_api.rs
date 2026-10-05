@@ -222,3 +222,246 @@ pub struct ModPlan {
     /// Set when there is no analysis yet.
     pub message: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModItemEntry {
+    pub id: String,
+    pub name: String,
+    pub rarity: Option<String>,
+    pub icon: ItemIcon,
+    /// What it sells for now (Bazaar instant sell / fair value / NPC), when known.
+    pub value: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModItemPage {
+    pub total: u32,
+    pub offset: u32,
+    pub items: Vec<ModItemEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModStack {
+    pub id: String,
+    pub name: String,
+    pub amount: f64,
+    pub icon: ItemIcon,
+    /// Cheapest way to get one unit now (Bazaar instant buy / lowest BIN / NPC shop).
+    pub unit_price: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModRecipe {
+    /// "CRAFTING" | "FORGE" | "KAT" | "NPC_SHOP"
+    pub kind: String,
+    pub output: ModStack,
+    pub inputs: Vec<ModStack>,
+    /// Crafting only: the 3×3 grid (A1..C3), empty slots as null.
+    pub grid: Vec<Option<ModStack>>,
+    pub duration_secs: Option<f64>,
+    pub npc: Option<String>,
+    pub coins: Option<f64>,
+    /// Sum of the inputs at current prices (None when an input has no price).
+    pub cost: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModDropSource {
+    pub source: String,
+    pub chance: f64,
+    pub amount: f64,
+}
+
+/// JEI-style item page: value, description, recipes, drop sources and uses.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModItemDetail {
+    pub item: ModItemEntry,
+    pub category: Option<String>,
+    /// In-game description with § formatting codes (NEU-REPO).
+    pub lore: Vec<String>,
+    pub value_source: Option<String>,
+    pub lowest_bin: Option<f64>,
+    pub sales_per_day: Option<f64>,
+    pub bazaar_buy: Option<f64>,
+    pub bazaar_sell: Option<f64>,
+    pub npc_sell: Option<f64>,
+    pub craft_cost: Option<f64>,
+    pub recipes: Vec<ModRecipe>,
+    pub drops: Vec<ModDropSource>,
+    pub used_in: Vec<ModItemEntry>,
+    pub wiki: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModValueItem {
+    /// The stack's custom_data (26.2 data component) as JSON.
+    pub custom_data: serde_json::Value,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModValuesRequest {
+    pub items: Vec<ModValueItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModValue {
+    pub skyblock_id: Option<String>,
+    pub name: String,
+    /// Value of the whole stack.
+    pub value: Option<f64>,
+    pub confidence: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModValues {
+    pub values: Vec<ModValue>,
+    pub total: f64,
+}
+
+/// A fixed public place to walk to (from SkyHanni-REPO's island graphs).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModWaypoint {
+    /// SkyHanni island id, e.g. "DWARVEN_MINES".
+    pub island: String,
+    pub name: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGuideStep {
+    pub title: String,
+    pub text: String,
+    /// From the last analysed profile; None when it cannot be told.
+    pub done: Option<bool>,
+    pub waypoint: Option<ModWaypoint>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGuide {
+    pub id: String,
+    pub island: String,
+    pub title: String,
+    pub source: String,
+    pub steps: Vec<ModGuideStep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGuides {
+    pub guides: Vec<ModGuide>,
+    /// Attribution for the waypoint data.
+    pub attribution: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGearItem {
+    pub id: String,
+    pub name: String,
+    pub icon: ItemIcon,
+    pub slot: String,
+    /// "REQUIRED" | "RECOMMENDED" | "LUXURY" for goal gear, the item tier for upgrades.
+    pub tier: String,
+    pub owned: bool,
+    /// Cheapest way to get it now (Bazaar / lowest BIN / NPC shop / craft).
+    pub price: Option<f64>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGearSection {
+    pub title: String,
+    pub items: Vec<ModGearItem>,
+}
+
+/// Recommended gear: tiers for the goal's slayers and the best-value upgrades per activity.
+/// Each item opens its recipe ("how to make it") in the item page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGear {
+    pub sections: Vec<ModGearSection>,
+    pub message: Option<String>,
+}
+
+/// Whether a key is stored (never the key itself; `hint` shows its last 4 characters).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct KeyInfo {
+    pub configured: bool,
+    pub hint: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TranslationSettingsView {
+    /// "server" (the server's provider) | "deepl" | "claude" | "none" (dictionary only)
+    pub provider: String,
+    pub deepl: KeyInfo,
+    pub anthropic: KeyInfo,
+    /// What "server" means on this server (None = dictionary only).
+    pub server_provider: Option<String>,
+    pub providers: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UserSettings {
+    pub translation: TranslationSettingsView,
+}
+
+/// `deeplKey` / `anthropicKey`: omitted = keep, "" = delete, otherwise the new key.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TranslationSettingsUpdate {
+    pub provider: String,
+    pub deepl_key: Option<String>,
+    pub anthropic_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TranslationTestResult {
+    pub ok: bool,
+    pub provider: String,
+    pub translated: Option<String>,
+    pub message: String,
+}

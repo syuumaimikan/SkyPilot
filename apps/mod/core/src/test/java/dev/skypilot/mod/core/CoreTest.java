@@ -28,6 +28,21 @@ class CoreTest {
 	}
 
 	@Test
+	void islandFromTabList() {
+		// sidebar shows the sub-area, the tab list the island
+		SkyBlockContext c = ContextParser.parse("SKYBLOCK", List.of("⏣ Royal Mines"), List.of(" §b§lArea: §7Dwarven Mines"));
+		assertEquals("Royal Mines", c.area());
+		assertEquals("Dwarven Mines", c.island());
+		assertEquals("DWARVEN_MINES", c.islandId());
+		assertEquals("THE_RIFT", Islands.idOf("The Rift"));
+		assertEquals("SPIDER_DEN", Islands.idOf("Spider's Den"));
+		assertEquals("WINTER", Islands.idOf("Jerry's Workshop"));
+		assertNull(Islands.idOf("Somewhere New"));
+		assertEquals("", ContextParser.parse("SKYBLOCK", List.of("⏣ Village"), List.of()).islandId());
+		assertEquals("ドワーフ鉱山", Islands.name("DWARVEN_MINES", Lang.JA));
+	}
+
+	@Test
 	void textHelpers() {
 		assertEquals("Hello", Text.strip("§a§lHello​"));
 		assertEquals(1_200L, Text.parseLong("1.2k").getAsLong());

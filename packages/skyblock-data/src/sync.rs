@@ -109,6 +109,64 @@ fn extract_neu(bytes: &[u8], target: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub const SKYHANNI_RAW: &str = "https://raw.githubusercontent.com/hannibal002/SkyHanni-REPO/main";
+
+/// Download SkyHanni-REPO island graphs (MIT) and keep only their named public places
+/// (see [`crate::locations`]). Islands that fail to download keep their previous file.
+pub async fn sync_skyhanni(paths: &DataPaths) -> anyhow::Result<()> {
+    let c = client()?;
+    let dir = paths.skyhanni_dir.join("island_graphs");
+    tokio::fs::create_dir_all(&dir).await?;
+    let mut ok = 0;
+    for island in crate::locations::ISLANDS {
+        let url = format!("{SKYHANNI_RAW}/constants/island_graphs/{island}.json");
+        let result: anyhow::Result<()> = async {
+            let resp = c.get(&url).send().await?;
+            if !resp.status().is_success() {
+                bail!("{}", resp.status());
+            }
+            let graph: serde_json::Value = serde_json::from_slice(&resp.bytes().await?)?;
+            // keep the original node shape so the loader reads synced files and fixtures alike
+            let mut named = serde_json::Map::new();
+            if let Some(obj) = graph.as_object() {
+                for (id, node) in obj {
+                    if node.get("Name").and_then(|n| n.as_str()).is_some_and(|n| !n.is_empty()) {
+                        let mut n = node.clone();
+                        if let Some(o) = n.as_object_mut() {
+                            o.remove("Neighbours");
+                        }
+                        named.insert(id.clone(), n);
+                    }
+                }
+            }
+            let tmp = dir.join(format!("{island}.json.tmp"));
+            tokio::fs::write(&tmp, serde_json::to_vec(&named)?).await?;
+            tokio::fs::rename(&tmp, dir.join(format!("{island}.json"))).await?;
+            Ok(())
+        }
+        .await;
+        match result {
+            Ok(()) => ok += 1,
+            Err(e) => tracing::warn!(island, error = %e, "SkyHanni island graph not updated"),
+        }
+    }
+    if let Ok(resp) = c.get(format!("{SKYHANNI_RAW}/LICENSE")).send().await {
+        if let Ok(text) = resp.text().await {
+            let _ = tokio::fs::write(paths.skyhanni_dir.join("LICENSE"), text).await;
+        }
+    }
+    if ok == 0 {
+        bail!("no SkyHanni island graph could be downloaded");
+    }
+    tracing::info!(islands = ok, "SkyHanni island graphs synced");
+    Ok(())
+}
+
+/// True when the SkyHanni location data has never been downloaded.
+pub fn needs_skyhanni(paths: &DataPaths) -> bool {
+    !paths.skyhanni_dir.join("island_graphs/HUB.json").exists()
+}
+
 /// True when the cache is missing or older than `max_age`.
 pub fn needs_sync(paths: &DataPaths, max_age: Duration) -> bool {
     let probe = paths.hypixel_dir.join("resources_items.json");

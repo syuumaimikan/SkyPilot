@@ -20,7 +20,8 @@ pub struct Stack {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Recipe {
-    Crafting { output: Stack, inputs: Vec<Stack> },
+    /// `inputs` sums the grid per item; `grid` keeps the 3×3 layout (A1..C3) for display.
+    Crafting { output: Stack, inputs: Vec<Stack>, grid: Vec<Option<Stack>> },
     Forge { output: Stack, inputs: Vec<Stack>, duration_secs: f64 },
     Kat { input: String, output: String, coins: f64, duration_secs: f64, items: Vec<Stack> },
     NpcShop { npc: String, result: Stack, cost: Vec<Stack> },
@@ -183,6 +184,8 @@ pub struct NeuData {
     pub wiki_urls: HashMap<String, String>,
     /// Item look per item: (1.8 item id, damage, player-head texture, glint).
     pub icons: HashMap<String, NeuIcon>,
+    /// Item description as shown in game (lines with § formatting codes).
+    pub lore: HashMap<String, Vec<String>>,
     pub leveling: Leveling,
     pub pets: PetConstants,
     pub hotm: Option<TreeLayout>,
@@ -417,6 +420,12 @@ impl NeuData {
                     },
                 );
             }
+            if let Some(lines) = item.get("lore").and_then(Value::as_array) {
+                let raw: Vec<String> = lines.iter().filter_map(Value::as_str).take(40).map(str::to_string).collect();
+                if !raw.is_empty() {
+                    neu.lore.insert(id.clone(), raw);
+                }
+            }
             if let Some(url) = item.get("info").and_then(Value::as_array).and_then(|a| a.iter().filter_map(Value::as_str).find(|u| u.contains("hypixelskyblock.minecraft.wiki"))) {
                 neu.wiki_urls.insert(id.clone(), url.to_string());
             }
@@ -428,20 +437,20 @@ impl NeuData {
 
             // legacy single crafting recipe
             if let Some(r) = item.get("recipe").and_then(Value::as_object) {
-                let inputs = grid_inputs(&neu, r);
+                let (inputs, grid) = grid_inputs(&neu, r);
                 if !inputs.is_empty() {
-                    neu.recipes.entry(id.clone()).or_default().push(Recipe::Crafting { output: Stack { id: id.clone(), amount: 1.0 }, inputs });
+                    neu.recipes.entry(id.clone()).or_default().push(Recipe::Crafting { output: Stack { id: id.clone(), amount: 1.0 }, inputs, grid });
                 }
             }
             for r in item.get("recipes").and_then(Value::as_array).into_iter().flatten() {
                 match r.get("type").and_then(Value::as_str).unwrap_or_default() {
                     "crafting" => {
                         if let Some(obj) = r.as_object() {
-                            let inputs = grid_inputs(&neu, obj);
+                            let (inputs, grid) = grid_inputs(&neu, obj);
                             let out_id = r.get("overrideOutputId").and_then(Value::as_str).map(|s| neu.normalize_id(s)).unwrap_or_else(|| id.clone());
                             let count = r.get("count").and_then(Value::as_f64).unwrap_or(1.0).max(1.0);
                             if !inputs.is_empty() {
-                                neu.recipes.entry(out_id.clone()).or_default().push(Recipe::Crafting { output: Stack { id: out_id, amount: count }, inputs });
+                                neu.recipes.entry(out_id.clone()).or_default().push(Recipe::Crafting { output: Stack { id: out_id, amount: count }, inputs, grid });
                             }
                         }
                     }
@@ -537,12 +546,16 @@ impl NeuData {
     }
 }
 
-fn grid_inputs(neu: &NeuData, obj: &serde_json::Map<String, Value>) -> Vec<Stack> {
+/// (inputs summed per item, the 3×3 grid in A1..C3 order).
+fn grid_inputs(neu: &NeuData, obj: &serde_json::Map<String, Value>) -> (Vec<Stack>, Vec<Option<Stack>>) {
     let mut agg: BTreeMap<String, f64> = BTreeMap::new();
+    let mut grid = Vec::with_capacity(9);
     for key in ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"] {
-        if let Some(st) = obj.get(key).and_then(Value::as_str).and_then(|s| neu.stack(s)) {
-            *agg.entry(st.id).or_insert(0.0) += st.amount;
+        let st = obj.get(key).and_then(Value::as_str).and_then(|s| neu.stack(s));
+        if let Some(st) = &st {
+            *agg.entry(st.id.clone()).or_insert(0.0) += st.amount;
         }
+        grid.push(st);
     }
-    agg.into_iter().map(|(id, amount)| Stack { id, amount }).collect()
+    (agg.into_iter().map(|(id, amount)| Stack { id, amount }).collect(), grid)
 }

@@ -13,6 +13,7 @@ mod error;
 mod jobs;
 mod push;
 mod routes;
+mod secrets;
 mod state;
 mod store;
 
@@ -98,6 +99,7 @@ async fn run() -> anyhow::Result<()> {
     if cmd == "sync-data" {
         skypilot_data::sync::sync_hypixel_resources(&paths).await?;
         skypilot_data::sync::sync_neu(&paths).await?;
+        skypilot_data::sync::sync_skyhanni(&paths).await?;
         println!("data synced into {}", config.root.join("data/cache").display());
         return Ok(());
     }
@@ -126,6 +128,11 @@ async fn run() -> anyhow::Result<()> {
         .await
         {
             tracing::warn!(error = %e, "data sync failed; using existing cache if present");
+        }
+    }
+    if !config.skip_data_sync && skypilot_data::sync::needs_skyhanni(&paths) {
+        if let Err(e) = skypilot_data::sync::sync_skyhanni(&paths).await {
+            tracing::warn!(error = %e, "SkyHanni location data unavailable; guides show no waypoints");
         }
     }
     let registry = Arc::new(tokio::task::spawn_blocking({
@@ -172,7 +179,8 @@ async fn run() -> anyhow::Result<()> {
     } else {
         None
     };
-    let state = Arc::new(AppState::new(config.clone(), registry, market, hypixel, store, translator, llm, bus, push));
+    let secrets = secrets::SecretBox::load(config.secret_key.as_deref(), &config.root.join("data/cache"))?;
+    let state = Arc::new(AppState::new(config.clone(), registry, market, hypixel, store, translator, llm, bus, push, secrets));
 
     jobs::warm_start(&state).await;
     if config.collector == CollectorMode::Embedded {

@@ -121,7 +121,8 @@ pub async fn translate(State(state): State<Arc<AppState>>, jar: CookieJar, heade
     if req.text.chars().count() > 600 {
         return Err(AppError::bad_request("text too long"));
     }
-    Ok(Json(state.translator.translate(&req).await))
+    let choice = crate::routes::settings::user_translation(&state, user.id).await;
+    Ok(Json(state.translator.translate_with(&req, crate::routes::settings::choice(&choice)).await))
 }
 
 pub async fn dictionary(State(state): State<Arc<AppState>>) -> Json<TranslationDictionary> {

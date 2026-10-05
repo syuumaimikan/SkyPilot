@@ -426,6 +426,41 @@ pub struct PatternDef {
     pub template: String,
 }
 
+// ------------------------------------------------------------------ guides
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GuidesFile {
+    pub guides: Vec<GuideDef>,
+}
+
+/// A "how to progress" guide for an island. Step locations name places in SkyHanni-REPO's
+/// island graphs (MIT); `done` uses the same requirement syntax as money methods.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GuideDef {
+    pub id: String,
+    /// SkyHanni island id, e.g. "DWARVEN_MINES".
+    pub island: String,
+    pub title: String,
+    pub title_ja: String,
+    pub source: String,
+    pub checked: String,
+    pub steps: Vec<GuideStepDef>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GuideStepDef {
+    pub title: String,
+    pub title_ja: String,
+    pub text: String,
+    pub text_ja: String,
+    /// Island of the waypoint when it differs from the guide's island.
+    pub island: Option<String>,
+    /// Named location (NPC / area / warp) shown as the waypoint.
+    pub location: Option<String>,
+    /// Requirement expression that marks the step as done, e.g. "skill:MINING>=12".
+    pub done: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Curated {
     pub market: MarketConfig,
@@ -441,6 +476,7 @@ pub struct Curated {
     pub calendar: CalendarConfig,
     pub daily: Vec<DailyTask>,
     pub translation: TranslationDictionaryFile,
+    pub guides: Vec<GuideDef>,
 }
 
 impl Curated {
@@ -459,6 +495,7 @@ impl Curated {
             calendar: load(registry_dir, "calendar.toml")?,
             daily: load::<DailyFile>(registry_dir, "daily.toml")?.tasks,
             translation: load(translation_dir, "dictionary.toml")?,
+            guides: load::<GuidesFile>(registry_dir, "guides.toml")?.guides,
         })
     }
 

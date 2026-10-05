@@ -116,6 +116,9 @@ impl<'a> Ctx<'a> {
             "garden" => self.analysis.garden.as_ref().and_then(|g| g.garden_level.as_ref()).map(|l| l.level as f64).or(Some(0.0)),
             "purse" => Some(self.liquid_coins()),
             "mp" => self.magical_power().map(f64::from),
+            "faction" => self.analysis.kuudra.as_ref().map(|k| if k.selected_faction.is_some() { 1.0 } else { 0.0 }),
+            "crimson_rep" => self.analysis.kuudra.as_ref().map(|k| k.mage_reputation.unwrap_or(0).max(k.barbarian_reputation.unwrap_or(0)) as f64),
+            "rift_timecharms" => self.analysis.rift.as_ref().map(|r| r.timecharms.len() as f64),
             _ => None,
         };
         value.map(|v| v >= target)

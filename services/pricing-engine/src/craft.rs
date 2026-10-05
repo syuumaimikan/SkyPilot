@@ -30,7 +30,7 @@ impl<'a> CraftCalculator<'a> {
             .map(|rs| {
                 rs.iter()
                     .filter_map(|r| match r {
-                        Recipe::Crafting { output, inputs } => Some((output, inputs)),
+                        Recipe::Crafting { output, inputs, .. } => Some((output, inputs)),
                         _ => None,
                     })
                     .collect()

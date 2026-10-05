@@ -10,6 +10,7 @@ pub mod curated;
 pub mod farms;
 pub mod hypixel;
 pub mod icons;
+pub mod locations;
 pub mod neu;
 #[cfg(feature = "sync")]
 pub mod sync;
@@ -35,6 +36,8 @@ pub struct DataPaths {
     pub hypixel_dir: PathBuf,
     /// Extracted NEU-REPO root (contains `constants/` and `items/`).
     pub neu_dir: PathBuf,
+    /// SkyHanni-REPO data (`island_graphs/<ISLAND>.json`, named nodes only).
+    pub skyhanni_dir: PathBuf,
 }
 
 impl DataPaths {
@@ -47,6 +50,7 @@ impl DataPaths {
             farms_dir: root.join("data/farms"),
             hypixel_dir: root.join("data/cache/hypixel"),
             neu_dir: root.join("data/cache/neu"),
+            skyhanni_dir: root.join("data/cache/skyhanni"),
         }
     }
 
@@ -58,6 +62,7 @@ impl DataPaths {
             farms_dir: root.join("data/farms"),
             hypixel_dir: root.join("fixtures/hypixel"),
             neu_dir: root.join("fixtures/neu"),
+            skyhanni_dir: root.join("fixtures/skyhanni"),
         }
     }
 }
@@ -79,6 +84,8 @@ pub struct Registry {
     pub neu: NeuData,
     pub curated: Curated,
     pub farms: Vec<FarmDesignDef>,
+    /// Named places per island (SkyHanni-REPO) for guide waypoints.
+    pub locations: locations::Locations,
     pub meta: RegistryMeta,
     name_index: Vec<(String, String)>,
 }
@@ -156,7 +163,8 @@ impl Registry {
             loaded_at_ms: chrono::Utc::now().timestamp_millis(),
         };
         tracing::info!(items = items.len(), neu_files = neu.file_count, recipes = neu.recipes.len(), "registry loaded");
-        Ok(Registry { items, skills, collections, election, neu, curated, farms, meta, name_index })
+        let locations = locations::Locations::load(&paths.skyhanni_dir.join("island_graphs"));
+        Ok(Registry { items, skills, collections, election, neu, curated, farms, locations, meta, name_index })
     }
 
     pub fn item(&self, id: &str) -> Option<&ItemDef> {

@@ -115,6 +115,34 @@ async function main() {
   ok("mod plan", modPlan.status === 200 && Array.isArray(modPlan.json?.actions));
   const modAlerts = await req("GET", `/api/mod/alerts?since=${Date.now() - 60000}&lang=ja`, undefined, bearer);
   ok("mod flip alerts", modAlerts.status === 200 && Array.isArray(modAlerts.json?.rows) && modAlerts.json.rules.length > 0);
+  const items = await req("GET", "/api/mod/items?q=hyperion&limit=5");
+  ok("mod item browser search", items.json?.items?.some((i) => i.id === "HYPERION"), JSON.stringify(items.json)?.slice(0, 200));
+  const item = await req("GET", "/api/mod/item/HYPERION?lang=ja");
+  ok("mod item detail with recipe", item.json?.item?.id === "HYPERION" && item.json.recipes.length > 0);
+  const values = await req("POST", "/api/mod/values", { items: [{ customData: { id: "ENCHANTED_DIAMOND" }, count: 64 }, { customData: {}, count: 1 }] });
+  ok("mod chest values", values.json?.values?.length === 2 && values.json.total > 0 && values.json.values[1].value === null);
+  const guides = await req("GET", "/api/mod/guides?lang=ja", undefined, bearer);
+  ok("mod guides with waypoints", guides.json?.guides?.length >= 3 && guides.json.guides.every((g) => g.steps.some((s) => s.waypoint)));
+  const gear = await req("GET", "/api/mod/gear?lang=ja", undefined, bearer);
+  ok("mod gear", gear.status === 200 && Array.isArray(gear.json?.sections));
+  // Per-user translation provider: keys are stored encrypted and only "…last4" comes back.
+  const settings0 = await req("GET", "/api/me/settings", undefined, bearer);
+  ok("user settings (default provider)", settings0.json?.translation?.provider === "server" && settings0.json.translation.providers.includes("deepl"));
+  const fakeKey = "smoketest-0000-1111-2222:fx";
+  const setKey = await req("PUT", "/api/me/settings/translation", { provider: "deepl", deeplKey: fakeKey, anthropicKey: null }, bearer);
+  ok(
+    "save own provider key (masked)",
+    setKey.json?.translation?.provider === "deepl" && setKey.json.translation.deepl.configured && setKey.json.translation.deepl.hint === "…2:fx" && !setKey.text.includes(fakeKey),
+  );
+  const badKey = await req("PUT", "/api/me/settings/translation", { provider: "deepl", deeplKey: "not a key", anthropicKey: null }, bearer);
+  ok("invalid key rejected", badKey.status === 400);
+  const badProvider = await req("PUT", "/api/me/settings/translation", { provider: "google", deeplKey: null, anthropicKey: null }, bearer);
+  ok("unknown provider rejected", badProvider.status === 400);
+  const noneTr = await req("PUT", "/api/me/settings/translation", { provider: "none", deeplKey: "", anthropicKey: null }, bearer);
+  ok("dictionary only + key removed", noneTr.json?.translation?.provider === "none" && !noneTr.json.translation.deepl.configured);
+  const dictOnly = await req("POST", "/api/translate", { text: "is anyone selling a cheap sword here", sourceLang: "en", targetLang: "ja", channel: "PARTY" }, bearer);
+  ok("dictionary-only user is not sent to a provider", dictOnly.json?.unchanged === true || dictOnly.json?.provider === "dictionary", JSON.stringify(dictOnly.json));
+  await req("PUT", "/api/me/settings/translation", { provider: "server", deeplKey: null, anthropicKey: null }, bearer);
   const bad = await req("GET", "/api/mod/hud", undefined, { Authorization: "Bearer spm_" + "0".repeat(64) });
   ok("invalid token rejected", bad.status === 401);
   const tr = await req("POST", "/api/translate", { text: "good luck", sourceLang: "en", targetLang: "ja", channel: "PARTY" }, bearer);

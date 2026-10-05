@@ -23,6 +23,7 @@ struct Inner {
     users: HashMap<Uuid, UserRow>,
     sessions: HashMap<String, SessionRow>,
     goals: HashMap<Uuid, Vec<SavedGoal>>,
+    user_settings: HashMap<Uuid, serde_json::Value>,
     analyses: HashMap<Uuid, (AnalyzeResponse, i64)>,
     snapshots: HashMap<(String, String), Vec<ProgressSnapshot>>,
     device_codes: HashMap<String, DeviceCodeRow>,
@@ -309,6 +310,15 @@ impl Store for MemoryStore {
         if g.sessions_stats.len() > 10_000 {
             g.sessions_stats.remove(0);
         }
+        Ok(())
+    }
+
+    async fn user_settings(&self, user_id: Uuid) -> StoreResult<Option<serde_json::Value>> {
+        Ok(self.inner.read().user_settings.get(&user_id).cloned())
+    }
+
+    async fn save_user_settings(&self, user_id: Uuid, settings: &serde_json::Value) -> StoreResult<()> {
+        self.inner.write().user_settings.insert(user_id, settings.clone());
         Ok(())
     }
 }
