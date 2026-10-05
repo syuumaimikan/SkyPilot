@@ -165,6 +165,15 @@ pub struct EssenceCost {
     pub stars: Vec<f64>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct NeuIcon {
+    /// 1.8 namespaced id, e.g. "minecraft:skull".
+    pub itemid: String,
+    pub damage: u32,
+    pub texture: Option<String>,
+    pub glint: bool,
+}
+
 #[derive(Debug, Default)]
 pub struct NeuData {
     pub recipes: HashMap<String, Vec<Recipe>>,
@@ -172,6 +181,8 @@ pub struct NeuData {
     pub minions: BTreeMap<String, Vec<MinionTier>>,
     pub display_names: HashMap<String, String>,
     pub wiki_urls: HashMap<String, String>,
+    /// Item look per item: (1.8 item id, damage, player-head texture, glint).
+    pub icons: HashMap<String, NeuIcon>,
     pub leveling: Leveling,
     pub pets: PetConstants,
     pub hotm: Option<TreeLayout>,
@@ -379,6 +390,8 @@ impl NeuData {
         let items_dir = dir.join("items");
         let entries = std::fs::read_dir(&items_dir).with_context(|| format!("listing {}", items_dir.display()))?;
         let minion_re = regex::Regex::new(r"^(.+)_GENERATOR_(\d+)$").unwrap();
+        // SkullOwner:{…Properties:{textures:[0:{Name:"textures",Signature:"…",Value:"<base64>"}]}}
+        let texture_re = regex::Regex::new(r#"textures:\[0:\{[^}]*?Value:"([A-Za-z0-9+/=]{20,})""#).unwrap();
         let product_re = regex::Regex::new(r"(?:generating and \w+|generating|harvesting|chopping|mining|killing|fishing for|catching|gathering)\s+(.+?)!").unwrap();
         for entry in entries.flatten() {
             let path = entry.path();
@@ -391,6 +404,18 @@ impl NeuData {
             let id = neu.normalize_id(internal);
             if let Some(name) = item.get("displayname").and_then(Value::as_str) {
                 neu.display_names.insert(id.clone(), strip_formatting(name));
+            }
+            if let Some(itemid) = item.get("itemid").and_then(Value::as_str) {
+                let nbt = item.get("nbttag").and_then(Value::as_str).unwrap_or_default();
+                neu.icons.insert(
+                    id.clone(),
+                    NeuIcon {
+                        itemid: itemid.to_string(),
+                        damage: item.get("damage").and_then(Value::as_u64).unwrap_or(0).min(u32::MAX as u64) as u32,
+                        texture: texture_re.captures(nbt).map(|c| c[1].to_string()),
+                        glint: nbt.contains("ench:["),
+                    },
+                );
             }
             if let Some(url) = item.get("info").and_then(Value::as_array).and_then(|a| a.iter().filter_map(Value::as_str).find(|u| u.contains("hypixelskyblock.minecraft.wiki"))) {
                 neu.wiki_urls.insert(id.clone(), url.to_string());

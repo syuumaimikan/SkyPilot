@@ -14,6 +14,7 @@ public final class SkyPilotConfig {
 	public Hud hud = new Hud();
 	public Translation translation = new Translation();
 	public Session session = new Session();
+	public Market market = new Market();
 	/** Adds a SkyPilot price line to SkyBlock item tooltips (display only). */
 	public boolean priceTooltip = true;
 
@@ -41,6 +42,15 @@ public final class SkyPilotConfig {
 		public boolean clickToTranslate = false;
 	}
 
+	/** Market features in game. Display only: SkyPilot never buys, sells or clicks for you. */
+	public static final class Market {
+		/** Flip panel beside Hypixel's Auction House / Bazaar windows. */
+		public boolean containerPanel = false;
+		/** Toast + chat line for new AH flips matching your alert rules (polls your SkyPilot server). */
+		public boolean alerts = false;
+		public boolean alertSound = true;
+	}
+
 	public static final class Session {
 		public boolean enabled = true;
 		/** Upload session statistics to the linked SkyPilot account when a session ends. */
@@ -60,6 +70,7 @@ public final class SkyPilotConfig {
 		if (hud == null) hud = new Hud();
 		if (translation == null) translation = new Translation();
 		if (session == null) session = new Session();
+		if (market == null) market = new Market();
 		if (translation.mode == null) translation.mode = TranslationModeSetting.OFF;
 		hud.scale = clamp(hud.scale, 0.5, 2.5);
 		hud.opacity = clamp(hud.opacity, 0.0, 1.0);

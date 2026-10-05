@@ -9,6 +9,7 @@ pub mod calendar;
 pub mod curated;
 pub mod farms;
 pub mod hypixel;
+pub mod icons;
 pub mod neu;
 #[cfg(feature = "sync")]
 pub mod sync;
@@ -131,6 +132,9 @@ impl Registry {
                         museum_donation_xp: None,
                         museum_category: None,
                         color: None,
+                        durability: 0,
+                        skin: None,
+                        glowing: false,
                         neu_only: true,
                     },
                 );
@@ -157,6 +161,27 @@ impl Registry {
 
     pub fn item(&self, id: &str) -> Option<&ItemDef> {
         self.items.get(id)
+    }
+
+    /// How the mod's GUI draws an item: Hypixel items resource first (material, skin,
+    /// colour, glint), then NEU (pets, books, runes), else paper. `id` may be a price key.
+    pub fn icon(&self, id: &str) -> icons::IconSpec {
+        let market = id.split('|').next().unwrap_or(id);
+        if let Some(d) = self.items.get(market).filter(|d| !d.neu_only) {
+            if let Some(m) = &d.material {
+                return icons::IconSpec {
+                    item: icons::modern_id(m, d.durability),
+                    texture: d.skin.clone(),
+                    color: d.color.as_deref().and_then(icons::parse_rgb),
+                    glint: d.glowing,
+                };
+            }
+        }
+        if let Some(n) = self.neu.icons.get(market) {
+            return icons::IconSpec { item: icons::modern_id(&n.itemid, n.damage), texture: n.texture.clone(), color: None, glint: n.glint };
+        }
+        let item = if market.starts_with("ENCHANTMENT_") { "minecraft:enchanted_book" } else { "minecraft:paper" };
+        icons::IconSpec { item: item.into(), texture: None, color: None, glint: false }
     }
 
     /// Display name for any market id (items, pets, books).

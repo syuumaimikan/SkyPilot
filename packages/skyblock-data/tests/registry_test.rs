@@ -147,3 +147,25 @@ fn farm_designs_are_consistent() {
         assert!(!crops.is_empty());
     }
 }
+
+#[test]
+fn item_icons_for_the_mod_gui() {
+    let r = registry();
+    let lapis = r.icon("LAPIS_ARMOR_LEGGINGS");
+    assert_eq!(lapis.item, "minecraft:leather_leggings");
+    assert_eq!(lapis.color, Some(0x0000FF));
+    let book = r.icon("ENCHANTED_DIAMOND");
+    assert_eq!(book.item, "minecraft:diamond");
+    assert!(book.glint);
+    assert_eq!(r.icon("HYPERION|recomb|s5").item, "minecraft:iron_sword", "price keys resolve to their item");
+    // player heads carry their texture (Hypixel items resource: SKULL_ITEM + skin.value)
+    let head = r.items.values().find(|d| d.material.as_deref() == Some("SKULL_ITEM") && d.skin.is_some()).expect("a textured head");
+    let icon = r.icon(&head.id);
+    assert_eq!(icon.item, "minecraft:player_head");
+    assert!(icon.texture.as_deref().is_some_and(|t| t.len() > 40));
+    // pets come from NEU (ENDER_DRAGON;4 = legendary)
+    let pet = r.icon("PET:ENDER_DRAGON:LEGENDARY");
+    assert_eq!(pet.item, "minecraft:player_head");
+    assert!(pet.texture.is_some());
+    assert_eq!(r.icon("NOT_AN_ITEM").item, "minecraft:paper");
+}

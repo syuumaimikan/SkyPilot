@@ -91,6 +91,25 @@ class LiveApiIT {
 
 			Dto.TranslationDictionary dict = api.dictionary().join();
 			assertFalse(dict.protectedTerms().isEmpty());
+
+			// In-game GUI endpoints, parsed from the real server's JSON.
+			Dto.MarketPanel ah = api.market("ah", 10, "ja").join();
+			assertEquals("AH", ah.kind());
+			for (Dto.FlipRow r : ah.rows()) {
+				assertNotNull(r.icon().item());
+				assertTrue(r.command().startsWith("/viewauction "));
+			}
+			Dto.MarketPanel bz = api.market("bazaar", 10, "ja").join();
+			assertEquals("BAZAAR", bz.kind());
+			bz.rows().forEach(r -> assertTrue(r.icon().item().startsWith("minecraft:")));
+			java.util.Map<String, Dto.ItemIcon> icons = api.icons(java.util.List.of("HYPERION", "LAPIS_ARMOR_LEGGINGS", "PET:ENDER_DRAGON:LEGENDARY")).join();
+			assertEquals("minecraft:iron_sword", icons.get("HYPERION").item());
+			assertEquals(255, icons.get("LAPIS_ARMOR_LEGGINGS").color());
+			assertNotNull(icons.get("PET:ENDER_DRAGON:LEGENDARY").texture());
+			Dto.Plan plan = api.plan("ja").join();
+			assertNotNull(plan.message(), "a fresh account has no analysis yet");
+			Dto.Alerts alerts = api.alerts(System.currentTimeMillis() - 60_000, "ja").join();
+			assertFalse(alerts.rules().isEmpty(), "default rule when the player has none");
 		} finally {
 			sched.shutdownNow();
 			transport.close();

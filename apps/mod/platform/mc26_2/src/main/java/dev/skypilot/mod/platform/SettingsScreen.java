@@ -62,9 +62,8 @@ final class SettingsScreen extends Screen {
 		toggle(left, row, colW, onOff(l, l.t("Session tracking", "セッション記録"), c.session.enabled), b -> c.session.enabled = !c.session.enabled);
 		toggle(right, row, colW, onOff(l, l.t("Upload sessions", "セッション送信"), c.session.upload), b -> c.session.upload = !c.session.upload);
 		row += 24;
-		toggle(left, row, W, Component.literal(l.t("Chat translation: ", "チャット翻訳: ") + c.translation.mode), b -> cycleTranslation(c));
-		row += 24;
-		toggle(left, row, W, onOff(l, l.t("Click to translate ([→JA] button)", "クリック翻訳（[訳]ボタン）"), c.translation.clickToTranslate), b -> {
+		toggle(left, row, colW, Component.literal(l.t("Translate: ", "翻訳: ") + c.translation.mode), b -> cycleTranslation(c));
+		toggle(right, row, colW, onOff(l, l.t("Click to translate", "クリック翻訳"), c.translation.clickToTranslate), b -> {
 			if (!c.translation.clickToTranslate && !c.translation.disclosureAccepted) {
 				afterAgree = () -> c.translation.clickToTranslate = true;
 				showDisclosure = true;
@@ -72,6 +71,12 @@ final class SettingsScreen extends Screen {
 			}
 			c.translation.clickToTranslate = !c.translation.clickToTranslate;
 		});
+		row += 24;
+		toggle(left, row, colW, onOff(l, l.t("Flip alerts", "フリップ通知"), c.market.alerts), b -> c.market.alerts = !c.market.alerts);
+		toggle(right, row, colW, onOff(l, l.t("AH/BZ panel", "AH・バザー横パネル"), c.market.containerPanel), b -> c.market.containerPanel = !c.market.containerPanel);
+		row += 24;
+		addRenderableWidget(Button.builder(Component.literal(l.t("SkyPilot menu (J)…", "SkyPilotメニュー（J）…")), b -> minecraft.gui.setScreen(new MenuScreen(this, null)))
+				.bounds(left, row, W, 20).build());
 		row += 24;
 		addRenderableWidget(Button.builder(Component.literal(l.t("Move / resize HUD…", "HUDの位置・サイズ…")), b -> minecraft.gui.setScreen(new HudEditorScreen(this)))
 				.bounds(left, row, colW, 20).build());

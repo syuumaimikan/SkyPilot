@@ -51,6 +51,17 @@ final class Commands {
 		for (String panel : PANELS) root.then(literal(panel).executes(c -> panel(panel)));
 		root.then(literal("price").executes(c -> priceHeld()));
 		root.then(literal("settings").executes(c -> openLater(() -> new SettingsScreen(null))));
+		root.then(literal("menu").executes(c -> openLater(() -> new MenuScreen(null, null)))
+				.then(argument("tab", StringArgumentType.word())
+						.suggests((c, b) -> {
+							for (MenuScreen.Tab t : MenuScreen.Tab.values()) b.suggest(t.name().toLowerCase(Locale.ROOT));
+							return b.buildFuture();
+						})
+						.executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.parse(StringArgumentType.getString(c, "tab")))))));
+		root.then(literal("flips").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.AH))));
+		root.then(literal("guide").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.GUIDE))));
+		root.then(literal("alerts").then(literal("on").executes(c -> setAlerts(true))).then(literal("off").executes(c -> setAlerts(false))));
+		root.then(literal("panel").then(literal("on").executes(c -> setPanel(true))).then(literal("off").executes(c -> setPanel(false))));
 		root.then(literal("hud")
 				.then(literal("edit").executes(c -> openLater(() -> new HudEditorScreen(null))))
 				.then(literal("on").executes(c -> setHud(true)))
@@ -101,6 +112,10 @@ final class Commands {
 		MccLang.info("SkyPilot - information only; it never plays, moves, clicks, buys or sells for you.", "SkyPilot は情報表示専用です。プレイ・移動・クリック・売買を代行することはありません。");
 		String[][] rows = {
 				{"/skypilot link", l.t("link this client to your SkyPilot workspace", "このクライアントをSkyPilotと連携")},
+				{"/skypilot menu [now|roadmap|guide|ah|bazaar|alerts]", l.t("SkyPilot menu (default key: J)", "SkyPilotメニュー（初期キー: J）")},
+				{"/skypilot flips | guide", l.t("menu: AH flips / guide for this area", "メニュー: AHフリップ / 現在地のガイド")},
+				{"/skypilot alerts on | off", l.t("flip alerts (toast + chat)", "フリップ通知（トースト+チャット）")},
+				{"/skypilot panel on | off", l.t("flip panel beside the AH / Bazaar windows", "AH・バザー画面横のフリップパネル")},
 				{"/skypilot goal | next | roadmap", l.t("your goal, next actions, roadmap", "目標・次の行動・ロードマップ")},
 				{"/skypilot market | mining | slayer | farming", l.t("advisor panels", "アドバイザー")},
 				{"/skypilot price", l.t("price of the held item", "手に持っているアイテムの価格")},
@@ -255,6 +270,26 @@ final class Commands {
 		sp.config().translation.disclosureAccepted = true;
 		sp.saveConfig();
 		MccLang.info("Thanks. Choose a mode with /skypilot translate mode <npc_only|party|guild|auto>.", "同意しました。/skypilot translate mode <npc_only|party|guild|auto> でモードを選んでください。");
+		return 1;
+	}
+
+	private static int setAlerts(boolean on) {
+		SkyPilot sp = SkyPilot.get();
+		sp.config().market.alerts = on;
+		sp.saveConfig();
+		if (on && !sp.linked()) {
+			MccLang.info("Flip alerts: on (they start once this client is linked - /skypilot link).", "フリップ通知: オン（連携後に開始します - /skypilot link）。");
+		} else {
+			MccLang.info(on ? "Flip alerts: on." : "Flip alerts: off.", on ? "フリップ通知: オン。" : "フリップ通知: オフ。");
+		}
+		return 1;
+	}
+
+	private static int setPanel(boolean on) {
+		SkyPilot sp = SkyPilot.get();
+		sp.config().market.containerPanel = on;
+		sp.saveConfig();
+		MccLang.info(on ? "AH / Bazaar panel: on." : "AH / Bazaar panel: off.", on ? "AH・バザー横パネル: オン。" : "AH・バザー横パネル: オフ。");
 		return 1;
 	}
 

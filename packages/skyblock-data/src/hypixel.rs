@@ -103,6 +103,12 @@ pub struct ItemDef {
     pub museum_category: Option<String>,
     /// Default leather colour as "r:g:b" (the resource's `color`, e.g. "0,0,255").
     pub color: Option<String>,
+    /// 1.8 data value of `material` (e.g. 3 for a player head).
+    pub durability: u32,
+    /// Player-head texture (`skin.value`, base64).
+    pub skin: Option<String>,
+    /// Shown with the enchantment glint.
+    pub glowing: bool,
     /// Item exists in NEU but not in the Hypixel items resource.
     pub neu_only: bool,
 }
@@ -142,6 +148,9 @@ impl ItemDef {
             museum_donation_xp: v.get("museum_data").and_then(|m| m.get("donation_xp")).and_then(Value::as_f64),
             museum_category: v.get("museum_data").and_then(|m| m.get("category")).and_then(Value::as_str).map(str::to_string),
             color: v.get("color").and_then(Value::as_str).and_then(skypilot_items::fingerprint::normalize_color),
+            durability: v.get("durability").and_then(Value::as_u64).map(|d| d.min(u32::MAX as u64) as u32).unwrap_or(0),
+            skin: v.get("skin").and_then(|s| s.get("value")).and_then(Value::as_str).map(str::to_string),
+            glowing: v.get("glowing").and_then(Value::as_bool).unwrap_or(false),
             neu_only: false,
             id,
         })

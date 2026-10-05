@@ -105,6 +105,16 @@ async function main() {
   ok("mod market panel", Array.isArray(panel.json?.lines) && panel.json.lines.length > 0);
   const modPrice = await req("POST", "/api/mod/price", { skyblockId: "ENCHANTED_DIAMOND", customData: { id: "ENCHANTED_DIAMOND" } }, bearer);
   ok("mod price check", modPrice.json?.skyblockId === "ENCHANTED_DIAMOND" && modPrice.json?.bazaarBuy > 0);
+  const ahPanel = await req("GET", "/api/mod/market?kind=ah&limit=10&lang=ja");
+  ok("mod AH flips (public)", ahPanel.json?.kind === "AH" && Array.isArray(ahPanel.json?.rows) && ahPanel.json.rows.every((r) => r.icon?.item && r.command?.startsWith("/viewauction ")));
+  const bzPanel = await req("GET", "/api/mod/market?kind=bazaar&limit=10&lang=ja");
+  ok("mod Bazaar flips (public)", bzPanel.json?.kind === "BAZAAR" && Array.isArray(bzPanel.json?.rows));
+  const icons = await req("GET", "/api/mod/icons?ids=HYPERION,LAPIS_ARMOR_LEGGINGS,PET:ENDER_DRAGON:LEGENDARY");
+  ok("mod item icons", icons.json?.HYPERION?.item === "minecraft:iron_sword" && icons.json?.LAPIS_ARMOR_LEGGINGS?.color === 255 && !!icons.json?.["PET:ENDER_DRAGON:LEGENDARY"]?.texture);
+  const modPlan = await req("GET", "/api/mod/plan?lang=ja", undefined, bearer);
+  ok("mod plan", modPlan.status === 200 && Array.isArray(modPlan.json?.actions));
+  const modAlerts = await req("GET", `/api/mod/alerts?since=${Date.now() - 60000}&lang=ja`, undefined, bearer);
+  ok("mod flip alerts", modAlerts.status === 200 && Array.isArray(modAlerts.json?.rows) && modAlerts.json.rules.length > 0);
   const bad = await req("GET", "/api/mod/hud", undefined, { Authorization: "Bearer spm_" + "0".repeat(64) });
   ok("invalid token rejected", bad.status === 401);
   const tr = await req("POST", "/api/translate", { text: "good luck", sourceLang: "en", targetLang: "ja", channel: "PARTY" }, bearer);

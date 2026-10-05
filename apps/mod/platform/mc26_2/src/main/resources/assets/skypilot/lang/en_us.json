@@ -1,5 +1,6 @@
 {
-  "key.category.skypilot.main": "SkyPilot",
-  "key.skypilot.settings": "Open SkyPilot settings",
-  "key.skypilot.edit_hud": "Move / resize SkyPilot HUD"
+	"key.category.skypilot.main": "SkyPilot",
+	"key.skypilot.settings": "Open SkyPilot settings",
+	"key.skypilot.edit_hud": "Move / resize SkyPilot HUD",
+	"key.skypilot.menu": "Open SkyPilot menu"
 }

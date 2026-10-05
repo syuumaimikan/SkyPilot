@@ -39,4 +39,51 @@ public final class Dto {
 
 	public record TranslationDictionary(String version, List<String> protectedTerms, List<DictionaryEntry> phrases) {
 	}
+
+	// ---------------------------------------------------------------- in-game GUI
+
+	/** Vanilla item id plus head texture / leather colour / glint used to draw a SkyBlock item. */
+	public record ItemIcon(String item, String texture, Integer color, boolean glint) {
+	}
+
+	/** An AH or Bazaar flip. {@code command} is only ever put into the chat box, never sent. */
+	public record FlipRow(String id, String kind, String itemId, String name, String rarity, List<String> modifiers, double buy, double sell, double profit,
+			double roi, Double profitPerHour, Double amount, double confidence, String confidenceLabel, String risk, String sellTime, boolean doNotFlip,
+			List<String> notes, String command, ItemIcon icon) {
+	}
+
+	public record MarketPanel(String kind, String title, List<FlipRow> rows, long ageSeconds, boolean stale, String note) {
+	}
+
+	public record Alerts(long nowMs, List<FlipRow> rows, List<String> rules) {
+	}
+
+	public record ItemRef(String itemId, String name, Double price, ItemIcon icon) {
+	}
+
+	public record PlanAction(String title, String category, String why, List<String> steps, List<HudLine> metrics, double confidence, Double cost, Double hours,
+			List<ItemRef> items) {
+	}
+
+	public record PlanStep(String title, String detail, String status, double progress, Double cost, Double hours) {
+	}
+
+	public record PlanGoal(String title, double progress, Double remainingCost, Double remainingHours, List<PlanStep> steps) {
+	}
+
+	public record Plan(String profile, long analyzedAtMs, List<PlanGoal> goals, List<PlanAction> actions, List<String> warnings, String message) {
+	}
+
+	/** Advisor report (same JSON as the web); table cells stay generic ({@code kind} + fields). */
+	public record Metric(String label, Double before, Double after, Double value, String unit, String text) {
+	}
+
+	public record ReportTable(List<String> columns, List<List<com.google.gson.JsonObject>> rows) {
+	}
+
+	public record ReportSection(String id, String title, String description, List<Metric> metrics, ReportTable table, List<String> bullets, List<String> notes) {
+	}
+
+	public record Report(String domain, String title, List<Metric> summary, List<ReportSection> sections, List<String> unknowns) {
+	}
 }

@@ -33,17 +33,23 @@ public final class SkyPilotClient implements ClientModInitializer {
 
 		KeyMapping openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.settings", InputConstants.UNKNOWN.getValue(), CATEGORY));
 		KeyMapping editHud = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.edit_hud", InputConstants.UNKNOWN.getValue(), CATEGORY));
+		KeyMapping openMenu = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.menu", InputConstants.KEY_J, CATEGORY));
 
 		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD, Identifier.fromNamespaceAndPath("skypilot", "hud"), HudRenderer::render);
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> Commands.register(dispatcher));
 		ClientReceiveMessageEvents.MODIFY_GAME.register(ClickTranslate::decorate);
 		ClientReceiveMessageEvents.GAME.register(ChatHook::onGameMessage);
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, flag, lines) -> PriceCheck.tooltip(stack, lines));
+		ContainerPanel.register();
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (openSettings.consumeClick()) mc.gui.setScreen(new SettingsScreen(null));
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
-			if (++ticks % 20 == 0) SkyPilot.get().tickSecond(mc);
+			while (openMenu.consumeClick()) mc.gui.setScreen(new MenuScreen(null, null));
+			if (++ticks % 20 == 0) {
+				SkyPilot.get().tickSecond(mc);
+				FlipAlerts.tickSecond(mc);
+			}
 		});
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SkyPilot.get().refreshHud(System.currentTimeMillis(), true));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {

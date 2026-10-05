@@ -95,6 +95,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/price", post(modapi::price))
         .route("/mod/text/{kind}", get(modapi::text))
         .route("/mod/session", post(modapi::session))
+        .route("/mod/market", get(modapi::market))
+        .route("/mod/plan", get(modapi::plan))
+        .route("/mod/alerts", get(modapi::alerts))
+        .route("/mod/icons", get(modapi::icons))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
     let origin: HeaderValue = state.config.public_web_url.trim_end_matches('/').parse().unwrap_or(HeaderValue::from_static("http://localhost:3000"));

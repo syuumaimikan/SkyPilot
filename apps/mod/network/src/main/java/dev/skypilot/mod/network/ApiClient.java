@@ -141,7 +141,52 @@ public final class ApiClient {
 		return request("POST", "/api/device/token", GSON.toJson(body), false).thenApply(r -> parse(r, Dto.DeviceTokenResponse.class));
 	}
 
+	/** AH ({@code "ah"}) or Bazaar ({@code "bazaar"}) flips - public market data, no account needed. */
+	public CompletableFuture<Dto.MarketPanel> market(String kind, int limit, String lang) {
+		return getPublic("/api/mod/market?kind=" + enc(kind) + "&limit=" + limit + "&lang=" + enc(lang), Dto.MarketPanel.class, 20_000);
+	}
+
+	public CompletableFuture<Dto.Plan> plan(String lang) {
+		return getCached("/api/mod/plan?lang=" + enc(lang), Dto.Plan.class, 30_000);
+	}
+
+	/** Advisor report, e.g. {@code mining}, {@code slayer}, {@code farming} (same as the web). */
+	public CompletableFuture<Dto.Report> report(String domain, String lang) {
+		return getCached("/api/advisor/report/" + enc(domain) + "?lang=" + enc(lang), Dto.Report.class, 60_000);
+	}
+
+	/** New flips matching the player's alert rules since {@code sinceMs} (not cached). */
+	public CompletableFuture<Dto.Alerts> alerts(long sinceMs, String lang) {
+		return request("GET", "/api/mod/alerts?since=" + sinceMs + "&lang=" + enc(lang), null, true).thenApply(r -> parse(r, Dto.Alerts.class));
+	}
+
+	/** Icons for up to 64 item ids. */
+	public CompletableFuture<Map<String, Dto.ItemIcon>> icons(java.util.Collection<String> ids) {
+		String joined = String.join(",", ids);
+		return request("GET", "/api/mod/icons?ids=" + enc(joined), null, false).thenApply(r -> {
+			try {
+				Map<String, Dto.ItemIcon> out = new HashMap<>();
+				JsonObject o = JsonParser.parseString(r.body()).getAsJsonObject();
+				for (Map.Entry<String, JsonElement> e : o.entrySet()) out.put(e.getKey(), GSON.fromJson(e.getValue(), Dto.ItemIcon.class));
+				return out;
+			} catch (RuntimeException e) {
+				throw new ApiException(r.status(), "DECODE", "unexpected response from SkyPilot server");
+			}
+		});
+	}
+
 	// ---------------------------------------------------------------- plumbing
+
+	private <T> CompletableFuture<T> getPublic(String path, Class<T> type, long ttlMillis) {
+		long now = clock.getAsLong();
+		CacheEntry hit = cache.get(path);
+		if (hit != null && hit.expiresAt > now) return CompletableFuture.completedFuture(type.cast(hit.value));
+		return request("GET", path, null, false).thenApply(r -> {
+			T v = parse(r, type);
+			cache.put(path, new CacheEntry(clock.getAsLong() + ttlMillis, v));
+			return v;
+		});
+	}
 
 	private <T> CompletableFuture<T> getCached(String path, Class<T> type, long ttlMillis) {
 		long now = clock.getAsLong();

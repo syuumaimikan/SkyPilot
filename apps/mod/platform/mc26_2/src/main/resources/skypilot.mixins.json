@@ -3,7 +3,8 @@
 	"package": "dev.skypilot.mod.platform.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"ChatComponentAccessor"
+		"ChatComponentAccessor",
+		"ContainerScreenAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
