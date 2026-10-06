@@ -42,6 +42,11 @@ public final class Instance {
 		}
 	}
 
+	/** Save the mod's settings (the mod reads them when the game starts). */
+	public static void saveConfig(Path instance, SkyPilotConfig c) throws IOException {
+		new ConfigStore(configDir(instance)).save(c);
+	}
+
 	public static void setServer(Path instance, String url) throws IOException {
 		if (!validServerUrl(url)) throw new IOException("the server URL must use https (http only for localhost)");
 		ConfigStore store = new ConfigStore(configDir(instance));

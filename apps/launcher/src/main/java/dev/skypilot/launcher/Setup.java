@@ -61,7 +61,7 @@ public final class Setup {
 		progress.accept(l.t("Adding the profile to the official launcher…", "公式ランチャーにプロファイルを追加中…"));
 		Files.createDirectories(s.instance());
 		String icon = iconDataUri();
-		for (Path f : profileFiles) LauncherProfiles.upsert(f, pins.versionId(), s.instance(), s.memoryMb, icon);
+		for (Path f : profileFiles) LauncherProfiles.upsert(f, pins.versionId(), s.instance(), s.profileOptions(), icon);
 		progress.accept(l.t("Done. Start the official launcher, pick \"" + LauncherProfiles.NAME + "\" and press Play.",
 				"完了しました。公式ランチャーで「" + LauncherProfiles.NAME + "」を選んでプレイを押してください。"));
 	}

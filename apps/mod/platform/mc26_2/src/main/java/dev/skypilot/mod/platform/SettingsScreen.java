@@ -381,6 +381,8 @@ final class SettingsScreen extends Screen {
 		}
 		addRenderableWidget(Button.builder(Component.literal(l.t("Mods…", "MOD管理…")), b -> minecraft.gui.setScreen(new ModManagerScreen(this)))
 				.bounds(x, y + ROW, colW, 20).build());
+		addRenderableWidget(Button.builder(Component.literal(l.t("Performance…", "軽量化…")), b -> minecraft.gui.setScreen(new PerformanceScreen(this)))
+				.bounds(x, y + ROW * 2, colW, 20).build());
 		addRenderableWidget(Button.builder(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
 			if (sp.api() != null) sp.api().clearCache();
 			sp.translator().clearCache();
@@ -393,7 +395,7 @@ final class SettingsScreen extends Screen {
 			lastPage = page;
 			rebuildWidgets();
 		}).bounds(right, y + ROW, colW, 20).build());
-		y += ROW * 2 + 4;
+		y += ROW * 3 + 4;
 		String status = (sp.linked() ? l.t("Linked", "連携済み") : l.t("Not linked", "未連携")) + " · " + c.apiBaseUrl;
 		labels.add(new Label(status, x, y, sp.linked() ? 0xFF55FF55 : 0xFFAAAAAA, false, 0));
 		y += 12;

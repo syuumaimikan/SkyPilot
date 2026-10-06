@@ -118,6 +118,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/money", get(modfit::money))
         .route("/mod/puzzles", get(modfit::puzzles))
         .route("/mod/skyblock", get(modfit::skyblock_now))
+        .route("/mod/news", get(modfit::news))
         .route("/mod/mod-updates", post(modlist::mod_updates))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 

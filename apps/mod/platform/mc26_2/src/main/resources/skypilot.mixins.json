@@ -3,8 +3,12 @@
 	"package": "dev.skypilot.mod.platform.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"BlockBreakParticlesMixin",
 		"ChatComponentAccessor",
 		"ContainerScreenAccessor",
+		"EntityRenderMixin",
+		"FramerateLimitMixin",
+		"ParticleEngineMixin",
 		"PlayerTabOverlayAccessor",
 		"SlotRenderMixin"
 	],

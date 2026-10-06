@@ -130,6 +130,13 @@ public final class Dto {
 	public record FireSale(String itemId, String name, long startMs, long endMs, Long amount, Long price) {
 	}
 
+	/** One SkyBlock patch-notes post (link to hypixel.net). */
+	public record NewsItem(String title, String date, String link) {
+	}
+
+	public record News(List<NewsItem> items, String source) {
+	}
+
 	/** Current mayor / minister and fire sales (Hypixel resources, via the SkyPilot server). */
 	public record SkyblockNow(Mayor mayor, Mayor minister, Integer year, List<FireSale> fireSales) {
 	}

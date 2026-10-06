@@ -939,6 +939,81 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				ModManagerScreen.setFilter(ModManagerScreen.Filter.MODS);
 			});
 
+			// Performance features: through the real render, particle and frame-rate hooks.
+			ctx.runOnClient(mc -> {
+				var cfg = SkyPilot.get().config();
+				var p = mc.player;
+				var splash = new net.minecraft.world.entity.decoration.ArmorStand(mc.level, p.getX() + 2, p.getY(), p.getZ());
+				splash.setCustomName(Component.literal("§f✧§e1,234§f✧"));
+				var label = new net.minecraft.world.entity.decoration.ArmorStand(mc.level, p.getX() + 2, p.getY(), p.getZ() + 1);
+				label.setCustomName(Component.literal("§c[Lv10] Zombie §a100/100❤"));
+				var far = new net.minecraft.world.entity.decoration.ArmorStand(mc.level, p.getX() + 100, p.getY(), p.getZ());
+				// entities in a level always have an id (hashCode uses it)
+				splash.setId(-9001);
+				label.setId(-9002);
+				far.setId(-9003);
+				var frustum = new net.minecraft.client.renderer.culling.Frustum(new org.joml.Matrix4f(), new org.joml.Matrix4f());
+				var dispatcher = mc.getEntityRenderDispatcher();
+				dev.skypilot.mod.core.Features.disableAll(cfg, dev.skypilot.mod.core.Features.Category.PERFORMANCE);
+				Performance.tick(mc);
+				check(!Performance.hide(splash, p.getX(), p.getEyeY(), p.getZ()) && !Performance.hide(far, p.getX(), p.getEyeY(), p.getZ()), "nothing is hidden while the switches are off");
+				check(mc.particleEngine.createParticle(net.minecraft.core.particles.ParticleTypes.CRIT, p.getX(), p.getY() + 1, p.getZ(), 0, 0, 0) != null, "particles are created while off");
+				for (var f : List.of(dev.skypilot.mod.core.Features.PERF_DAMAGE_SPLASH, dev.skypilot.mod.core.Features.PERF_FAR_ENTITIES, dev.skypilot.mod.core.Features.PERF_HIT_PARTICLES,
+						dev.skypilot.mod.core.Features.PERF_MENU_FPS, dev.skypilot.mod.core.Features.PERF_HUD_MEMORY, dev.skypilot.mod.core.Features.PERF_HUD_COUNTS)) {
+					dev.skypilot.mod.core.Features.set(cfg, f, true);
+				}
+				cfg.perf.menuFps = 20;
+				Performance.tick(mc);
+				check(!dispatcher.shouldRender(splash, frustum, p.getX(), p.getEyeY(), p.getZ()), "damage number left out by the render hook");
+				check(!Performance.hide(label, p.getX(), p.getEyeY(), p.getZ()), "mob name labels stay");
+				check(Performance.hide(far, p.getX(), p.getEyeY(), p.getZ()), "far entity left out");
+				check(!Performance.hide(p, p.getX(), p.getEyeY(), p.getZ()), "the player is never hidden");
+				check(mc.particleEngine.createParticle(net.minecraft.core.particles.ParticleTypes.CRIT, p.getX(), p.getY() + 1, p.getZ(), 0, 0, 0) == null, "crit particles skipped by the particle hook");
+				check(mc.particleEngine.createParticle(net.minecraft.core.particles.ParticleTypes.FLAME, p.getX(), p.getY() + 1, p.getZ(), 0, 0, 0) != null, "other particles still created");
+			});
+			// Lightweight video settings: lowered on request, the player's own values come back.
+			ctx.runOnClient(mc -> {
+				var cfg = SkyPilot.get().config();
+				mc.options.renderDistance().set(12);
+				mc.options.entityShadows().set(true);
+				mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.FANCY);
+				int lighter = VideoPreset.pending(mc.options);
+				check(lighter >= 3, "preset has something to lower (" + lighter + ")");
+				VideoPreset.apply(mc, cfg);
+				check(mc.options.renderDistance().get() == 8 && !mc.options.entityShadows().get() && mc.options.cloudStatus().get() == net.minecraft.client.CloudStatus.OFF,
+						"video options lowered");
+				check(cfg.perf.videoBackup != null && "12".equals(cfg.perf.videoBackup.get("renderDistance")), "own values kept");
+				VideoPreset.apply(mc, cfg);
+				check("12".equals(cfg.perf.videoBackup.get("renderDistance")), "applying twice keeps the first values");
+				VideoPreset.restore(mc, cfg);
+				check(mc.options.renderDistance().get() == 12 && mc.options.entityShadows().get() && mc.options.cloudStatus().get() == net.minecraft.client.CloudStatus.FANCY,
+						"own values restored");
+				check(cfg.perf.videoBackup == null, "backup cleared after restore");
+				VideoPreset.apply(mc, cfg);
+			});
+			PerformanceScreen.showVideo(false);
+			ctx.setScreen(() -> new PerformanceScreen(null));
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc -> {
+				int limit = mc.getFramerateLimitTracker().getFramerateLimit();
+				check(limit <= 20, "menu FPS limit applied through the frame-rate hook (" + limit + ")");
+			});
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-performance"));
+			PerformanceScreen.showVideo(true);
+			ctx.setScreen(() -> new PerformanceScreen(null));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-performance-video"));
+			ctx.setScreen(() -> null);
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-performance-hud"));
+			ctx.runOnClient(mc -> {
+				var cfg = SkyPilot.get().config();
+				VideoPreset.restore(mc, cfg);
+				cfg.perf.menuFps = 60;
+				dev.skypilot.mod.core.Features.disableAll(cfg, dev.skypilot.mod.core.Features.Category.PERFORMANCE);
+				Performance.tick(mc);
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

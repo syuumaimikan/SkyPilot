@@ -236,6 +236,11 @@ public final class ApiClient {
 		return getCached("/api/mod/money?lang=" + enc(lang), Dto.Money.class, 60_000);
 	}
 
+	/** SkyBlock patch notes (public, cached 30 minutes). */
+	public CompletableFuture<Dto.News> news() {
+		return getPublic("/api/mod/news", Dto.News.class, 1_800_000);
+	}
+
 	/** Mayor, minister and fire sales (public, cached 5 minutes). */
 	public CompletableFuture<Dto.SkyblockNow> skyblockNow() {
 		return getPublic("/api/mod/skyblock", Dto.SkyblockNow.class, 300_000);

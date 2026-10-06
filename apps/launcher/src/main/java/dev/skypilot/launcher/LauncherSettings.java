@@ -18,6 +18,24 @@ public final class LauncherSettings {
 	public int memoryMb = 4096;
 	/** "auto", "en" or "ja". */
 	public String language = "auto";
+	/** "dark" or "light". */
+	public String theme = "dark";
+	/** Extra Java tuning flags for the profile (checked by {@link JvmArgs}). */
+	public String extraJvmArgs = "";
+	/** Game window size in the profile; 0 = the official launcher's default. */
+	public int width;
+	public int height;
+	/** Close the launcher after handing over to the official launcher. */
+	public boolean closeAfterPlay;
+	/** Optional public Minecraft name, only for the head picture in the sidebar. */
+	public String playerName = "";
+	/** Window placement (0 = centred default). */
+	public int windowX, windowY, windowW, windowH;
+	public String lastPage = "home";
+
+	public LauncherProfiles.Options profileOptions() {
+		return new LauncherProfiles.Options(memoryMb, JvmArgs.problems(extraJvmArgs).isEmpty() ? JvmArgs.clean(extraJvmArgs) : "", width, height);
+	}
 
 	public Path minecraft() {
 		return minecraftDir == null || minecraftDir.isBlank() ? Env.minecraftDir() : Path.of(minecraftDir);
@@ -34,6 +52,21 @@ public final class LauncherSettings {
 	public LauncherSettings sanitize() {
 		memoryMb = Math.max(2048, Math.min(32768, memoryMb));
 		if (language == null || !(language.equals("en") || language.equals("ja") || language.equals("auto"))) language = "auto";
+		if (theme == null || !(theme.equals("dark") || theme.equals("light"))) theme = "dark";
+		if (extraJvmArgs == null) extraJvmArgs = "";
+		extraJvmArgs = JvmArgs.clean(extraJvmArgs);
+		if (width < 0 || width > 7680 || height < 0 || height > 4320 || (width == 0) != (height == 0)) {
+			width = 0;
+			height = 0;
+		}
+		if (width > 0 && (width < 640 || height < 360)) {
+			width = 0;
+			height = 0;
+		}
+		if (playerName == null || !(playerName.isEmpty() || Avatar.validName(playerName))) playerName = "";
+		if (lastPage == null || !lastPage.matches("[a-z]{2,16}")) lastPage = "home";
+		windowW = Math.max(0, Math.min(windowW, 10_000));
+		windowH = Math.max(0, Math.min(windowH, 10_000));
 		return this;
 	}
 

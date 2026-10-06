@@ -11,6 +11,7 @@ evaluationDependsOn(':platform:mc26_2')
 
 dependencies {
 	implementation project(':core')
+	implementation project(':network')
 	implementation "com.google.code.gson:gson:${gson_version}"
 	implementation "com.formdev:flatlaf:${flatlaf_version}"
 
@@ -73,7 +74,7 @@ tasks.register('launcherJar', Jar) {
 	description = 'Builds a single runnable launcher jar.'
 	archiveBaseName = 'skypilot-launcher'
 	archiveClassifier = 'all'
-	manifest { attributes 'Main-Class': application.mainClass.get() }
+	manifest { attributes 'Main-Class': application.mainClass.get(), 'Implementation-Title': 'SkyPilot Launcher', 'Implementation-Version': project.version }
 	from sourceSets.main.output
 	dependsOn configurations.runtimeClasspath
 	from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } } {
@@ -107,7 +108,7 @@ tasks.register('jpackageImage', Exec) {
 		// Modules from `jdeps --print-module-deps` (+ jdk.charsets for console output on Windows).
 		args '--type', 'app-image', '--name', 'SkyPilot Launcher', '--app-version', appVersion,
 				'--input', inputDir.absolutePath, '--main-jar', jarName.get(), '--main-class', mainCls.get(),
-				'--add-modules', 'java.base,java.desktop,java.net.http,java.sql,jdk.charsets',
+				'--add-modules', 'java.base,java.desktop,java.net.http,java.sql,jdk.charsets,jdk.management',
 				'--dest', destDir.absolutePath,
 				'--vendor', 'SkyPilot', '--description', 'Sets up SkyPilot for the official Minecraft Launcher'
 	}

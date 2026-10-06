@@ -434,6 +434,26 @@ pub struct ModSkyblockNow {
     pub fire_sales: Vec<ModFireSale>,
 }
 
+/// One SkyBlock patch-notes post (Hypixel's public news resource).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModNewsItem {
+    pub title: String,
+    /// As Hypixel writes it, e.g. "1st September 2026".
+    pub date: String,
+    /// https://hypixel.net/threads/… only.
+    pub link: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModNews {
+    pub items: Vec<ModNewsItem>,
+    pub source: String,
+}
+
 // ---------------------------------------------------------------- other mods: update check
 
 /// Latest Modrinth version for one mod file (by SHA-1). Information only - nothing is downloaded.

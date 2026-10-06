@@ -28,13 +28,20 @@ final class InfoHud {
 	private InfoHud() {
 	}
 
+	private static List<HudRow> cachedRows;
+	private static long cachedAt;
+
 	static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
 		SkyPilot sp = SkyPilot.get();
 		Minecraft mc = Minecraft.getInstance();
 		if (sp == null || mc.player == null || mc.gui.screen() instanceof HudEditorScreen) return;
 		lowHealth(g, mc);
 		if (Feat.on(Features.HUD_COMPASS)) compass(g, mc);
-		List<HudRow> rows = rows(sp, mc, System.currentTimeMillis());
+		long now = System.currentTimeMillis();
+		// Lite mode: rebuild the lines 4 times a second instead of every frame.
+		List<HudRow> rows = Performance.lite() && cachedRows != null && now - cachedAt < 250 ? cachedRows : rows(sp, mc, now);
+		cachedRows = rows;
+		cachedAt = now;
 		if (!rows.isEmpty()) draw(g, rows, sp.config().infoHud, HudRenderer.lastBox, g.guiWidth(), g.guiHeight(), false);
 	}
 
@@ -59,6 +66,14 @@ final class InfoHud {
 		if (Feat.on(Features.HUD_FPS)) {
 			PlayerInfo me = mc.getConnection() == null ? null : mc.getConnection().getPlayerInfo(mc.player.getUUID());
 			out.add(HudRow.text(mc.getFps() + " FPS" + (me != null ? "  " + me.getLatency() + " ms" : ""), HudRow.MUTED));
+		}
+		if (Feat.on(Features.PERF_HUD_MEMORY)) {
+			Runtime rt = Runtime.getRuntime();
+			long used = rt.totalMemory() - rt.freeMemory();
+			out.add(HudRow.text(dev.skypilot.mod.core.PerfRules.memory(used, rt.maxMemory()), used > rt.maxMemory() * 0.85 ? HudRow.BAD : HudRow.MUTED));
+		}
+		if (Feat.on(Features.PERF_HUD_COUNTS) && mc.level != null) {
+			out.add(HudRow.text(l.t("Entities ", "エンティティ ") + mc.level.getEntityCount() + "  " + l.t("Particles ", "パーティクル ") + dev.skypilot.mod.core.PerfRules.particleTotal(mc.particleEngine.countParticles()), HudRow.MUTED));
 		}
 		if (Feat.on(Features.HUD_CLOCK)) {
 			LocalTime t = LocalTime.now();

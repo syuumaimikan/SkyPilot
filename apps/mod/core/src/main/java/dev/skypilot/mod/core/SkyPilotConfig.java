@@ -32,6 +32,18 @@ public final class SkyPilotConfig {
 	public java.util.List<Todo> todos = new java.util.ArrayList<>();
 	/** Items worth at least this much are outlined (inventory.valuable_highlight). */
 	public double valuableThreshold = 1_000_000;
+	/** Numbers for the performance features and the saved video settings. */
+	public Performance perf = new Performance();
+
+	public static final class Performance {
+		public int backgroundFps = 15;
+		public int menuFps = 60;
+		public int entityDistance = 48;
+		public int playerDistance = 32;
+		public int particlesPerTick = 150;
+		/** The player's own video settings before "lightweight video settings" (null = not applied). */
+		public java.util.Map<String, String> videoBackup;
+	}
 
 	public static final class Todo {
 		public String text;
@@ -180,6 +192,16 @@ public final class SkyPilotConfig {
 		todos.removeIf(t -> t == null || t.text == null || t.text.isBlank() || t.text.length() > 80);
 		while (todos.size() > 30) todos.remove(todos.size() - 1);
 		if (!(valuableThreshold > 0) || Double.isInfinite(valuableThreshold)) valuableThreshold = 1_000_000;
+		if (perf == null) perf = new Performance();
+		perf.backgroundFps = (int) clamp(perf.backgroundFps, 5, 60);
+		perf.menuFps = (int) clamp(perf.menuFps, 15, 240);
+		perf.entityDistance = (int) clamp(perf.entityDistance, 8, 128);
+		perf.playerDistance = (int) clamp(perf.playerDistance, 4, 128);
+		perf.particlesPerTick = (int) clamp(perf.particlesPerTick, 20, 2000);
+		if (perf.videoBackup != null) {
+			perf.videoBackup.entrySet().removeIf(e -> e.getKey() == null || e.getValue() == null || e.getKey().length() > 40 || e.getValue().length() > 40);
+			if (perf.videoBackup.isEmpty()) perf.videoBackup = null;
+		}
 		if (translation.mode == null) translation.mode = TranslationModeSetting.OFF;
 		hud.scale = clamp(hud.scale, 0.5, 2.5);
 		hud.opacity = clamp(hud.opacity, 0.0, 1.0);

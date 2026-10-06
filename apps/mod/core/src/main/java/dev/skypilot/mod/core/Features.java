@@ -21,7 +21,7 @@ public final class Features {
 	public enum Category {
 		CHAT("Chat", "チャット"), TOOLTIP("Tooltips", "説明欄"), INVENTORY("Inventory", "インベントリ"), HUD("HUD", "HUD"), MINING("Mining", "採掘"),
 		FARMING("Farming", "農業"), FISHING("Fishing", "釣り"), COMBAT("Combat", "戦闘"), DUNGEONS("Dungeons", "ダンジョン"), RIFT("Rift", "リフト"),
-		GUIDES("Guides", "ガイド"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール");
+		GUIDES("Guides", "ガイド"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール"), PERFORMANCE("Performance", "軽量化");
 
 		public final String en;
 		public final String ja;
@@ -343,6 +343,42 @@ public final class Features {
 			"Coins and XP gained this session (kept on this computer).", "このセッションのコインとXPを記録（このPCのみ）。", "");
 	public static final Feature TOOLS_SESSION_UPLOAD = f("tools.session_upload", Category.TOOLS, "Upload sessions", "セッション送信",
 			"Sends finished session statistics to your linked SkyPilot account.", "終了したセッション統計を連携中のSkyPilotへ送信します。", "n");
+
+	// ---------------------------------------------------------------- performance
+	// Drawing less is a client-side display choice: hidden entities still exist and react to
+	// clicks and hits exactly as before; nothing the player does is cancelled.
+	public static final Feature PERF_BACKGROUND_FPS = f("perf.background_fps", Category.PERFORMANCE, "Background FPS limit", "非アクティブ時のFPS制限",
+			"While the game window is not focused, frames are capped (default 15 FPS; /skypilot perf).", "ゲーム画面が選択されていない間はFPSを抑えます（既定 15 FPS、/skypilot perf で変更）。", "r");
+	public static final Feature PERF_MENU_FPS = f("perf.menu_fps", Category.PERFORMANCE, "Menu FPS limit", "メニュー表示中のFPS制限",
+			"While a menu or inventory is open in a world, frames are capped (default 60 FPS).", "ワールド内でメニューやインベントリを開いている間はFPSを抑えます（既定 60 FPS）。", "r");
+	public static final Feature PERF_FAR_ENTITIES = f("perf.hide_far_entities", Category.PERFORMANCE, "Hide far mobs and items", "遠くのモブ・アイテムを描画しない",
+			"Mobs, items, armor stands and other entities (not players) farther than the set distance (default 48 blocks) are not drawn. They are still there and react as usual.",
+			"設定距離（既定 48 ブロック）より遠いモブ・アイテム・防具立てなど（プレイヤー以外）を描画しません。存在や当たり判定はそのままです。", "");
+	public static final Feature PERF_FAR_PLAYERS = f("perf.hide_far_players", Category.PERFORMANCE, "Hide far players", "遠くのプレイヤーを描画しない",
+			"Other players farther than the set distance (default 32 blocks) are not drawn. Useful in busy hubs.", "設定距離（既定 32 ブロック）より遠い他のプレイヤーを描画しません。混雑したハブで効果的です。", "");
+	public static final Feature PERF_DAMAGE_SPLASH = f("perf.hide_damage_splash", Category.PERFORMANCE, "Hide damage numbers", "ダメージ数値を描画しない",
+			"The floating damage numbers (✧1,234✧ and similar) are not drawn.", "攻撃時に浮かぶダメージ数値（✧1,234✧ など）を描画しません。", "");
+	public static final Feature PERF_FALLING_BLOCKS = f("perf.hide_falling_blocks", Category.PERFORMANCE, "Hide falling blocks", "落下ブロックを描画しない",
+			"Falling sand, gravel and other falling-block entities are not drawn.", "落下中の砂・砂利などのブロックを描画しません。", "");
+	public static final Feature PERF_FIREWORKS = f("perf.hide_fireworks", Category.PERFORMANCE, "Hide fireworks", "花火を描画しない",
+			"Firework rockets and their sparks and flashes are not drawn.", "花火のロケットと火花・閃光を描画しません。", "");
+	public static final Feature PERF_LIGHTNING = f("perf.hide_lightning", Category.PERFORMANCE, "Hide lightning bolts", "雷を描画しない",
+			"Lightning bolts are not drawn (Minecraft's own \"Hide Lightning Flashes\" option removes the sky flash).", "雷の稲妻を描画しません（空の光はMinecraft標準の「雷の閃光を非表示」で消せます）。", "");
+	public static final Feature PERF_EXPLOSIONS = f("perf.hide_explosions", Category.PERFORMANCE, "Hide explosion particles", "爆発パーティクルを描画しない",
+			"Explosion clouds are not drawn.", "爆発の煙を描画しません。", "");
+	public static final Feature PERF_HIT_PARTICLES = f("perf.hide_hit_particles", Category.PERFORMANCE, "Hide hit particles", "攻撃パーティクルを描画しない",
+			"Critical-hit, enchanted-hit, damage, sweep and heart particles are not drawn.", "クリティカル・エンチャント・ダメージ・なぎ払い・ハートのパーティクルを描画しません。", "");
+	public static final Feature PERF_BREAK_PARTICLES = f("perf.hide_break_particles", Category.PERFORMANCE, "Hide block break particles", "ブロック破壊パーティクルを描画しない",
+			"The crumbs when blocks are mined or broken are not drawn (mining still works as usual).", "ブロックを掘る・壊すときの破片を描画しません（採掘自体はそのままです）。", "");
+	public static final Feature PERF_PARTICLE_CAP = f("perf.particle_cap", Category.PERFORMANCE, "Particle limit", "パーティクル数の制限",
+			"At most the set number of new particles per tick (default 150); the rest are skipped.", "1ティックに新しく出るパーティクルを設定数（既定 150）までにします。", "");
+	public static final Feature PERF_LITE = f("perf.lite_mode", Category.PERFORMANCE, "SkyPilot lite mode", "SkyPilot軽量モード",
+			"SkyPilot itself works less: the info HUD is rebuilt 4 times a second instead of every frame and movement tracking runs every 5 ticks.",
+			"SkyPilot自身の処理を減らします。情報HUDの更新を毎フレームから1秒4回に、移動の記録を5ティックごとにします。", "");
+	public static final Feature PERF_HUD_MEMORY = f("perf.hud_memory", Category.PERFORMANCE, "Memory on the info HUD", "メモリ使用量をHUDに表示",
+			"Shows the game's memory use, e.g. \"RAM 1.8 / 4.0 GB\".", "ゲームのメモリ使用量（例: RAM 1.8 / 4.0 GB）を表示します。", "");
+	public static final Feature PERF_HUD_COUNTS = f("perf.hud_counts", Category.PERFORMANCE, "Entities and particles on the info HUD", "エンティティ数・パーティクル数をHUDに表示",
+			"Shows how many entities and particles the client is handling right now.", "今処理しているエンティティとパーティクルの数を表示します。", "");
 
 	private Features() {
 	}

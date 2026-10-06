@@ -39,6 +39,18 @@ final class ToolCommands {
 			mc.execute(() -> mc.gui.setScreen(new ModManagerScreen(null)));
 			return 1;
 		}));
+		root.then(literal("perf").executes(c -> {
+			Minecraft mc = Minecraft.getInstance();
+			mc.execute(() -> mc.gui.setScreen(new PerformanceScreen(null)));
+			return 1;
+		}).then(literal("video").then(literal("apply").executes(c -> video(true))).then(literal("restore").executes(c -> video(false))))
+				.then(literal("off").executes(c -> {
+					SkyPilot sp = SkyPilot.get();
+					Features.disableAll(sp.config(), Features.Category.PERFORMANCE);
+					sp.saveConfig();
+					info("Every performance switch is off.", "軽量化のスイッチをすべてオフにしました。");
+					return 1;
+				})));
 		root.then(literal("features").executes(c -> open())
 				.then(literal("recommended").executes(c -> recommended())));
 		root.then(literal("feature").then(argument("id", StringArgumentType.word())
@@ -284,6 +296,19 @@ final class ToolCommands {
 	private static int open() {
 		Minecraft mc = Minecraft.getInstance();
 		mc.execute(() -> mc.gui.setScreen(new SettingsScreen(null, SettingsScreen.Page.FEATURES)));
+		return 1;
+	}
+
+	/** Lightweight video settings on / back (Minecraft's own options, changed only on this command). */
+	private static int video(boolean apply) {
+		Minecraft mc = Minecraft.getInstance();
+		mc.execute(() -> {
+			SkyPilot sp = SkyPilot.get();
+			int n = apply ? VideoPreset.apply(mc, sp.config()) : VideoPreset.restore(mc, sp.config());
+			sp.saveConfig();
+			if (apply) info(n + " video option(s) lowered. /skypilot perf video restore puts them back.", "ビデオ設定を " + n + " 項目下げました。/skypilot perf video restore で戻せます。");
+			else info(n + " video option(s) restored.", "ビデオ設定を " + n + " 項目元に戻しました。");
+		});
 		return 1;
 	}
 

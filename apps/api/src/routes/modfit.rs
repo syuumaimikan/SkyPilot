@@ -332,6 +332,54 @@ pub async fn skyblock_now(State(state): State<Arc<AppState>>) -> ApiResult<Json<
     }))
 }
 
+/// SkyBlock patch notes (Hypixel's public news resource, cached 30 minutes; links to hypixel.net only).
+pub async fn news(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModNews>> {
+    use std::sync::Mutex;
+    static NEWS: std::sync::OnceLock<Mutex<(i64, serde_json::Value)>> = std::sync::OnceLock::new();
+    let now = AppState::now_ms();
+    let cache = NEWS.get_or_init(|| Mutex::new((0, serde_json::Value::Null)));
+    let cached = {
+        let c = cache.lock().expect("news cache");
+        (now - c.0 < 1_800_000).then(|| c.1.clone())
+    };
+    let json = match cached {
+        Some(v) => v,
+        None => match state.hypixel.news().await {
+            Ok(v) => {
+                *cache.lock().expect("news cache") = (now, v.clone());
+                v
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "news not refreshed");
+                cache.lock().expect("news cache").1.clone()
+            }
+        },
+    };
+    Ok(Json(ModNews { items: parse_news(&json), source: "Hypixel".into() }))
+}
+
+pub fn parse_news(v: &serde_json::Value) -> Vec<ModNewsItem> {
+    v.get("items")
+        .and_then(|i| i.as_array())
+        .map(|list| {
+            list.iter()
+                .filter_map(|n| {
+                    let link = n.get("link")?.as_str()?;
+                    if !link.starts_with("https://hypixel.net/") {
+                        return None;
+                    }
+                    Some(ModNewsItem {
+                        title: n.get("title")?.as_str()?.chars().take(120).collect(),
+                        date: n.get("text").and_then(|t| t.as_str()).unwrap_or("").chars().take(40).collect(),
+                        link: link.to_string(),
+                    })
+                })
+                .take(20)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Dungeon puzzle rules (public, curated from the wiki).
 pub async fn puzzles(State(state): State<Arc<AppState>>, Query(q): Query<GuidesQuery>) -> ApiResult<Json<Vec<ModPuzzle>>> {
     let registry = state.registry();
@@ -343,4 +391,24 @@ pub async fn puzzles(State(state): State<Arc<AppState>>, Query(q): Query<GuidesQ
             .map(|d| ModPuzzle { name: d.name.clone(), floors: d.floors.clone(), rule: if ja { d.rule_ja.clone() } else { d.rule.clone() }, can_fail: d.can_fail, source: p.source.clone() })
             .collect(),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_hypixel_news_and_keeps_only_hypixel_links() {
+        let v = serde_json::json!({"success": true, "items": [
+            {"item": {"material": "INK_SACK", "data": 3}, "link": "https://hypixel.net/threads/6147732/", "text": "1st September 2026", "title": "SkyBlock v0.27.1"},
+            {"item": {"material": "GOLD_AXE"}, "link": "http://evil.example/x", "text": "x", "title": "bad link"},
+            {"link": "https://hypixel.net/threads/1/", "title": "No date"}
+        ]});
+        let n = parse_news(&v);
+        assert_eq!(n.len(), 2);
+        assert_eq!(n[0].title, "SkyBlock v0.27.1");
+        assert_eq!(n[0].date, "1st September 2026");
+        assert_eq!(n[1].date, "");
+        assert!(parse_news(&serde_json::Value::Null).is_empty());
+    }
 }
