@@ -134,6 +134,10 @@ async function main() {
   ok("bazaar price has the tax rate", modPrice.json?.bazaarTaxRate === 0.0125);
   const sb = await req("GET", "/api/mod/skyblock");
   ok("mayor and fire sales (Hypixel resources)", sb.status === 200 && Array.isArray(sb.json?.fireSales) && (sb.json.mayor === null || typeof sb.json.mayor.name === "string"), JSON.stringify(sb.json)?.slice(0, 200));
+  const badUpd = await req("POST", "/api/mod/mod-updates", { hashes: ["not-a-hash"], gameVersion: "26.2" }, bearer);
+  ok("mod update check validates input", badUpd.status === 400);
+  const upd = await req("POST", "/api/mod/mod-updates", { hashes: ["0".repeat(40)], gameVersion: "26.2" }, bearer);
+  ok("mod update check (Modrinth, unknown file)", upd.status === 200 && Array.isArray(upd.json?.updates) && upd.json.source === "Modrinth", `${upd.status}`);
   const puzzles = await req("GET", "/api/mod/puzzles?lang=ja");
   ok("dungeon puzzle rules (wiki)", puzzles.json?.length >= 10 && puzzles.json.some((p) => p.name === "Three Weirdos" && p.canFail));
   const sea = await req("GET", "/api/mod/sea-creatures");

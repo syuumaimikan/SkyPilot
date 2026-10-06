@@ -379,6 +379,8 @@ final class SettingsScreen extends Screen {
 				Commands.startLink();
 			}).bounds(x, y, colW, 20).build());
 		}
+		addRenderableWidget(Button.builder(Component.literal(l.t("Mods…", "MOD管理…")), b -> minecraft.gui.setScreen(new ModManagerScreen(this)))
+				.bounds(x, y + ROW, colW, 20).build());
 		addRenderableWidget(Button.builder(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
 			if (sp.api() != null) sp.api().clearCache();
 			sp.translator().clearCache();
@@ -386,7 +388,12 @@ final class SettingsScreen extends Screen {
 			urlMessage = l.t("Cached data cleared; it is fetched again when needed.", "キャッシュを消去しました。必要に応じて再取得します。");
 			rebuildWidgets();
 		}).bounds(right, y, colW, 20).build());
-		y += ROW + 4;
+		addRenderableWidget(Button.builder(Component.literal(l.t("Features…", "機能一覧…")), b -> {
+			page = Page.FEATURES;
+			lastPage = page;
+			rebuildWidgets();
+		}).bounds(right, y + ROW, colW, 20).build());
+		y += ROW * 2 + 4;
 		String status = (sp.linked() ? l.t("Linked", "連携済み") : l.t("Not linked", "未連携")) + " · " + c.apiBaseUrl;
 		labels.add(new Label(status, x, y, sp.linked() ? 0xFF55FF55 : 0xFFAAAAAA, false, 0));
 		y += 12;

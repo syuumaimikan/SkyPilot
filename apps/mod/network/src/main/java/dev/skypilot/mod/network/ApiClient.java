@@ -241,6 +241,16 @@ public final class ApiClient {
 		return getPublic("/api/mod/skyblock", Dto.SkyblockNow.class, 300_000);
 	}
 
+	/** Latest versions of the given mod files (SHA-1) on Modrinth, asked by the SkyPilot server. */
+	public CompletableFuture<Dto.ModUpdates> modUpdates(java.util.List<String> sha1s, String gameVersion) {
+		JsonObject body = new JsonObject();
+		com.google.gson.JsonArray hashes = new com.google.gson.JsonArray();
+		for (String h : sha1s) hashes.add(h);
+		body.add("hashes", hashes);
+		body.addProperty("gameVersion", gameVersion);
+		return request("POST", "/api/mod/mod-updates", GSON.toJson(body), true).thenApply(r -> parse(r, Dto.ModUpdates.class));
+	}
+
 	/** Dungeon puzzle rules (public, cached 1 hour). */
 	public CompletableFuture<Dto.Puzzle[]> puzzles(String lang) {
 		return getPublic("/api/mod/puzzles?lang=" + enc(lang), Dto.Puzzle[].class, 3_600_000);

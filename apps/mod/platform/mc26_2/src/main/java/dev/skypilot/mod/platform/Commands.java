@@ -161,6 +161,7 @@ final class Commands {
 				{"/skypilot hud edit | on | off", l.t("move / toggle the HUD", "HUDの移動・表示切替")},
 				{"/skypilot session [reset | upload on|off]", l.t("session statistics", "セッション統計")},
 				{"/skypilot settings", l.t("settings screen", "設定画面")},
+				{"/skypilot mods", l.t("manage your mods: details, settings, switch on/off, updates", "MOD管理: 詳細・設定・有効/無効・更新確認")},
 				{"/skypilot features [recommended]", l.t("turn features on / off (or the recommended set)", "機能のオン/オフ（おすすめを一括オン）")},
 				{"/skypilot feature <id> on | off", l.t("switch one feature", "機能を1つ切り替え")},
 				{"/skypilot calc <expression>", l.t("calculator with k / m / b", "電卓（k / m / b 対応）")},

@@ -129,6 +129,8 @@ export type { ModSkyblockNow } from "./generated/ModSkyblockNow";
 export type { ModSlayerFit } from "./generated/ModSlayerFit";
 export type { ModStack } from "./generated/ModStack";
 export type { ModTextResponse } from "./generated/ModTextResponse";
+export type { ModUpdate } from "./generated/ModUpdate";
+export type { ModUpdates } from "./generated/ModUpdates";
 export type { ModValue } from "./generated/ModValue";
 export type { ModValueItem } from "./generated/ModValueItem";
 export type { ModValues } from "./generated/ModValues";

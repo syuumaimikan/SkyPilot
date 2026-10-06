@@ -434,6 +434,34 @@ pub struct ModSkyblockNow {
     pub fire_sales: Vec<ModFireSale>,
 }
 
+// ---------------------------------------------------------------- other mods: update check
+
+/// Latest Modrinth version for one mod file (by SHA-1). Information only - nothing is downloaded.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModUpdate {
+    pub hash: String,
+    pub project_id: String,
+    pub version_id: String,
+    pub version_number: String,
+    pub name: String,
+    pub published: Option<String>,
+    /// The file the player has is the latest one.
+    pub up_to_date: bool,
+    /// Modrinth page of the latest version.
+    pub url: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModUpdates {
+    pub updates: Vec<ModUpdate>,
+    pub checked_at_ms: i64,
+    pub source: String,
+}
+
 // ---------------------------------------------------------------- dungeon puzzles
 
 /// What a dungeon puzzle asks for (curated from the wiki; general rules, not a solver).

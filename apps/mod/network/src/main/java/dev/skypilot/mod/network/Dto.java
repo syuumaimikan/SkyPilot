@@ -134,6 +134,13 @@ public final class Dto {
 	public record SkyblockNow(Mayor mayor, Mayor minister, Integer year, List<FireSale> fireSales) {
 	}
 
+	/** Latest Modrinth version of one mod file (by SHA-1); information only. */
+	public record ModUpdate(String hash, String projectId, String versionId, String versionNumber, String name, String published, boolean upToDate, String url) {
+	}
+
+	public record ModUpdates(List<ModUpdate> updates, long checkedAtMs, String source) {
+	}
+
 	/** A dungeon puzzle's general rules (wiki), never a solution. */
 	public record Puzzle(String name, String floors, String rule, boolean canFail, String source) {
 	}

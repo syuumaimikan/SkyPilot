@@ -881,6 +881,64 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				Timers.skyblock = null;
 			});
 
+			// ---------------------------------------------------------------- mod manager
+			ctx.runOnClient(mc -> {
+				try {
+					java.nio.file.Path dir = ModManager.modsDir();
+					java.nio.file.Files.createDirectories(dir);
+					java.nio.file.Path jar = dir.resolve("skypilot-test-mod.jar.disabled");
+					try (var zip = new java.util.zip.ZipOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+						zip.putNextEntry(new java.util.zip.ZipEntry("fabric.mod.json"));
+						zip.write("{\"schemaVersion\":1,\"id\":\"sp_test_mod\",\"name\":\"SkyPilot Test Mod\",\"version\":\"1.0.0\",\"description\":\"A switched-off mod for the test.\"}"
+								.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+						zip.closeEntry();
+					}
+				} catch (java.io.IOException e) {
+					throw new AssertionError(e);
+				}
+				List<ModManager.Entry> mods = ModManager.scan();
+				check(mods.stream().anyMatch(e -> e.id().equals("skypilot")), "SkyPilot itself is listed");
+				check(mods.stream().anyMatch(e -> e.id().equals("minecraft") && e.kind() == ModManager.Kind.BUILTIN), "Minecraft is built in");
+				ModManager.Entry off = mods.stream().filter(e -> e.id().equals("sp_test_mod")).findFirst().orElseThrow();
+				check(off.kind() == ModManager.Kind.DISABLED && off.toggleable(), "the .jar.disabled file is listed as disabled");
+				check(mods.stream().anyMatch(e -> !e.dependents().isEmpty()), "dependents are known (e.g. what needs fabric-api)");
+				// switch it on: renamed to .jar, listed as not loaded until a restart
+				check(ModManager.toggle(off) == null, "switched on");
+				check(java.nio.file.Files.exists(ModManager.modsDir().resolve("skypilot-test-mod.jar")), "file renamed to .jar");
+				ModManager.Entry on = ModManager.scan().stream().filter(e -> e.id().equals("sp_test_mod")).findFirst().orElseThrow();
+				check(on.kind() == ModManager.Kind.NOT_LOADED && ModManager.PENDING.contains(on.file()), "pending until restart");
+				check(ModManager.toggle(on) == null && java.nio.file.Files.exists(ModManager.modsDir().resolve("skypilot-test-mod.jar.disabled")), "switched back off");
+				check(ModManager.PENDING.isEmpty(), "back to the state the game started with");
+				check(ModManager.sha1(ModManager.modsDir().resolve("skypilot-test-mod.jar.disabled")).length() == 40, "file hash for the update check");
+				ModManagerScreen.setFilter(ModManagerScreen.Filter.ALL);
+			});
+			ctx.setScreen(() -> {
+				ModManagerScreen s = new ModManagerScreen(null);
+				return s;
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> ((ModManagerScreen) mc.gui.screen()).select("skypilot"));
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-mod-manager"));
+			ctx.runOnClient(mc -> ((ModManagerScreen) mc.gui.screen()).select("sp_test_mod"));
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				var enable = mc.gui.screen().children().stream().filter(w -> w instanceof net.minecraft.client.gui.components.Button b
+						&& (b.getMessage().getString().equals("Enable") || b.getMessage().getString().equals("有効にする"))).map(w -> (net.minecraft.client.gui.components.Button) w)
+						.findFirst().orElse(null);
+				check(enable != null && enable.active, "Enable button is usable for a disabled mod file: " + (enable == null ? "missing" : "inactive"));
+			});
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-mod-manager-disabled"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				try {
+					java.nio.file.Files.deleteIfExists(ModManager.modsDir().resolve("skypilot-test-mod.jar.disabled"));
+				} catch (java.io.IOException e) {
+					throw new AssertionError(e);
+				}
+				ModManagerScreen.setFilter(ModManagerScreen.Filter.MODS);
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

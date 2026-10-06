@@ -33,6 +33,10 @@ impl AppError {
     pub fn conflict(code: &'static str, message: impl Into<String>) -> Self {
         Self::new(StatusCode::CONFLICT, code, message)
     }
+    /// A service this server relies on (e.g. Modrinth) failed.
+    pub fn upstream(message: impl Into<String>) -> Self {
+        Self::new(StatusCode::BAD_GATEWAY, "UPSTREAM", message)
+    }
     pub fn too_many() -> Self {
         Self::new(StatusCode::TOO_MANY_REQUESTS, "RATE_LIMITED", "too many requests - please slow down")
     }

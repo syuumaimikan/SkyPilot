@@ -34,6 +34,11 @@ final class ToolCommands {
 	}
 
 	static void register(LiteralArgumentBuilder<FabricClientCommandSource> root) {
+		root.then(literal("mods").executes(c -> {
+			Minecraft mc = Minecraft.getInstance();
+			mc.execute(() -> mc.gui.setScreen(new ModManagerScreen(null)));
+			return 1;
+		}));
 		root.then(literal("features").executes(c -> open())
 				.then(literal("recommended").executes(c -> recommended())));
 		root.then(literal("feature").then(argument("id", StringArgumentType.word())

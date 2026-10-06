@@ -86,6 +86,22 @@ Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestC
   per user on the SkyPilot server (`/api/me/settings`); the key is never written to the config
   or shown again.
 
+## Other mods (`/skypilot mods`, Settings → General → Mods…)
+
+- Lists every mod Fabric Loader loaded (mod files, bundled libraries, built-ins) plus
+  `*.jar.disabled` files and jars that are not loaded, with name, version, authors, license,
+  description, file, what it needs and what needs it, and its icon.
+- **Settings** opens the mod's own config screen through Mod Menu's public API (the `modmenu`
+  entrypoint, called by reflection - no dependency on Mod Menu; mods without one have no button).
+- **Disable / Enable** renames the file in the mods folder (`x.jar` ↔ `x.jar.disabled`); it takes
+  effect after a restart. Disabling a mod others need asks for a second click and names them. If
+  the OS refuses the rename while the game runs, the screen says so (close the game and rename).
+- **Homepage / Source / Issues** open the mod's https links after Minecraft's link confirmation.
+- **Check updates** (feature `tools.mod_updates`, off by default): the SHA-1 of each mod file goes
+  to the SkyPilot server (`POST /api/mod/mod-updates`), which asks Modrinth
+  (`/v2/version_files/update`, cached 1 h, a 429 is not retried) and returns version info and a
+  Modrinth link. SkyPilot never downloads, installs or runs other mods' files.
+
 ## Feature switches
 
 Every optional feature has its own switch (`core/Features.java`, stored in `features` in the
