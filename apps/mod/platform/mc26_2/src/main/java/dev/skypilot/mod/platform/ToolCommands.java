@@ -51,6 +51,19 @@ final class ToolCommands {
 					info("Every performance switch is off.", "軽量化のスイッチをすべてオフにしました。");
 					return 1;
 				})));
+		root.then(literal("afk").executes(c -> afkStatus())
+				.then(literal("minutes").then(argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 30)).executes(c -> {
+					SkyPilot sp = SkyPilot.get();
+					sp.config().afk.minutes = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "n");
+					sp.saveConfig();
+					return afkStatus();
+				})))
+				.then(literal("fps").then(argument("n", com.mojang.brigadier.arguments.IntegerArgumentType.integer(5, 30)).executes(c -> {
+					SkyPilot sp = SkyPilot.get();
+					sp.config().afk.fps = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(c, "n");
+					sp.saveConfig();
+					return afkStatus();
+				}))));
 		root.then(literal("features").executes(c -> open())
 				.then(literal("recommended").executes(c -> recommended())));
 		root.then(literal("feature").then(argument("id", StringArgumentType.word())
@@ -300,6 +313,17 @@ final class ToolCommands {
 	}
 
 	/** Lightweight video settings on / back (Minecraft's own options, changed only on this command). */
+	private static int afkStatus() {
+		SkyPilot sp = SkyPilot.get();
+		SkyPilotConfig c = sp.config();
+		Lang l = sp.lang();
+		String state = !c.on(Features.AFK_DETECT) ? l.t("AFK detection is off (/skypilot features → AFK guard).", "放置の検知はオフです（/skypilot features →「AFKガード」）。")
+				: Afk.afk() ? l.t("You are AFK for ", "放置中: ") + Text.duration(Afk.awayMs()) : l.t("Active.", "操作中です。");
+		McText.info(state + l.t(" AFK after " + c.afk.minutes + " min · " + c.afk.fps + " FPS while AFK. Nothing is pressed or moved for you.",
+				" " + c.afk.minutes + " 分で放置扱い・放置中 " + c.afk.fps + " FPS。代わりに操作することはありません。"));
+		return 1;
+	}
+
 	private static int video(boolean apply) {
 		Minecraft mc = Minecraft.getInstance();
 		mc.execute(() -> {

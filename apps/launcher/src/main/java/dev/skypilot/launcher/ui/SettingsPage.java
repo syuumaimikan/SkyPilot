@@ -48,11 +48,18 @@ final class SettingsPage {
 	private final JTextField instDir = new JTextField();
 	private final JTextField server = new JTextField();
 	private final JLabel serverHint = Ui.muted(" ");
+	private final JComboBox<String> launchMode = new JComboBox<>();
+	private final JTextField clientId = new JTextField();
+	private final JLabel clientHint = Ui.muted(" ");
+	private final JLabel repairHint = Ui.muted(" ");
+	private final Widgets.Toggle autoUpdate;
+	private final JLabel updateHint = Ui.muted(" ");
 	private final long totalMb = SystemInfo.totalMemoryMb();
 
 	SettingsPage(Ctx c) {
 		this.c = c;
 		closeAfter = new Widgets.Toggle(c.settings.closeAfterPlay);
+		autoUpdate = new Widgets.Toggle(c.settings.autoUpdateCheck);
 		memory = new JSlider(2, 16, Math.max(2, Math.min(16, c.settings.memoryMb / 1024)));
 		root = build();
 	}
@@ -65,8 +72,8 @@ final class SettingsPage {
 		JPanel page = Ui.page();
 		JButton save = Widgets.primary(c.t("Save", "保存"), "check");
 		save.addActionListener(e -> save());
-		page.add(Ui.header(c.t("Settings", "設定"), c.t("Memory, window size and Java arguments go into the \"" + LauncherProfiles.NAME + "\" profile when you save.",
-				"メモリ・ウィンドウサイズ・Java引数は、保存すると「" + LauncherProfiles.NAME + "」プロファイルに反映されます。"), save), BorderLayout.NORTH);
+		page.add(Ui.header(c.t("Settings", "設定"), c.t("Memory, window size and Java arguments apply to the next start (and to the \"" + LauncherProfiles.NAME + "\" profile of the official launcher).",
+				"メモリ・ウィンドウサイズ・Java引数は次回の起動から使われます（公式ランチャーの「" + LauncherProfiles.NAME + "」プロファイルにも反映）。"), save), BorderLayout.NORTH);
 
 		Ui.ScrollBody body = new Ui.ScrollBody(null);
 		body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -86,6 +93,8 @@ final class SettingsPage {
 				row(c.t("Language", "言語"), lang),
 				row(c.t("Theme", "テーマ"), theme),
 				row(c.t("Close the launcher after Play", "プレイ後にランチャーを閉じる"), closeAfter))));
+
+		body.add(section("user", c.t("Account and launch", "アカウントと起動"), accountForm()));
 
 		memory.setMajorTickSpacing(2);
 		memory.setMinorTickSpacing(1);
@@ -166,6 +175,18 @@ final class SettingsPage {
 		srv.add(test, BorderLayout.EAST);
 		srv.add(serverHint, BorderLayout.SOUTH);
 		body.add(section("server", c.t("SkyPilot server", "SkyPilotサーバー"), form(row(c.t("Address", "アドレス"), srv))));
+		JButton checkUpdate = Widgets.button(c.t("Check now", "今すぐ確認"), "refresh");
+		checkUpdate.addActionListener(e -> UpdateUi.checkNow(c, t -> updateHint.setText(t)));
+		JPanel upd = new JPanel(new BorderLayout(8, 4));
+		upd.setOpaque(false);
+		upd.add(Ui.label(c.t("Version ", "バージョン ") + Net.versionName(), 13f, Font.BOLD, Theme.TEXT), BorderLayout.WEST);
+		upd.add(checkUpdate, BorderLayout.EAST);
+		upd.add(updateHint, BorderLayout.SOUTH);
+		updateHint.setText(c.t("Updates come from your SkyPilot server and are installed only when their signature checks out.",
+				"更新はSkyPilotサーバーから取得し、署名を確認できたものだけをインストールします。"));
+		body.add(section("download", c.t("Updates", "アップデート"), form(
+				row(c.t("This launcher", "このランチャー"), upd),
+				row(c.t("Check when the launcher starts", "起動時に確認する"), autoUpdate))));
 		body.add(Box.createVerticalStrut(10));
 		page.add(Ui.scroll(body), BorderLayout.CENTER);
 		return page;
@@ -190,6 +211,84 @@ final class SettingsPage {
 		List<String> p = JvmArgs.problems(args.getText());
 		argsHint.setText(p.isEmpty() ? c.t("Optional tuning flags (e.g. garbage collector). Memory is set above.", "任意の調整用フラグ（GCの種類など）。メモリは上で設定します。") : String.join("; ", p));
 		argsHint.setForeground(p.isEmpty() ? Theme.MUTED : Theme.BAD);
+	}
+
+	private JComponent accountForm() {
+		dev.skypilot.launcher.AccountStore.Saved a = dev.skypilot.launcher.Account.saved(c.launcherDir);
+		JPanel acct = new JPanel(new BorderLayout(10, 0));
+		acct.setOpaque(false);
+		acct.add(Ui.label(a == null ? c.t("Not signed in", "サインインしていません") : a.name() + c.t(" (Microsoft account)", "（Microsoft アカウント）"), 13f, Font.BOLD, Theme.TEXT), BorderLayout.WEST);
+		JButton sign = a == null ? Widgets.primary(c.t("Sign in with Microsoft", "Microsoft でサインイン"), "user") : Widgets.button(c.t("Sign out", "サインアウト"), "x");
+		sign.addActionListener(e -> {
+			if (a == null) {
+				SignInDialog.open(c, root, c.rebuild);
+				return;
+			}
+			try {
+				dev.skypilot.launcher.Account.signOut(c.launcherDir);
+				c.ok(c.t("Signed out", "サインアウトしました"), null);
+			} catch (Exception ex) {
+				c.fail(c.t("Could not sign out", "サインアウトできませんでした"), ex);
+			}
+			c.rebuild.run();
+		});
+		JPanel signBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+		signBox.setOpaque(false);
+		signBox.add(sign);
+		acct.add(signBox, BorderLayout.EAST);
+
+		launchMode.addItem(c.t("This launcher (Microsoft sign-in)", "このランチャー（Microsoft サインイン）"));
+		launchMode.addItem(c.t("Official Minecraft Launcher", "公式 Minecraft ランチャー"));
+		launchMode.setSelectedIndex("official".equals(c.settings.launchMode) ? 1 : 0);
+
+		clientId.setText(c.settings.msClientId);
+		clientId.putClientProperty("JTextField.placeholderText", "00000000-0000-0000-0000-000000000000");
+		clientHint.setText(c.t("Your Azure app's Application (client) ID, approved by Mojang for Minecraft. Without it PLAY uses the official launcher.",
+				"Mojang に Minecraft 用として承認された Azure アプリのアプリケーション（クライアント）ID。未設定ならプレイは公式ランチャーを使います。"));
+		JPanel idBox = new JPanel(new BorderLayout(8, 4));
+		idBox.setOpaque(false);
+		idBox.add(clientId, BorderLayout.CENTER);
+		JButton help = Widgets.link(c.t("How to get one", "取得方法"), "external");
+		help.addActionListener(e -> Ui.browse(SignInDialog.REGISTER_DOCS));
+		idBox.add(help, BorderLayout.EAST);
+		idBox.add(clientHint, BorderLayout.SOUTH);
+
+		JButton repair = Widgets.button(c.t("Check and repair game files", "ゲームファイルを確認・修復"), "wrench");
+		repair.addActionListener(e -> {
+			repair.setEnabled(false);
+			repairHint.setText(c.t("Checking every file (SHA-1)…", "すべてのファイルを確認中（SHA-1）…"));
+			c.async(() -> dev.skypilot.launcher.GameFiles.prepare(c.settings.minecraft(), c.launcherDir.resolve("runtime"), c.pins, true, new dev.skypilot.launcher.GameFiles.Progress() {
+				@Override
+				public void stage(String en, String ja) {
+					Ctx.later(() -> repairHint.setText(c.t(en, ja)));
+				}
+
+				@Override
+				public void count(long done, long total) {
+					Ctx.later(() -> repairHint.setText(done + " / " + total));
+				}
+			}, () -> false), p -> {
+				repair.setEnabled(true);
+				repairHint.setText(c.t("All game files are fine.", "ゲームファイルはすべて正常です。"));
+			}, ex -> {
+				repair.setEnabled(true);
+				repairHint.setText(c.t("Repair failed: ", "修復に失敗しました: ") + ex.getMessage());
+			});
+		});
+		JPanel repairBox = new JPanel(new BorderLayout(0, 4));
+		repairBox.setOpaque(false);
+		JPanel rb = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		rb.setOpaque(false);
+		rb.add(repair);
+		repairBox.add(rb, BorderLayout.CENTER);
+		repairHint.setText(c.t("Minecraft " + c.pins.minecraft() + ", Fabric, assets and Mojang's Java runtime (downloaded from Mojang and Fabric, SHA-1 checked).",
+				"Minecraft " + c.pins.minecraft() + "・Fabric・アセット・Mojang の Java ランタイム（Mojang と Fabric から取得、SHA-1 で確認）。"));
+		repairBox.add(repairHint, BorderLayout.SOUTH);
+		return form(
+				row(c.t("Account", "アカウント"), acct),
+				row(c.t("Start the game with", "ゲームの起動方法"), launchMode),
+				row(c.t("Microsoft client ID", "Microsoft クライアントID"), idBox),
+				row(c.t("Game files", "ゲームファイル"), repairBox));
 	}
 
 	private JComponent section(String icon, String title, JComponent body) {
@@ -283,6 +382,15 @@ final class SettingsPage {
 		};
 		c.settings.theme = theme.getSelectedIndex() == 1 ? "light" : "dark";
 		c.settings.closeAfterPlay = closeAfter.isOn();
+		c.settings.autoUpdateCheck = autoUpdate.isOn();
+		String id = clientId.getText().strip();
+		if (!id.isEmpty() && !dev.skypilot.launcher.MicrosoftAuth.validClientId(id)) {
+			c.toast("alert", Theme.BAD, c.t("Not saved", "保存していません"), c.t("The client ID looks like 00000000-0000-0000-0000-000000000000.", "クライアントIDは 00000000-0000-0000-0000-000000000000 の形式です。"));
+			return;
+		}
+		boolean accountChanged = !id.equals(c.settings.msClientId) || !c.settings.launchMode.equals(launchMode.getSelectedIndex() == 1 ? "official" : "direct");
+		c.settings.msClientId = id;
+		c.settings.launchMode = launchMode.getSelectedIndex() == 1 ? "official" : "direct";
 		c.settings.memoryMb = memory.getValue() * 1024;
 		c.settings.width = SIZES[size.getSelectedIndex()][0];
 		c.settings.height = SIZES[size.getSelectedIndex()][1];
@@ -301,6 +409,6 @@ final class SettingsPage {
 			c.fail(c.t("Could not save", "保存できませんでした"), e);
 			return;
 		}
-		if (!oldLang.equals(c.settings.language) || !oldTheme.equals(c.settings.theme)) c.rebuild.run();
+		if (!oldLang.equals(c.settings.language) || !oldTheme.equals(c.settings.theme) || accountChanged) c.rebuild.run();
 	}
 }

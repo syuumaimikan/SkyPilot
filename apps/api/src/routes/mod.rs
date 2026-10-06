@@ -1,6 +1,7 @@
 pub mod advisor;
 pub mod analyze;
 pub mod auth_routes;
+pub mod launcher;
 pub mod market;
 pub mod misc;
 pub mod modapi;
@@ -102,6 +103,9 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/text/{kind}", get(modapi::text))
         .route("/mod/session", post(modapi::session))
         .route("/mod/market", get(modapi::market))
+        .route("/mod/bazaar/quotes", get(modapi::bazaar_quotes))
+        .route("/launcher/latest", get(launcher::latest))
+        .route("/launcher/files/{name}", get(launcher::file))
         .route("/mod/plan", get(modapi::plan))
         .route("/mod/alerts", get(modapi::alerts))
         .route("/mod/icons", get(modapi::icons))

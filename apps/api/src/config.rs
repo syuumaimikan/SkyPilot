@@ -32,6 +32,8 @@ pub struct Config {
     pub web_push: bool,
     /// Development only: serve the anonymised fixture profile for the name "SampleUser".
     pub dev_sample_profile: bool,
+    /// Launcher update feed: installer + latest.json + latest.json.sig (from `gradlew :launcher:launcherRelease`).
+    pub launcher_releases_dir: PathBuf,
 }
 
 fn env(key: &str) -> Option<String> {
@@ -45,6 +47,7 @@ impl Config {
             None => skypilot_data::find_repo_root(&std::env::current_dir()?).ok_or_else(|| anyhow::anyhow!("cannot locate repository root; set SKYPILOT_ROOT"))?,
         };
         let public_web_url = env("PUBLIC_WEB_URL").unwrap_or_else(|| "http://localhost:3000".into());
+        let launcher_releases_dir = env("LAUNCHER_RELEASES_DIR").map(PathBuf::from).unwrap_or_else(|| root.join("data").join("launcher-releases"));
         Ok(Config {
             bind: env("API_BIND").unwrap_or_else(|| "0.0.0.0:8080".into()).parse()?,
             root,
@@ -65,6 +68,7 @@ impl Config {
             vapid_subject: env("VAPID_SUBJECT").unwrap_or_else(|| public_web_url.clone()),
             web_push: !env("WEB_PUSH").is_some_and(|v| v == "0" || v == "false"),
             dev_sample_profile: env("SKYPILOT_DEV_SAMPLE_PROFILE").is_some_and(|v| v == "1" || v == "true"),
+            launcher_releases_dir,
             public_web_url,
         })
     }

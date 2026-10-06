@@ -82,3 +82,42 @@ fn bazaar_list_contains_products_and_freshness() {
     assert_eq!(list.tax_rate, 0.0125);
     assert!(list.freshness.updated_at_ms > 0);
 }
+
+fn history(offer: f64, order: f64, n: usize) -> Vec<skypilot_pricing::state::BazaarPoint> {
+    (0..n)
+        .map(|i| skypilot_pricing::state::BazaarPoint {
+            ts_ms: i as i64 * 900_000,
+            buy: offer,
+            sell: order,
+            buy_volume: 1000.0,
+            sell_volume: 1000.0,
+            buy_moving_week: 100_000.0,
+            sell_moving_week: 100_000.0,
+        })
+        .collect()
+}
+
+#[test]
+fn pushed_offers_are_planned_at_the_usual_price() {
+    use skypilot_pricing::bazaar::price_check;
+    // normal book: planned as-is
+    let ok = price_check(100.0, 110.0, &history(110.0, 100.0, 40));
+    assert!(!ok.manipulated && ok.planned_sell == 110.0 && ok.notes.is_empty());
+    // offers pushed to 2x: flagged, planned at usual +5%
+    let pushed = price_check(100.0, 220.0, &history(110.0, 100.0, 40));
+    assert!(pushed.manipulated);
+    assert!((pushed.planned_sell - 115.5).abs() < 1e-9);
+    // buy orders collapsed: flagged
+    assert!(price_check(50.0, 110.0, &history(110.0, 100.0, 40)).manipulated);
+    // too little history: no judgement
+    assert!(!price_check(100.0, 220.0, &history(110.0, 100.0, 3)).manipulated);
+}
+
+#[test]
+fn flipper_upgrade_lowers_the_tax() {
+    let engine = MarketEngine::new(common::registry());
+    assert!((engine.bazaar_tax_for(0) - 0.0125).abs() < 1e-12);
+    assert!((engine.bazaar_tax_for(1) - 0.01125).abs() < 1e-12);
+    assert!((engine.bazaar_tax_for(2) - 0.01).abs() < 1e-12);
+    assert!((engine.bazaar_tax_for(9) - 0.01).abs() < 1e-12);
+}

@@ -90,6 +90,13 @@ impl MarketEngine {
         self.registry().curated.market.bazaar.tax_rate
     }
 
+    /// Bazaar tax after the Bazaar Flipper account upgrade (`level` 0..=max, clamped).
+    pub fn bazaar_tax_for(&self, flipper_level: u32) -> f64 {
+        let reg = self.registry();
+        let b = &reg.curated.market.bazaar;
+        (b.tax_rate - b.flipper_reduction_per_level * flipper_level.min(b.flipper_max_level) as f64).max(0.0)
+    }
+
     // ------------------------------------------------------------------ ingestion
 
     /// Normalise a full AH crawl (all pages) and replace active listings.
@@ -179,9 +186,14 @@ impl MarketEngine {
     }
 
     pub fn bazaar_list(&self, capital: f64) -> BazaarList {
+        self.bazaar_list_for(capital, 0)
+    }
+
+    /// Bazaar flips for a player with `flipper_level` levels of the Bazaar Flipper upgrade.
+    pub fn bazaar_list_for(&self, capital: f64, flipper_level: u32) -> BazaarList {
         let registry = self.registry();
         let names = |id: &str| registry.display_name(id);
-        let tax = self.bazaar_tax();
+        let tax = self.bazaar_tax_for(flipper_level);
         let st = self.state.read();
         let cfg = bazaar::BazaarFlipConfig { tax_rate: tax, capital: capital.max(1.0), ..Default::default() };
         let mut flips = bazaar::order_flips(&st, &cfg, &names);

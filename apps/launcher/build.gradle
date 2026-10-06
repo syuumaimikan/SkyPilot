@@ -2,8 +2,8 @@ plugins {
 	id 'application'
 }
 
-// SkyPilot Launcher: a desktop app that prepares a Fabric 26.2 "SkyPilot" profile for the
-// official Minecraft Launcher (which keeps doing the Microsoft sign-in and starts the game).
+// SkyPilot Launcher: a desktop app that installs SkyPilot (Fabric 26.2) and starts the game -
+// directly after a Microsoft sign-in, or through the official Minecraft Launcher's profile.
 // It bundles the SkyPilot mod jar built in this repository and pins Fabric API by SHA-512.
 
 // The mod's jar task must exist before this script looks it up.
@@ -22,6 +22,18 @@ dependencies {
 
 tasks.named('test') {
 	systemProperty 'java.awt.headless', 'true' // the page screenshots are painted without a window
+	jvmArgs '--enable-native-access=ALL-UNNAMED' // Windows Data Protection test
+	// LiveLaunchTest (downloads the game and starts it) runs only with -Dskypilot.liveLaunch=<empty folder>
+	systemProperty 'skypilot.liveLaunch', providers.systemProperty('skypilot.liveLaunch').getOrElse('')
+	testLogging.showStandardStreams = providers.systemProperty('skypilot.liveLaunch').isPresent()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs << '-Xlint:-restricted' // Dpapi uses the foreign function API on purpose
+}
+
+tasks.named('run', JavaExec) {
+	jvmArgs '--enable-native-access=ALL-UNNAMED'
 }
 
 application {
@@ -93,23 +105,142 @@ def jpackageInput = tasks.register('jpackageInput', Sync) {
 	from tasks.named('launcherJar')
 	into layout.buildDirectory.dir('jpackage-input')
 }
+// Windows icon (.ico with PNG images, Vista+) made from the mod's icon.
+def appIcon = tasks.register('appIcon') {
+	description = 'Writes the launcher icon (skypilot.ico) from the mod icon.'
+	inputs.file(modIcon)
+	def out = layout.buildDirectory.file('icons/skypilot.ico')
+	outputs.file(out)
+	doLast {
+		def src = javax.imageio.ImageIO.read(modIcon)
+		def sizes = [16, 24, 32, 48, 64, 128, 256]
+		def pngs = sizes.collect { int sz ->
+			def img = new java.awt.image.BufferedImage(sz, sz, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+			def g = img.createGraphics()
+			g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+			g.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY)
+			g.drawImage(src, 0, 0, sz, sz, null)
+			g.dispose()
+			def bos = new ByteArrayOutputStream()
+			javax.imageio.ImageIO.write(img, 'png', bos)
+			bos.toByteArray()
+		}
+		def bb = java.nio.ByteBuffer.allocate(6 + 16 * sizes.size() + pngs.sum { it.length }).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+		bb.putShort((short) 0).putShort((short) 1).putShort((short) sizes.size())
+		int offset = 6 + 16 * sizes.size()
+		sizes.eachWithIndex { int sz, int i ->
+			bb.put((byte) (sz >= 256 ? 0 : sz)).put((byte) (sz >= 256 ? 0 : sz)).put((byte) 0).put((byte) 0)
+			bb.putShort((short) 1).putShort((short) 32).putInt(pngs[i].length).putInt(offset)
+			offset += pngs[i].length
+		}
+		pngs.each { bb.put(it) }
+		def f = out.get().asFile
+		f.parentFile.mkdirs()
+		f.bytes = bb.array()
+	}
+}
+
+// Shared jpackage options. Modules from `jdeps --print-module-deps` (+ jdk.charsets for console
+// output on Windows); native access for Windows Data Protection (saved Microsoft sign-in).
+def jpackageCommon = { String jarName, String mainClass, File inputDir, File icon, String appVersion ->
+	['--name', 'SkyPilot Launcher', '--app-version', appVersion,
+	 '--input', inputDir.absolutePath, '--main-jar', jarName, '--main-class', mainClass,
+	 '--add-modules', 'java.base,java.desktop,java.net.http,java.sql,jdk.charsets,jdk.management',
+	 '--java-options', '--enable-native-access=ALL-UNNAMED',
+	 '--icon', icon.absolutePath,
+	 '--vendor', 'SkyPilot', '--description', 'SkyPilot Launcher for Hypixel SkyBlock (Minecraft 26.2, Fabric)']
+}
+
 tasks.register('jpackageImage', Exec) {
 	description = 'Builds a self-contained launcher app image with jpackage.'
-	dependsOn jpackageInput
+	dependsOn jpackageInput, appIcon
 	def inputDir = layout.buildDirectory.dir('jpackage-input').get().asFile
 	def jarName = tasks.named('launcherJar').flatMap { it.archiveFileName }
 	def destDir = layout.buildDirectory.dir('jpackage').get().asFile
+	def icon = layout.buildDirectory.file('icons/skypilot.ico').get().asFile
 	def appVersion = project.version.toString()
 	def mainCls = application.mainClass
 	doFirst {
 		destDir.deleteDir()
 		if (destDir.exists()) throw new GradleException("cannot delete ${destDir} - is SkyPilot Launcher.exe still running?")
 		executable jpackageExe.get()
-		// Modules from `jdeps --print-module-deps` (+ jdk.charsets for console output on Windows).
-		args '--type', 'app-image', '--name', 'SkyPilot Launcher', '--app-version', appVersion,
-				'--input', inputDir.absolutePath, '--main-jar', jarName.get(), '--main-class', mainCls.get(),
-				'--add-modules', 'java.base,java.desktop,java.net.http,java.sql,jdk.charsets,jdk.management',
-				'--dest', destDir.absolutePath,
-				'--vendor', 'SkyPilot', '--description', 'Sets up SkyPilot for the official Minecraft Launcher'
+		args jpackageCommon(jarName.get(), mainCls.get(), inputDir, icon, appVersion) + ['--type', 'app-image', '--dest', destDir.absolutePath]
 	}
 }
+
+// Windows installer (per user: no administrator rights; Start menu and desktop shortcuts).
+// Needs WiX Toolset 4/5 (`wix` on the PATH with the UI and Util extensions). The fixed upgrade
+// UUID lets a newer installer replace the installed version in place (used by the updater).
+tasks.register('jpackageInstaller', Exec) {
+	description = 'Builds the Windows installer (SkyPilot-Launcher-<version>.exe) with jpackage + WiX.'
+	dependsOn jpackageInput, appIcon
+	onlyIf { System.getProperty('os.name').toLowerCase().contains('win') }
+	def inputDir = layout.buildDirectory.dir('jpackage-input').get().asFile
+	def jarName = tasks.named('launcherJar').flatMap { it.archiveFileName }
+	def destDir = layout.buildDirectory.dir('installer').get().asFile
+	def icon = layout.buildDirectory.file('icons/skypilot.ico').get().asFile
+	def appVersion = project.version.toString()
+	def mainCls = application.mainClass
+	doFirst {
+		destDir.deleteDir()
+		executable jpackageExe.get()
+		args jpackageCommon(jarName.get(), mainCls.get(), inputDir, icon, appVersion) + ['--type', 'exe', '--dest', destDir.absolutePath,
+				'--win-per-user-install', '--win-menu', '--win-menu-group', 'SkyPilot', '--win-shortcut',
+				'--win-upgrade-uuid', '5b0a3c1e-6f3e-4d52-9a7e-2f1c8d4b7a61']
+	}
+	doLast {
+		def exe = destDir.listFiles().find { it.name.endsWith('.exe') }
+		if (exe == null) throw new GradleException('jpackage made no installer')
+		exe.renameTo(new File(destDir, "SkyPilot-Launcher-${appVersion}.exe"))
+	}
+}
+
+// Update feed for the SkyPilot server (LAUNCHER_RELEASES_DIR): the installer, latest.json and
+// its Ed25519 signature. The private key comes from SKYPILOT_UPDATE_KEY (base64 PKCS#8) and is
+// never stored in the repository; the launcher only installs updates whose signature matches
+// the public key in src/main/resources/update-key.pub.
+tasks.register('launcherRelease') {
+	description = 'Writes build/release: installer, latest.json and latest.json.sig.'
+	dependsOn 'jpackageInstaller'
+	def installerDir = layout.buildDirectory.dir('installer').get().asFile
+	def releaseDir = layout.buildDirectory.dir('release').get().asFile
+	def appVersion = project.version.toString()
+	doLast {
+		def key = System.getenv('SKYPILOT_UPDATE_KEY')
+		if (key == null || key.isBlank()) throw new GradleException('SKYPILOT_UPDATE_KEY is not set: updates must be signed')
+		releaseDir.deleteDir()
+		releaseDir.mkdirs()
+		def exe = new File(installerDir, "SkyPilot-Launcher-${appVersion}.exe")
+		def target = new File(releaseDir, exe.name)
+		target.bytes = exe.bytes
+		def md = java.security.MessageDigest.getInstance('SHA-256')
+		md.update(target.bytes)
+		def manifest = groovy.json.JsonOutput.toJson([version: appVersion, file: target.name, sha256: md.digest().encodeHex().toString(), size: target.length(),
+				publishedAt: java.time.Instant.now().toString()])
+		def priv = java.security.KeyFactory.getInstance('Ed25519').generatePrivate(new java.security.spec.PKCS8EncodedKeySpec(Base64.decoder.decode(key.strip())))
+		def sig = java.security.Signature.getInstance('Ed25519')
+		sig.initSign(priv)
+		sig.update(manifest.getBytes('UTF-8'))
+		new File(releaseDir, 'latest.json').setText(manifest, 'UTF-8')
+		new File(releaseDir, 'latest.json.sig').setText(Base64.encoder.encodeToString(sig.sign()), 'UTF-8')
+	}
+}
+
+// One-time: a new update-signing key pair. The private key goes to ~/.skypilot (keep it safe,
+// e.g. as the SKYPILOT_UPDATE_KEY secret); the public key goes into the launcher's resources.
+tasks.register('generateUpdateKey') {
+	description = 'Creates ~/.skypilot/launcher-update-key.txt and src/main/resources/update-key.pub.'
+	def pub = file('src/main/resources/update-key.pub')
+	doLast {
+		def home = new File(System.getProperty('user.home'), '.skypilot')
+		def privFile = new File(home, 'launcher-update-key.txt')
+		if (privFile.exists()) throw new GradleException("${privFile} already exists - not overwriting a signing key")
+		def kp = java.security.KeyPairGenerator.getInstance('Ed25519').generateKeyPair()
+		home.mkdirs()
+		privFile.text = Base64.encoder.encodeToString(kp.private.encoded) + '\n'
+		pub.parentFile.mkdirs()
+		pub.text = Base64.encoder.encodeToString(kp.public.encoded) + '\n'
+		println "private key: ${privFile} (not in the repository)"
+	}
+}
+

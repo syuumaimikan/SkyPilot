@@ -61,6 +61,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
 			while (openMenu.consumeClick()) mc.gui.setScreen(new MenuScreen(null, null));
 			Performance.tick(mc);
+			Afk.tick(mc);
 			FarmBuilder.tick(mc);
 			if (!Performance.lite() || ticks % 5 == 0) Activity.tick(mc);
 			if (++ticks % 20 == 0) {

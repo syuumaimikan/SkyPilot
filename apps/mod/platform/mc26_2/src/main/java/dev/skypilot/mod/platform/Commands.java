@@ -164,6 +164,7 @@ final class Commands {
 				{"/skypilot mods", l.t("manage your mods: details, settings, switch on/off, updates", "MOD管理: 詳細・設定・有効/無効・更新確認")},
 				{"/skypilot perf", l.t("performance: background/menu FPS limits, hide far entities and particles, lightweight video settings",
 						"軽量化: 非アクティブ時・メニュー中のFPS制限、遠くのエンティティやパーティクルの非表示、軽量ビデオ設定")},
+				{"/skypilot afk [minutes <1-30> | fps <5-30>]", l.t("AFK guard: status and settings (alerts while you are away, no anti-AFK)", "AFKガード: 状態と設定（離席中の通知。自動操作はしません）")},
 				{"/skypilot features [recommended]", l.t("turn features on / off (or the recommended set)", "機能のオン/オフ（おすすめを一括オン）")},
 				{"/skypilot feature <id> on | off", l.t("switch one feature", "機能を1つ切り替え")},
 				{"/skypilot calc <expression>", l.t("calculator with k / m / b", "電卓（k / m / b 対応）")},

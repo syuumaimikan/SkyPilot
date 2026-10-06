@@ -138,6 +138,11 @@ final class Icons {
 				x.draw(new Arc2D.Double(4, 4, 16, 16, 60, 280, Arc2D.OPEN));
 				x.draw(poly(17.5, 2.8, 18.2, 6.6, 14.4, 7.2));
 			};
+			case "download" -> x -> {
+				line(x, 12, 3.5, 12, 15);
+				x.draw(poly(7, 10.5, 12, 15.5, 17, 10.5));
+				x.draw(poly(4, 16, 4, 20, 20, 20, 20, 16));
+			};
 			case "search" -> x -> {
 				circle(x, 10.5, 10.5, 6);
 				line(x, 15, 15, 20, 20);

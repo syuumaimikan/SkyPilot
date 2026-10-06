@@ -39,6 +39,10 @@ combat automation. Every in-game action is performed by the player.
 | Mod update check | SHA-1 of the player's mod files | sent to the SkyPilot server, which asks Modrinth; shows version info and a link only | **off** |
 | Write in Japanese (`/skypilot en`) | the text the player typed | JA→EN translation put into the chat box; the player sends it | **off** (consent) |
 | Translation provider (settings) | - | sends the chosen provider and, if entered, the player's own DeepL/Anthropic key to the SkyPilot server only (stored encrypted, shown back as `…last4`) | server's provider |
+| Performance switches, video preset | entities / particles the client is about to draw, Minecraft's video options | draws less (hidden entities still exist and react as usual; nothing the player does is cancelled); the preset saves the player's values and restores them exactly | **off** |
+| AFK guard | keyboard / mouse activity (observed, never cancelled), chat lines, own health | an AFK row on the info HUD, sound + toast + flashing taskbar button, a summary when back, a lower FPS cap; **no anti-AFK** - nothing is pressed or moved for the player | **off** |
+| Bazaar order helper | the player's own order items in "Your Bazaar Orders" (name and lore) | coloured frames and a summary line; orders are never clicked, claimed or changed | **off** |
+| Flip panel clicks | the row the player clicks | `/viewauction …` / `/bz …` put into the chat box only; sending stays the player's choice | with the panel |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |
 
 Not implemented on purpose (the project's own rules): dungeon puzzle / terminal solvers, secret
@@ -58,24 +62,33 @@ tokens; linking uses the device-authorization flow and a revocable SkyPilot toke
 
 ## Launcher
 
-The SkyPilot Launcher ([launcher.md](launcher.md)) only prepares files for the official Minecraft
-Launcher:
+The SkyPilot Launcher ([launcher.md](launcher.md)) installs SkyPilot (the Fabric version file,
+the bundled SHA-256-checked mod, the SHA-512-pinned Fabric API, optionally a profile entry for
+the official launcher with a backup first) and starts the game in one of two ways:
 
-- the Fabric version file;
-- the bundled, SHA-256-checked SkyPilot mod;
-- the SHA-512-pinned Fabric API;
-- one profile entry (the original profile file is backed up first).
+- **Official launcher**: sign-in and starting the game stay there; SkyPilot never sees a token.
+- **Direct start after a Microsoft sign-in** (the player's choice, needs their own Azure client
+  ID approved by Mojang - SkyPilot never borrows another launcher's ID):
+  - The device code flow: the password is typed only on Microsoft's own page; the launcher
+    never asks for a password or a token.
+  - The refresh token is stored only on this PC, encrypted with Windows DPAPI for the current
+    user; the Minecraft access token stays in memory and goes only to the game process. Neither
+    is logged (the logged start command shows `<hidden>`) or sent to the SkyPilot server, the
+    mod or anyone but Microsoft / Xbox Live / Minecraft services. Sign-out deletes the file.
+  - The mod still never handles Microsoft/Minecraft passwords or tokens.
 
-Microsoft sign-in, tokens and starting the game stay entirely in the official launcher. SkyPilot
-never asks for or stores a Microsoft/Minecraft password, refresh token or session token.
+Network access is limited by purpose (`Net`): game files only from Mojang / Fabric hosts, each
+checked against the SHA-1 in their metadata; mods only from `meta.fabricmc.net` and
+`cdn.modrinth.com` against pinned hashes; sign-in only to Microsoft / Xbox / Minecraft services;
+information (Modrinth versions, public skins) is read only. https only, redirects off, size
+limits, and a 429 is not retried.
 
-Network access is limited:
+Launcher updates are installed only when their description carries a valid Ed25519 signature
+from the key built into the launcher and the installer matches the signed SHA-256 and size; the
+installer runs only after the player clicks "Install". The private signing key is never in the
+repository.
 
-- Downloads are https only, from `meta.fabricmc.net` and `cdn.modrinth.com` only.
-- Redirects are off and every download has a size limit.
-- Nothing downloaded is executed by the launcher.
-
-It never deletes files: replaced mods are renamed to `.jar.disabled`.
+It never deletes the player's files: replaced mods are renamed to `.jar.disabled`.
 
 ## Hypixel API usage
 

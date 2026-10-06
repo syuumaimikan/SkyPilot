@@ -20,7 +20,10 @@ export function BazaarView() {
   const { t, lang } = useI18n();
   const [capitalText, setCapitalText] = useState("50m");
   const capital = parseCoins(capitalText) ?? 50_000_000;
-  const q = useApi<BazaarList>("/api/market/bazaar", { capital }, { refetchInterval: 30_000 });
+  const [flipper, setFlipper] = useState("0");
+  const [hideRisky, setHideRisky] = useState(true);
+  const q = useApi<BazaarList>("/api/market/bazaar", { capital, flipper }, { refetchInterval: 30_000 });
+  const flips = useMemo(() => (q.data?.flips ?? []).filter((f) => !hideRisky || !f.manipulated), [q.data, hideRisky]);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"spread" | "volume" | "trend">("volume");
 
@@ -41,9 +44,23 @@ export function BazaarView() {
         )}
         actions={q.data ? <Freshness f={q.data.freshness} /> : null}
       />
-      <div className="flex max-w-xs flex-col gap-1">
-        <Label htmlFor="capital">{t("Your capital", "使える資金")}</Label>
-        <Input id="capital" value={capitalText} onChange={(e) => setCapitalText(e.target.value)} placeholder="50m" />
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex w-48 flex-col gap-1">
+          <Label htmlFor="capital">{t("Your capital", "使える資金")}</Label>
+          <Input id="capital" value={capitalText} onChange={(e) => setCapitalText(e.target.value)} placeholder="50m" />
+        </div>
+        <div className="flex w-56 flex-col gap-1">
+          <Label htmlFor="flipper">{t("Bazaar Flipper upgrade", "Bazaar Flipper アップグレード")}</Label>
+          <NativeSelect id="flipper" value={flipper} onChange={(e) => setFlipper(e.target.value)}>
+            <option value="0">{t("None (tax 1.25%)", "なし（税 1.25%）")}</option>
+            <option value="1">{t("Level 1 (tax 1.125%)", "レベル1（税 1.125%）")}</option>
+            <option value="2">{t("Level 2 (tax 1%)", "レベル2（税 1%）")}</option>
+          </NativeSelect>
+        </div>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input type="checkbox" checked={hideRisky} onChange={(e) => setHideRisky(e.target.checked)} />
+          {t("Hide possible manipulation", "操作の疑いがあるものを隠す")}
+        </label>
       </div>
       {q.isLoading ? (
         <Loading rows={5} />
@@ -56,7 +73,7 @@ export function BazaarView() {
             <TabsTrigger value="products">{t("All products", "全商品")}</TabsTrigger>
           </TabsList>
           <TabsContent value="flips">
-            {q.data.flips.length === 0 ? (
+            {flips.length === 0 ? (
               <Empty>{t("No profitable bazaar flips for this capital right now.", "この資金で利益の出るバザーフリップは現在ありません。")}</Empty>
             ) : (
               <Card>
@@ -78,12 +95,13 @@ export function BazaarView() {
                       </TR>
                     </THead>
                     <TBody>
-                      {q.data.flips.map((f) => (
+                      {flips.map((f) => (
                         <TR key={`${f.kind}-${f.productId}`}>
                           <TD className="max-w-xs">
                             <Link href={`/market/price?item=${encodeURIComponent(f.productId)}`} className="font-medium hover:underline">
                               {f.name}
                             </Link>
+                            {f.manipulated ? <Badge className="ml-1" tone="bad">{t("Possible manipulation", "操作の疑い")}</Badge> : null}
                             {f.notes.length > 0 ? <div className="text-[11px] text-muted-foreground">{f.notes.join(" · ")}</div> : null}
                           </TD>
                           <TD>

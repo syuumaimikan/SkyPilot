@@ -69,12 +69,29 @@ Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestC
   what the player owns and the cost to complete every tier; items open their recipe page.
 - **Money**: money methods ranked for the player (coins/h ranges from live prices), missing
   requirements, and where to do them.
-- **Side panels** (`ScreenOverlays`): AH/Bazaar flips beside Hypixel's market windows
-  (`market.containerPanel`), the item browser right of inventory windows
-  (`inventory.itemBrowser`: search, click for value / recipes with a 3×3 grid / drop sources /
-  uses), and the chest value list left of chests, backpacks and the ender chest
-  (`inventory.chestValue`: total and items by value; clicking a name outlines the slot). Item
-  tooltips get a value line (`priceTooltip`).
+- **Side panels** (`ScreenOverlays`):
+  - AH/Bazaar flips beside Hypixel's market windows (`market.containerPanel`): sort chip
+    (best / profit / ROI / per hour), "Purse only" (the sidebar purse becomes the budget: AH flips
+    above it are left out, Bazaar amounts fit it), Bazaar Flipper level (Settings → Market) for
+    the tax. Clicking a row puts `/viewauction …` or `/bz …` into the chat box.
+  - The item browser right of inventory windows (`inventory.itemBrowser`): the grid fills the
+    whole panel (pages of up to 600 cells), category chips (weapons, armor, equipment,
+    accessories, tools, materials, minions, pet items, reforge stones, cosmetics, other - grouped
+    from the items resource's `category`), a hover card with the in-game description and the
+    known prices (Bazaar buy / sell, lowest BIN with sales per day, NPC sell, craft cost; unknown
+    prices are left out), click or R for recipes, U for uses, Ctrl+F for search. The left edge
+    can be dragged to resize the list or push it into the screen edge (a tab brings it back);
+    width, category and the hidden state are saved (`inventory.itemBrowserWidth / …Category /
+    …Collapsed`).
+  - The chest value list left of chests, backpacks and the ender chest
+    (`inventory.chestValue`: total and items by value; clicking a name outlines the slot).
+  - Bazaar order helper in "Your Bazaar Orders" (`market.bazaar_order_helper`): green frame =
+    best price, red = outbid (tooltip: by how much), gold = filled; a summary line above the
+    window. It reads the order items' name and "Price per unit" lore and compares them with
+    `/api/mod/bazaar/quotes`; nothing is clicked.
+  - Tooltips of these panels are drawn right away on top (`Ui.overlayTooltip`): a deferred
+    tooltip set in a screen's after-extract callback would be dropped with the frame in 26.2.
+  Item tooltips get a value line (`priceTooltip`).
 - **Guides**: steps from `/api/mod/guides`; following one draws a box, a straight line and a
   HUD arrow to the step's public place (Gizmos in `LevelRenderEvents.BEFORE_GIZMOS`). Only on the
   matching island; no pathfinding.
@@ -134,6 +151,21 @@ features that use the SkyPilot server (never Hypixel), ✉ those that send chat 
 | Guides | next action on the info HUD ☁, automatic guide line to where the next action is done ☁ |
 | Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |
 | Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), to-do list (`todo`), stopwatch (`timer start/lap/stop`), item lookup (`lookup <name>`) ☁, session tracking, session upload ☁ |
+| Market (more) | Bazaar order helper ☁ |
+| Performance | background / menu FPS limits, hide far mobs / far players / damage numbers / falling blocks / fireworks / lightning / explosion, hit and block-break particles, particle limit per tick, SkyPilot lite mode, memory and entity / particle counts on the info HUD; `/skypilot perf` (switches, and a lightweight video preset that saves your values and restores them exactly) |
+| AFK guard | AFK detection (no keyboard / mouse input for `afk.minutes`, default 3), alerts while away (private messages, party invites, your name, Limbo / AFK notice, restart warning, death, big health drop, disconnect: sound, toast, flashing taskbar button), welcome-back summary, low FPS while AFK (`afk.fps`, default 10); `/skypilot afk [minutes <n> \| fps <n>]` |
+
+Notes on the newer groups:
+
+- Performance features only draw less: hidden entities still exist, can be hit and react as
+  usual; nothing the player does is cancelled. The video preset changes Minecraft's own options
+  (render distance ≥ 8, entity distance, particles, shadows, clouds, biome blend, leaves,
+  transparency, menu blur) and "Restore" puts back exactly what was saved.
+- The AFK guard only watches: input is noted by `KeyboardInputMixin` / `MouseInputMixin`
+  (observing, never cancelling). There is **no anti-AFK**: nothing is pressed or moved to avoid
+  Hypixel's AFK handling (that would be movement automation, which SkyPilot never does).
+- Click to translate plays a short "ding" on click and a bell when the translation is in
+  (`translation.sound`, on by default, Settings → Translate).
 
 Implementation notes:
 

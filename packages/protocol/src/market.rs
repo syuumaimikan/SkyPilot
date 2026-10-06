@@ -178,6 +178,9 @@ pub struct BazaarFlip {
     pub confidence: Confidence,
     pub score: f64,
     pub notes: Vec<String>,
+    /// Prices far from their usual level (pushed offers or a crash): do not flip.
+    #[serde(default)]
+    pub manipulated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

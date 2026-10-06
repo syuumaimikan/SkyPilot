@@ -110,6 +110,7 @@ public final class Performance {
 
 	/** Minecraft's frame-rate limit with SkyPilot's caps. */
 	public static int fpsLimit(int vanilla) {
+		vanilla = Afk.fpsLimit(vanilla);
 		if (!background && !menu) return vanilla;
 		Minecraft mc = Minecraft.getInstance();
 		boolean menuOpen = mc.level != null && mc.gui.screen() != null;

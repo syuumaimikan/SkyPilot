@@ -33,6 +33,9 @@ impl FlipScoreStrategy for DefaultFlipScore {
     }
 }
 
+/// Minutes after which an underpriced BIN that is still listed becomes suspicious.
+pub const STALE_BARGAIN_MINUTES: f64 = 45.0;
+
 #[derive(Debug, Clone)]
 pub struct FlipConfig {
     pub listing_hours: f64,
@@ -99,7 +102,10 @@ pub fn scan(
             let fair = fair_value::compute(&key, &listing.market_id, &others, &sales, now_ms, state.history_since_ms, fv_cfg);
             let Some(value) = fair.value else { continue };
             let next_other = others.iter().copied().filter(|p| *p >= unit_buy).fold(f64::INFINITY, f64::min);
-            let unit_sell = if next_other.is_finite() { value.min(next_other * 0.99) } else { value };
+            // A falling market is planned at a lower price: half of the 24h drop, at most -20%.
+            let falling = fair.trend.filter(|t| *t < -0.05);
+            let planned = value * (1.0 + falling.map(|t| (t * 0.5).max(-0.2)).unwrap_or(0.0));
+            let unit_sell = if next_other.is_finite() { planned.min(next_other * 0.99) } else { planned };
             let count = listing.count.max(1) as f64;
             let sell_total = unit_sell * count;
             if sell_total <= buy {
@@ -119,6 +125,19 @@ pub fn scan(
             let mut confidence = fair.confidence.clone();
             if manipulation.suspicious {
                 confidence = Confidence::from_score(confidence.score * 0.3, [confidence.reasons.clone(), manipulation.flags.clone()].concat());
+            }
+            if let Some(t) = falling {
+                let mut reasons = confidence.reasons.clone();
+                reasons.push(format!("Price falling ({:.0}% in 24h): planned lower", t * 100.0));
+                confidence = Confidence::from_score(confidence.score * 0.85, reasons);
+            }
+            // Snipers take real bargains within minutes; a cheap BIN that sits for long usually
+            // differs in something the fingerprint does not see.
+            let unsold_minutes = ((now_ms - listing.start_ms).max(0) / 60_000) as f64;
+            if listing.start_ms > 0 && unsold_minutes > STALE_BARGAIN_MINUTES && unit_buy < value * 0.8 {
+                let mut reasons = confidence.reasons.clone();
+                reasons.push(format!("Cheap listing unsold for {unsold_minutes:.0} min: check the item closely"));
+                confidence = Confidence::from_score(confidence.score * 0.6, reasons);
             }
             let mut opp = FlipOpportunity {
                 auction_id: listing.auction_id.clone(),

@@ -79,6 +79,21 @@ final class Ui {
 
 	/** A tooltip whose line breaks ("\n") start new lines (styles kept); long lines wrap at 260 px. */
 	static void tooltip(GuiGraphicsExtractor g, Component text, int mouseX, int mouseY) {
+		g.setTooltipForNextFrame(Minecraft.getInstance().font, lines(text), mouseX, mouseY);
+	}
+
+	/**
+	 * The same tooltip drawn right away, on top of everything: for panels drawn after a window
+	 * (screen "after extract" callbacks), where a deferred tooltip would be dropped with the frame.
+	 */
+	static void overlayTooltip(GuiGraphicsExtractor g, Component text, int mouseX, int mouseY) {
+		java.util.List<net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent> parts = new java.util.ArrayList<>();
+		for (net.minecraft.util.FormattedCharSequence line : lines(text)) parts.add(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent.create(line));
+		g.nextStratum();
+		g.tooltip(Minecraft.getInstance().font, parts, mouseX, mouseY, net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner.INSTANCE, null);
+	}
+
+	private static java.util.List<net.minecraft.util.FormattedCharSequence> lines(Component text) {
 		Font font = Minecraft.getInstance().font;
 		java.util.List<net.minecraft.network.chat.MutableComponent> lines = new java.util.ArrayList<>();
 		lines.add(Component.empty());
@@ -91,7 +106,11 @@ final class Ui {
 			return java.util.Optional.empty();
 		}, net.minecraft.network.chat.Style.EMPTY);
 		java.util.List<net.minecraft.util.FormattedCharSequence> out = new java.util.ArrayList<>();
-		for (Component line : lines) out.addAll(font.split(line, 260));
-		g.setTooltipForNextFrame(font, out, mouseX, mouseY);
+		for (Component line : lines) {
+			java.util.List<net.minecraft.util.FormattedCharSequence> split = font.split(line, 260);
+			if (split.isEmpty()) out.add(net.minecraft.util.FormattedCharSequence.EMPTY); // keep blank separator lines
+			else out.addAll(split);
+		}
+		return out;
 	}
 }

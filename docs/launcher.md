@@ -1,140 +1,183 @@
 # SkyPilot Launcher
 
-A small desktop app (Java 25, Swing + FlatLaf) that prepares SkyPilot for the **official
-Minecraft Launcher**. It doesn't start Minecraft and doesn't sign in. You sign in with Microsoft
-and press Play in the official launcher, as you always do.
+A desktop app (Java 25, Swing + FlatLaf) that installs SkyPilot for Minecraft 26.2 + Fabric and
+starts the game. There are two ways to play:
+
+| Mode | Sign-in | Who starts Minecraft |
+|---|---|---|
+| **This launcher** (default when signed in) | Microsoft device-code sign-in in your browser | SkyPilot Launcher, with Mojang's own game files and Java runtime |
+| **Official Minecraft Launcher** | In the official launcher | The official launcher, using the "SkyPilot (SkyBlock)" profile this launcher adds |
 
 ```
-apps/launcher/   (a Gradle subproject of apps/mod - shares core/ and the Gradle wrapper)
+apps/launcher/   (a Gradle subproject of apps/mod - shares core/, network/ and the Gradle wrapper)
   src/main/java/dev/skypilot/launcher/
-    LauncherMain        window, or --status / --setup on the command line
-    Setup               the status checks and "Set up / Repair"
-    FabricInstaller     versions/<fabric id>/<fabric id>.json from meta.fabricmc.net
-    LauncherProfiles    the "SkyPilot (SkyBlock)" entry in launcher_profiles*.json
-    Mods                bundled SkyPilot mod + pinned Fabric API, list / switch on-off / add
-    Instance            the SkyPilot game folder: mod config (server URL), link state, logs
-    Net                 https downloads from the two allowed hosts, size limit, hashes
-    OfficialLauncher    opens the official launcher (fixed commands)
-    ui/LauncherFrame    Home, Mods, Settings, Logs, About
+    LauncherMain       window, or --status / --setup on the command line
+    Setup              status checks, "Repair", run() for the official launcher, runDirect()
+    MicrosoftAuth      device code → Microsoft token → Xbox Live → XSTS → Minecraft session
+    Account            the signed-in account (session in memory, renewal)
+    AccountStore       account.json: name, UUID, DPAPI-encrypted refresh token
+    Dpapi              Windows Data Protection through Java's foreign function API
+    GameFiles          version files, libraries, client jar, assets, Java runtime (SHA-1 checked)
+    GameLauncher       the start command from the version files' argument lists
+    Updater            signed launcher updates from your SkyPilot server
+    FabricInstaller    versions/<fabric id>/<fabric id>.json from meta.fabricmc.net
+    LauncherProfiles   the "SkyPilot (SkyBlock)" entry in launcher_profiles*.json
+    Mods, ModScan, ModCheck, Presets, ModrinthUpdates     mod list, compatibility, presets
+    CrashAnalyzer, GameWatcher, Backups, Importer, ServerList, GameOptions, Diagnostics
+    Net                https only, per-purpose host lists, size limits, hashes
+  src/main/java/dev/skypilot/launcher/ui/
+    LauncherFrame (sidebar + account card), HomePage, ModsPage, FeaturesPage, ScreenshotsPage,
+    LogsPage, ToolsPage, SettingsPage, AboutPage, SignInDialog, UpdateUi
 ```
 
-## What "Set up / Repair" does
+## Microsoft sign-in and direct start
 
-1. Checks that the official launcher's profile file exists (`launcher_profiles.json`, or
-   `launcher_profiles_microsoft_store.json` for the Microsoft Store / Xbox app). If it doesn't,
-   it stops before doing anything and asks you to start the official launcher once.
-2. **Fabric Loader:** downloads the version file for Minecraft 26.2 + Fabric Loader 0.19.5
-   from `meta.fabricmc.net`, the same way Fabric's own installer does.
-   - The file is checked (`id`, `inheritsFrom`, `libraries`, `mainClass`) and written to
-     `versions/fabric-loader-0.19.5-26.2/`.
-   - The official launcher then downloads and verifies the libraries and Minecraft itself.
-3. **SkyPilot mod:** copies the jar bundled inside the launcher to `<game folder>/mods`.
-   - Its SHA-256 is recorded at build time and checked before the copy.
-   - When a signing keystore is configured, the bundled jar is the signed one.
-4. **Fabric API:** downloads exactly the file the mod is built and tested against
-   (Modrinth version `ewUK83HI`).
-   - The size and SHA-512 are pinned in `gradle.properties`, and a mismatch means nothing is
-     installed.
-   - If the pinned file is already there, nothing is downloaded.
-5. **Profile:** adds or updates the **"SkyPilot (SkyBlock)"** profile with:
-   - type `custom`, version `fabric-loader-0.19.5-26.2`;
-   - its own game folder (default `.minecraft/skypilot`);
-   - memory `-Xmx<N>M` and the SkyPilot icon.
-   - Every other profile and setting in the file is kept.
-   - The original file is copied once to `launcher_profiles.json.skypilot-backup` before the
-     first change.
+**One-time setup: a client ID.** Mojang lets only approved apps sign in to Minecraft
+(`api.minecraftservices.com` answers 403 to others), and SkyPilot does not borrow another
+launcher's ID. Before the first sign-in:
 
-Older copies of the SkyPilot mod or Fabric API are switched off (renamed to `.jar.disabled`),
-never deleted. Running setup again is safe and only repairs what is missing.
+1. Register a free app in Microsoft Entra (Azure portal → App registrations → New):
+   - Supported account types: **Personal Microsoft accounts only**.
+   - Authentication → **Allow public client flows: Yes** (needed for the device code flow).
+2. Ask Mojang to allow the app for Minecraft: <https://aka.ms/mce-reviewappid>. Approval can
+   take a while.
+3. Paste the **Application (client) ID** in Settings → Account and launch (or in the sign-in
+   dialog). Until then, PLAY opens the official Minecraft Launcher.
+
+**Signing in** (sidebar → "Sign in with Microsoft"):
+
+1. The launcher asks `login.microsoftonline.com/consumers` for a device code
+   (scope `XboxLive.signin offline_access`).
+2. It shows the code, copies it and opens `microsoft.com/link`. You type the code and sign in
+   **on Microsoft's page**; the launcher never sees your password.
+3. Xbox Live (`user.auth.xboxlive.com`) → XSTS (`xsts.auth.xboxlive.com`) →
+   `login_with_xbox` → `minecraft/profile` turn the Microsoft token into a game session.
+   Endpoint shapes: minecraft.wiki "Microsoft authentication" (checked 2026-10).
+
+Problems are explained instead of shown as codes: client ID unknown or without personal accounts,
+"Allow public client flows" off, not approved by Mojang (403), no Xbox profile
+(XErr 2148916233), Xbox not available in the region (…235), adult verification (…236/237),
+child account without a family (…238), account without Minecraft (profile 404), expired code.
+
+**What is kept, and where:**
+
+| Data | Where | How |
+|---|---|---|
+| Player name and UUID | `account.json` in the launcher folder | plain (shown in the sidebar) |
+| Microsoft refresh token | same file | encrypted with Windows DPAPI for the current Windows user (+ app entropy). Copying the file to another user or PC makes it useless. Not saved on other systems: you sign in again next time |
+| Minecraft access token | memory only | renewed from the refresh token when it is older than 23 h 50 min |
+
+Nothing of this is sent to the SkyPilot server, logged or shown. The start command in
+`logs/launcher.log` has the token replaced by `<hidden>`. "Sign out" deletes `account.json`.
+
+**PLAY in direct mode:**
+
+1. `Setup.runDirect`: Fabric's version file, the bundled SkyPilot mod (SHA-256) and the pinned
+   Fabric API (SHA-512), only if missing. The official launcher's profile is updated too when
+   that launcher is installed.
+2. A valid session (renewed silently, or "Sign in again").
+3. `GameFiles.prepare`, from `Net.GAME_HOSTS` only:
+   - Mojang's version list → the pinned version's file (SHA-1 from the list).
+   - Libraries for this OS (Mojang's rules) plus Fabric's; Fabric's version wins when both list
+     the same artifact (ASM).
+   - The client jar, the asset index and its objects (`resources.download.minecraft.net`).
+   - Mojang's Java runtime named in the version file (`java-runtime-epsilon`, Java 25) into
+     `<launcher folder>/runtime`.
+   - Each download is checked against its SHA-1 and size before it is moved into place; files
+     already present with the right size are reused (shared with the official launcher's
+     `versions`, `libraries` and `assets`). Settings → "Check and repair game files" checks
+     every SHA-1. HTTP 429 stops the download instead of retrying.
+4. `GameLauncher.command`: the vanilla and Fabric argument lists with their rules and
+   placeholders, memory, allowed extra Java flags, window size, and Minecraft's Quick Play
+   (`--quickPlayMultiplayer mc.hypixel.net`) when "Join Hypixel right away" is ticked.
+5. The game's console output goes to `<launcher folder>/logs/game-console.log`; a non-zero exit
+   shows a toast that opens the crash explanation.
+
+## Install and update
+
+```bash
+cd apps/mod
+./gradlew :launcher:jpackageImage       # portable app: apps/launcher/build/jpackage/SkyPilot Launcher/
+./gradlew :launcher:jpackageInstaller   # installer: apps/launcher/build/installer/SkyPilot-Launcher-<version>.exe
+```
+
+- The installer needs WiX Toolset 5 on the PATH:
+  `dotnet tool install --global wix --version 5.0.2`, then
+  `wix extension add -g WixToolset.UI.wixext/5.0.2` and `… WixToolset.Util.wixext/5.0.2`.
+  CI builds both and uploads them as artifacts.
+- The installer is per user (no administrator rights), adds Start menu and desktop shortcuts and
+  appears in "Installed apps" for removal. A fixed upgrade UUID lets a newer installer replace
+  the installed version.
+- Without code signing, Windows SmartScreen may warn on first start ("More info → Run anyway").
+
+**Updates** come from your SkyPilot server and are installed only after two checks:
+
+1. `GET /api/launcher/latest` returns `latest.json` and its **Ed25519 signature**; the signature
+   must match the public key built into the launcher (`src/main/resources/update-key.pub`).
+2. The installer from `GET /api/launcher/files/<name>` must have the SHA-256 and size given in
+   the signed `latest.json`.
+
+Only then, and only after you click "Install", the installer runs; the launcher closes and opens
+again when it has finished. Settings → Updates: "Check now", and "Check when the launcher
+starts" (on by default).
+
+**Publishing a release:**
+
+```bash
+./gradlew :launcher:generateUpdateKey      # once: private key → ~/.skypilot/launcher-update-key.txt
+export SKYPILOT_UPDATE_KEY="$(cat ~/.skypilot/launcher-update-key.txt)"
+./gradlew :launcher:launcherRelease        # build/release: installer, latest.json, latest.json.sig
+```
+
+Copy `build/release/*` to the server's `LAUNCHER_RELEASES_DIR` (default
+`data/launcher-releases`). Keep the private key out of the repository (it never is in it);
+whoever has it can sign launcher updates.
 
 ## Pages
 
 | Page | Contents |
 |---|---|
-| Home | Status checklist and the buttons below; the setup log and the steps to play |
-| Mods | The game folder's mods: name, version, file. Switch on/off (rename) or add a local Fabric `.jar` you picked (it must contain `fabric.mod.json`). Open the mods folder |
-| Settings | Language (auto / English / 日本語), memory for Minecraft (2–32 GB), Minecraft folder, SkyPilot game folder, SkyPilot server URL. The server URL is written to the mod's own config; https only, http allowed only for localhost |
-| Logs | `logs/latest.log` (last 400 lines) and crash reports of the game folder |
-| About | What the launcher does and never does, pinned versions and hashes, folders |
-
-**Status checklist on Home:**
-
-- Official launcher found
-- Fabric version installed
-- Profile up to date
-- SkyPilot mod (byte-identical)
-- Fabric API (pinned SHA-512)
-- SkyPilot server reachable (optional)
-- Mod linked (optional: only checks that the mod's token file exists, never reads it)
-
-**Buttons on Home:**
-
-- Set up / Repair
-- Open Minecraft Launcher
-- Open SkyPilot web
-- Refresh
-
-The game folder is separate from your normal `.minecraft` game, so its mods, options and worlds
-don't mix with your vanilla or other modded profiles.
+| Home | Hero with PLAY (install / sign in / start / running), "Join Hypixel right away", mayor and perks, upcoming events, SkyBlock news, installation checks with Repair, quick actions (add Hypixel, import settings, FPS boost, game folder) |
+| Mods | Search, filters, presets, troubleshoot (safe mode), compatibility problems (missing / wrong dependencies, conflicts, wrong Java), details, Modrinth update links, drag and drop |
+| Features | The mod's switchable features by category, recommended set, consent features |
+| Screenshots | Grid and viewer |
+| Logs | latest.log with search and filters, crash reports with "What happened" explanations, copy for support (anonymised) |
+| Tools | Import from your main game, server list, backups / restore, diagnostics, game language, disk use |
+| Settings | Appearance; **Account and launch** (account, launch mode, client ID, check and repair game files); game (memory, window size, extra Java flags); profile picture; folders; SkyPilot server; **Updates** |
+| About | Versions, what it does and never does, third-party licences |
 
 ## Never
 
-- Asks for, reads or stores a Microsoft or Minecraft account, password, refresh token or session
-  token. Signing in and starting the game happen in the official launcher only.
-- Starts Minecraft itself, changes the game, or runs downloaded code.
-  - The only downloads are a JSON file from `meta.fabricmc.net` and the hash-pinned Fabric API
-    jar from `cdn.modrinth.com`.
-  - Both are https only, with redirects off and a size limit.
-  - Any other host is refused before a request is made.
-- Downloads other mods. "Add a mod file…" only copies a file you already have.
-- Deletes your files.
-
-## Build and run
-
-```bash
-cd apps/mod
-./gradlew :launcher:build             # tests + build/libs/skypilot-launcher-<version>-all.jar
-./gradlew :launcher:run               # open the window from the source tree
-./gradlew :launcher:jpackageImage     # Windows/macOS/Linux app with its own Java runtime
-```
-
-- `jpackageImage` writes `apps/launcher/build/jpackage/SkyPilot Launcher/`.
-  - On Windows, run `SkyPilot Launcher.exe` from that folder.
-  - It is about 80 MB, because it includes a trimmed Java 25 runtime: java.base, java.desktop,
-    java.net.http, java.sql and jdk.charsets.
-- The runnable jar needs Java 25: `java -jar skypilot-launcher-0.1.0-all.jar`.
-- Without code signing, Windows SmartScreen may warn on first start ("More info → Run anyway").
-- For releases, sign the exe and installer with your code-signing certificate, and publish the
-  SHA-256 of the jar next to it.
-
-**Command line** (same checks without a window):
-
-```bash
-java -jar skypilot-launcher-0.1.0-all.jar --status
-java -jar skypilot-launcher-0.1.0-all.jar --setup
-java -jar skypilot-launcher-0.1.0-all.jar --minecraft-dir /tmp/mc-test --instance-dir /tmp/mc-test/sp --setup
-```
-
-The launcher's own settings are in `%APPDATA%\SkyPilot\launcher.json`
-(`~/Library/Application Support/SkyPilot`, `~/.config/skypilot`).
+- Asks for your password, or for a token. Sign-in happens on Microsoft's page; tokens come from
+  Microsoft / Xbox / Mojang directly and stay on this PC (see the table above).
+- Sends your sign-in anywhere but Microsoft, Xbox Live and Minecraft services.
+- Runs anything it downloaded without a check: game files against Mojang's / Fabric's SHA-1,
+  mods against pinned hashes, launcher updates against SkyPilot's signature.
+- Downloads other mods for you (update checks only link to Modrinth), or deletes your files
+  (mods are switched off by renaming; settings are backed up before changes).
 
 ## Tests
 
-`./gradlew :launcher:test` runs only in temporary folders, never in the real `.minecraft`.
+`./gradlew :launcher:test` runs in temporary folders only, never in the real `.minecraft`.
 
 | Area | What is tested |
 |---|---|
-| Fabric version file | Installed from fixture metadata, and the placeholder jar is removed. Wrong id, wrong `inheritsFrom` and non-JSON are rejected with nothing written |
-| Profile file | Other profiles, settings and `version` are kept. The backup is made once and never overwritten. `created` is kept, memory is updated. The Microsoft Store file name is supported |
-| Mods | The bundled mod is installed only with the matching SHA-256. Fabric API is installed only with the pinned SHA-512 and isn't downloaded again. Older copies are switched off, not deleted. List, toggle and add (non-Fabric and non-`.jar` files are rejected) |
-| Network rules | http, other hosts, look-alike hosts and `file:` are refused |
-| Server URL and folder | Server URL rules, mod config written, link state, logs and crash reports, settings limits |
-| Full setup | Fails safely without the official launcher. With fixture downloads every check turns green and no account data is written |
-| Pages | Every page in English and Japanese is painted headless to `apps/launcher/build/launcher-screens/*.png` |
+| Sign-in | Device code → pending → token → Xbox → XSTS → Minecraft → profile with scripted answers; request shapes; every explained error; tokens never in `toString` |
+| Saved account | DPAPI round trip (Windows); the refresh token is not in the file in clear text; a damaged file is "signed out"; sign-out deletes it |
+| Game files | OS / feature rules, Maven paths, library merging (Fabric wins), runtime platform |
+| Start command | Order, placeholders, Quick Play and window size only when set, blocked Java flags dropped, token hidden in the log line |
+| Updates | Signature checked, changed manifest / other key / bad file name refused, version order |
+| Earlier areas | Fabric version file, profile file, mods and compatibility, presets, Modrinth, NBT server list, import, backups, crash explanations, settings limits |
+| Pages | Every page in English and Japanese, light theme, the sign-in dialog and the signed-in home page painted to `apps/launcher/build/launcher-screens/*.png` |
+
+`LiveLaunchTest` downloads everything from the real servers (about 700 MB) and starts the game
+with an offline session until the title screen; it runs only with
+`-Dskypilot.liveLaunch=<empty folder>`.
 
 ## Removing it
 
-1. Delete the "SkyPilot (SkyBlock)" profile in the official launcher (or restore
+1. Windows: "Installed apps" → SkyPilot Launcher → Uninstall (or delete the portable folder).
+2. Delete the "SkyPilot (SkyBlock)" profile in the official launcher (or restore
    `launcher_profiles.json.skypilot-backup`).
-2. Delete the folders `.minecraft/skypilot` and `.minecraft/versions/fabric-loader-0.19.5-26.2`.
-3. Delete `%APPDATA%\SkyPilot`.
+3. Delete `.minecraft/skypilot` and `.minecraft/versions/fabric-loader-0.19.5-26.2`.
+4. Delete `%APPDATA%\SkyPilot` (settings, saved sign-in, Java runtime, logs).

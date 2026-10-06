@@ -27,7 +27,9 @@ class GuiEndpointsTest {
 		assertEquals("minecraft:player_head", r.icon().item());
 		assertNull(r.icon().color());
 		assertNull(t.calls.get(0).headers().get("Authorization"), "market data needs no account");
-		assertEquals("kind=ah&limit=30&lang=ja", t.calls.get(0).uri().getRawQuery());
+		assertEquals("kind=ah&limit=30&lang=ja&sort=score&flipper=0", t.calls.get(0).uri().getRawQuery());
+		api.market("bazaar", 20, "en", "hour", 12_500_000, 2).join();
+		assertEquals("kind=bazaar&limit=20&lang=en&sort=hour&budget=12500000&flipper=2", t.calls.get(1).uri().getRawQuery());
 	}
 
 	@Test

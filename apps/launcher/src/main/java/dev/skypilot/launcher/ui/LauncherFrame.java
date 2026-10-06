@@ -15,6 +15,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -96,6 +97,7 @@ public final class LauncherFrame {
 				ctx.toasts = new Widgets.Toasts(f.getLayeredPane());
 				ctx.rebuild = () -> SwingUtilities.invokeLater(build[0]);
 				f.setContentPane(new LauncherFrame(ctx).content(s.lastPage));
+				UpdateUi.checkOnStart(ctx);
 				SwingUtilities.updateComponentTreeUI(f);
 				f.revalidate();
 				f.repaint();
@@ -248,7 +250,7 @@ public final class LauncherFrame {
 		bottom.setLayout(new BoxLayout(bottom, BoxLayout.Y_AXIS));
 		playerCard.setOpaque(false);
 		playerCard.setAlignmentX(0);
-		renderPlayer(Avatar.cached(c.launcherDir, c.settings.playerName));
+		renderPlayer(Avatar.cached(c.launcherDir, headName()));
 		bottom.add(playerCard);
 		bottom.add(Box.createVerticalStrut(12));
 		JLabel ver = Ui.label("Minecraft " + c.pins.minecraft() + "  ·  Fabric " + c.pins.loader(), 11f, Font.PLAIN, Theme.FAINT);
@@ -256,22 +258,60 @@ public final class LauncherFrame {
 		ver.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 0));
 		bottom.add(ver);
 		side.add(bottom, BorderLayout.SOUTH);
-		String name = c.settings.playerName;
+		loadHead();
+		return side;
+	}
+
+	/** The signed-in account's name, else the name typed in Settings (for the head picture only). */
+	private String headName() {
+		dev.skypilot.launcher.AccountStore.Saved a = dev.skypilot.launcher.Account.saved(c.launcherDir);
+		return a != null ? a.name() : c.settings.playerName;
+	}
+
+	private void loadHead() {
+		String name = headName();
 		if (Avatar.validName(name) && !Avatar.fresh(c.launcherDir, name)) {
 			c.async(() -> Avatar.fetch(c.launcherDir, name, url -> Net.getInfo(url, 1L << 20)), this::renderPlayer, e -> LauncherLog.error("head not loaded", e));
 		}
-		return side;
+	}
+
+	/** After signing in or out: the sidebar card and the pages that show the account. */
+	private void accountChanged() {
+		renderPlayer(Avatar.cached(c.launcherDir, headName()));
+		loadHead();
+		c.rebuild.run();
 	}
 
 	private void renderPlayer(BufferedImage head) {
 		playerCard.removeAll();
-		String name = c.settings.playerName;
+		dev.skypilot.launcher.AccountStore.Saved account = dev.skypilot.launcher.Account.saved(c.launcherDir);
+		String name = account != null ? account.name() : c.settings.playerName;
 		playerCard.add(Widgets.roundImage(head, 38, name.isEmpty() ? "S" : name, false), BorderLayout.WEST);
 		JPanel t = new JPanel();
 		t.setOpaque(false);
 		t.setLayout(new BoxLayout(t, BoxLayout.Y_AXIS));
 		t.add(Ui.label(name.isEmpty() ? c.t("Player", "プレイヤー") : name, 13.5f, Font.BOLD, Theme.TEXT));
-		t.add(Ui.label(c.t("Signs in via the Minecraft Launcher", "サインインは公式ランチャーで"), 11f, Font.PLAIN, Theme.FAINT));
+		JButton action;
+		if (account != null) {
+			t.add(Ui.label(c.t("Microsoft account", "Microsoft アカウント"), 11f, Font.PLAIN, Theme.FAINT));
+			action = Widgets.link(c.t("Sign out", "サインアウト"), null);
+			action.addActionListener(e -> {
+				try {
+					dev.skypilot.launcher.Account.signOut(c.launcherDir);
+					c.ok(c.t("Signed out", "サインアウトしました"), c.t("The saved sign-in was deleted from this PC.", "このPCに保存したサインイン情報を削除しました。"));
+				} catch (Exception ex) {
+					c.fail(c.t("Could not sign out", "サインアウトできませんでした"), ex);
+				}
+				accountChanged();
+			});
+		} else {
+			action = Widgets.link(c.t("Sign in with Microsoft", "Microsoft でサインイン"), null);
+			action.addActionListener(e -> SignInDialog.open(c, playerCard, this::accountChanged));
+		}
+		action.setAlignmentX(0);
+		action.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
+		action.setFont(Theme.font(Font.PLAIN, 11.5f));
+		t.add(action);
 		playerCard.add(t, BorderLayout.CENTER);
 		playerCard.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Theme.BORDER), BorderFactory.createEmptyBorder(14, 6, 0, 0)));
 		playerCard.revalidate();

@@ -44,6 +44,15 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 	private static final String HEAD_TEXTURE = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYWVjM2ZmNTYzMjkwYjEzZmYzYmNjMzY4OThhZjdlYWE5ODhiNmNjMThkYzI1NDE0N2Y1ODM3NGFmZTliMjFiOSJ9fX0=";
 
 	/** A stack with a SkyBlock id in custom_data, like Hypixel sends. */
+	private static ItemStack order(net.minecraft.world.item.Item item, String name, String... lore) {
+		ItemStack s = new ItemStack(item);
+		s.set(DataComponents.CUSTOM_NAME, Component.literal(name));
+		List<Component> lines = new ArrayList<>();
+		for (String l : lore) lines.add(Component.literal(l));
+		s.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(lines));
+		return s;
+	}
+
 	private static ItemStack skyblockItem(net.minecraft.world.item.Item item, String id, int count) {
 		ItemStack s = new ItemStack(item, count);
 		CompoundTag tag = new CompoundTag();
@@ -86,6 +95,12 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext ctx) {
 		check(ctx.computeOnClient(mc -> SkyPilot.get() != null), "SkyPilot initialised");
 		check(ctx.computeOnClient(mc -> !SkyPilot.get().config().translation.mode.name().equals("AUTO")), "translation is not on by default");
+		// No SkyPilot server during the test (as on CI): a server running on this PC would replace
+		// the synthetic data the screens are checked with.
+		ctx.runOnClient(mc -> {
+			SkyPilot.get().config().apiBaseUrl = "http://127.0.0.1:9";
+			SkyPilot.get().rebuildApi();
+		});
 
 		try (TestSingleplayerContext world = ctx.worldBuilder().create()) {
 			world.getConnection().waitForChunksRender(true, 1200);
@@ -712,6 +727,120 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			ctx.waitTicks(2);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-auction-deals"));
 			ctx.setScreen(() -> null);
+
+			// Item browser: the grid fills the whole panel, hover shows the item card, categories,
+			// and the left edge pushes the list into the screen edge.
+			ctx.runOnClient(mc -> {
+				SkyPilot.get().config().language = "ja";
+				SkyPilot.get().config().inventory.itemBrowser = true; // switched off by the features section above
+				SkyPilot.get().config().inventory.itemBrowserCategory = "weapons";
+				List<Dto.ItemEntry> many = new ArrayList<>();
+				Dto.ItemIcon diamondSword = new Dto.ItemIcon("minecraft:diamond_sword", null, null, false);
+				Dto.ItemIcon bow = new Dto.ItemIcon("minecraft:bow", null, null, true);
+				many.add(new Dto.ItemEntry("HYPERION", "Hyperion", "LEGENDARY", diamondSword, 4.7e8));
+				for (int i = 1; i < 600; i++) many.add(new Dto.ItemEntry("W" + i, "Weapon " + i, i % 3 == 0 ? "EPIC" : "RARE", i % 2 == 0 ? bow : diamondSword, 1000.0 * i));
+				ItemBrowser.setData(new Dto.ItemPage(1200, 0, many), "");
+				ItemBrowser.setCard("HYPERION", new Dto.ItemDetail(many.get(0), "SWORD", List.of("§7Damage: §c+260", "§7Strength: §c+150", "", "§6Ability: Wither Impact §e§lRIGHT CLICK",
+						"§7Teleports §a10 blocks §7ahead of you."), "BIN", 4.65e8, 3.2, null, null, 100_000.0, 4.4e8, List.of(), List.of(), List.of(), null));
+			});
+			ctx.setScreen(() -> new net.minecraft.client.gui.screens.inventory.InventoryScreen(Minecraft.getInstance().player));
+			ctx.waitTicks(3);
+			int[] cell = new int[2];
+			double[] scale = new double[1];
+			ctx.runOnClient(mc -> {
+				ItemBrowser b = ScreenOverlays.browserOf(mc.gui.screen());
+				check(b != null, "item browser attached");
+				check(b.fillsPanel(), "item grid fills the panel height");
+				check(b.cells() >= 30, "cells on one page: " + b.cells());
+				int[] c = b.cellCenter(0);
+				cell[0] = c[0];
+				cell[1] = c[1];
+				scale[0] = mc.getWindow().getGuiScale();
+				Dto.ItemDetail card = new Dto.ItemDetail(new Dto.ItemEntry("HYPERION", "Hyperion", "LEGENDARY", null, 4.7e8), "SWORD", List.of("§7Damage: §c+260"),
+						"BIN", 4.65e8, 3.2, null, null, 100_000.0, null, List.of(), List.of(), List.of(), null);
+				String tip = dev.skypilot.mod.core.Text.strip(ItemBrowser.tooltip(card.item(), card, dev.skypilot.mod.core.Lang.JA).getString());
+				check(tip.contains("Damage: +260") && tip.contains("最安BIN") && tip.contains("NPC売却") && !tip.contains("クラフト費用"), "hover card: " + tip);
+			});
+			ctx.getInput().setCursorPos(cell[0] * scale[0], cell[1] * scale[0]);
+			ctx.waitTicks(10);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-item-browser-full"));
+			ctx.runOnClient(mc -> SkyPilot.get().config().inventory.itemBrowserCollapsed = true);
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> check(ScreenOverlays.browserOf(mc.gui.screen()).collapsedNow(), "item browser collapsed to a tab"));
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-item-browser-collapsed"));
+			ctx.runOnClient(mc -> {
+				SkyPilot.get().config().inventory.itemBrowserCollapsed = false;
+				SkyPilot.get().config().inventory.itemBrowserWidth = 120;
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-item-browser-narrow"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				SkyPilot.get().config().inventory.itemBrowserWidth = 0;
+				SkyPilot.get().config().inventory.itemBrowserCategory = "all";
+				SkyPilot.get().config().inventory.itemBrowser = false;
+				ItemBrowser.setData(null, "");
+			});
+
+			// Bazaar order helper: colours your own order items, reading only.
+			ctx.runOnClient(mc -> SkyPilot.get().config().features.put("market.bazaar_order_helper", true));
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.fourRows(7, mc.player.getInventory());
+				menu.getSlot(10).set(order(Items.DIAMOND, "BUY Enchanted Diamond", "Filled: 10/640 (1.6%)", "Price per unit: 1,234.5 coins"));
+				menu.getSlot(11).set(order(Items.GOLD_INGOT, "SELL Enchanted Gold", "Filled: 0/64 (0%)", "Price per unit: 980 coins"));
+				menu.getSlot(12).set(order(Items.SUGAR_CANE, "BUY Enchanted Sugar Cane", "Filled: 64/64 100%!", "Price per unit: 1,500 coins"));
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Your Bazaar Orders"));
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				BazaarOrders o = ScreenOverlays.ordersOf(mc.gui.screen());
+				check(o != null, "order helper attached");
+				o.setQuotes(java.util.Map.of(
+						"Enchanted Diamond", new Dto.BazaarQuote("Enchanted Diamond", "ENCHANTED_DIAMOND", 1300.0, 1234.5),
+						"Enchanted Gold", new Dto.BazaarQuote("Enchanted Gold", "ENCHANTED_GOLD", 950.0, 900.0)));
+				dev.skypilot.mod.core.BazaarOrderRules.Order gold = BazaarOrders.order(((ContainerScreen) mc.gui.screen()).getMenu().getSlot(11).getItem());
+				check(gold != null && !gold.buy() && gold.price() == 980, "order read from the item: " + gold);
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-bazaar-orders"));
+			ctx.setScreen(() -> null);
+
+			// AFK guard: away after the set minutes, alerts counted, low FPS, summary when back.
+			ctx.runOnClient(mc -> {
+				var f = SkyPilot.get().config().features;
+				f.put("afk.detect", true);
+				f.put("afk.alerts", true);
+				f.put("afk.summary", true);
+				f.put("afk.low_fps", true);
+				Afk.idleFor(10 * 60_000L);
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				check(Afk.afk(), "marked AFK after 10 minutes without input");
+				check(Afk.fpsLimit(260) == 10, "10 FPS while AFK");
+				Afk.chat("From [VIP] Friend: are you there?");
+				Afk.chat("[MVP+] Friend has invited you to join their party!");
+				Afk.chat("Hello everyone");
+			});
+			ctx.waitTicks(30);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-afk-alert"));
+			ctx.runOnClient(mc -> Afk.input());
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				check(!Afk.afk(), "back after input");
+				check(Afk.fpsLimit(260) == 260, "frame rate back");
+				Component back = shown(mc, "離席中");
+				check(back != null && back.getString().contains("1× 個人メッセージ") && back.getString().contains("1× パーティ招待"),
+						"welcome-back summary: " + (back == null ? null : back.getString()));
+				var f = SkyPilot.get().config().features;
+				f.remove("afk.detect");
+				f.remove("afk.alerts");
+				f.remove("afk.summary");
+				f.remove("afk.low_fps");
+				f.remove("market.bazaar_order_helper");
+				SkyPilot.get().config().language = "auto";
+			});
 			ctx.runOnClient(mc -> {
 				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
 				SkyPilot.get().config().priceTooltip = true;

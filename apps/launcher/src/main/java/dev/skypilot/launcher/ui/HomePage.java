@@ -1,10 +1,15 @@
 package dev.skypilot.launcher.ui;
 
+import dev.skypilot.launcher.Account;
+import dev.skypilot.launcher.AccountStore;
+import dev.skypilot.launcher.GameFiles;
+import dev.skypilot.launcher.GameLauncher;
 import dev.skypilot.launcher.GameWatcher;
 import dev.skypilot.launcher.Importer;
 import dev.skypilot.launcher.Instance;
 import dev.skypilot.launcher.LauncherLog;
 import dev.skypilot.launcher.LauncherProfiles;
+import dev.skypilot.launcher.MicrosoftAuth;
 import dev.skypilot.launcher.Net;
 import dev.skypilot.launcher.OfficialLauncher;
 import dev.skypilot.launcher.ServerList;
@@ -179,6 +184,24 @@ final class HomePage {
 		playRow.setAlignmentX(0);
 		playRow.add(play);
 		left.add(playRow);
+		if (direct()) {
+			left.add(Box.createVerticalStrut(10));
+			javax.swing.JCheckBox hypixel = new javax.swing.JCheckBox(c.t("Join Hypixel right away", "起動したら Hypixel に接続"), c.settings.joinHypixel);
+			hypixel.setOpaque(false);
+			hypixel.setForeground(Color.WHITE);
+			hypixel.setFont(Theme.font(Font.PLAIN, 12.5f));
+			hypixel.setAlignmentX(0);
+			hypixel.addActionListener(e -> {
+				c.settings.joinHypixel = hypixel.isSelected();
+				try {
+					c.settings.save(c.launcherDir);
+				} catch (Exception ex) {
+					LauncherLog.error("settings not saved", ex);
+				}
+				updateHero();
+			});
+			left.add(hypixel);
+		}
 		left.add(Box.createVerticalStrut(10));
 		progress.setVisible(false);
 		progress.setAlignmentX(0);
@@ -282,6 +305,17 @@ final class HomePage {
 			play.setText(c.t("RUNNING", "実行中"));
 			play.sub = c.t("Have fun on SkyBlock!", "SkyBlockを楽しんで！");
 			play.setEnabled(false);
+		} else if (direct()) {
+			AccountStore.Saved a = Account.saved(c.launcherDir);
+			setStatus(c.t("Ready to play", "プレイ準備完了"), Theme.OK);
+			play.setText(c.t("PLAY", "プレイ"));
+			play.sub = (a == null ? "" : a.name() + "  ·  ") + (c.settings.joinHypixel ? c.t("joins Hypixel", "Hypixel に接続") : "Minecraft " + c.pins.minecraft());
+			play.setEnabled(true);
+		} else if (!launcherFound() && MicrosoftAuth.validClientId(c.settings.msClientId)) {
+			setStatus(c.t("Sign in to play", "サインインしてプレイ"), Theme.WARN);
+			play.setText(c.t("SIGN IN", "サインイン"));
+			play.sub = c.t("with your Microsoft account", "Microsoft アカウントで");
+			play.setEnabled(true);
 		} else if (!launcherFound()) {
 			setStatus(c.t("Minecraft Launcher not found", "Minecraftランチャーが見つかりません"), Theme.WARN);
 			play.setText(c.t("GET MINECRAFT", "Minecraftを入手"));
@@ -434,7 +468,20 @@ final class HomePage {
 
 	// ---------------------------------------------------------------- play
 
+	/** Signed in with Microsoft and set to start the game from here. */
+	private boolean direct() {
+		return c.settings.direct(Account.signedIn(c.launcherDir));
+	}
+
 	private void onPlay() {
+		if (direct()) {
+			playDirect();
+			return;
+		}
+		if (!launcherFound() && MicrosoftAuth.validClientId(c.settings.msClientId)) {
+			SignInDialog.open(c, root, c.rebuild);
+			return;
+		}
 		if (!launcherFound()) {
 			Ui.browse("https://www.minecraft.net/download");
 			c.toast("info", Theme.ACCENT, c.t("Get the official launcher", "公式ランチャーを入手"), c.t("Install it, start it once and sign in, then come back here.",
@@ -512,6 +559,79 @@ final class HomePage {
 		if (c.settings.closeAfterPlay) {
 			new Timer(1500, e -> System.exit(0)).start();
 		}
+	}
+
+	/**
+	 * Start the game from this launcher: install SkyPilot's files if needed, renew the session,
+	 * check / download the game files, then run Minecraft with the player's own session.
+	 */
+	private void playDirect() {
+		installing = true;
+		play.setBusy(true);
+		play.setText(c.t("STARTING", "起動中"));
+		play.sub = "";
+		progress.setVisible(true);
+		progress.setIndeterminate(true);
+		setStatus(c.t("Starting…", "起動しています…"), Theme.ACCENT);
+		java.util.concurrent.atomic.AtomicBoolean stop = new java.util.concurrent.atomic.AtomicBoolean();
+		c.async(() -> {
+			Setup.runDirect(c.settings, c.pins, c.l, url -> Net.download(url, 64L << 20), s -> Ctx.later(() -> step.setText(s)));
+			Ctx.later(() -> step.setText(c.t("Signing in…", "サインイン中…")));
+			MicrosoftAuth.Session session = Account.session(c.launcherDir, c.settings.msClientId, new MicrosoftAuth());
+			GameFiles.Prepared prepared = GameFiles.prepare(c.settings.minecraft(), c.launcherDir.resolve("runtime"), c.pins, false, new GameFiles.Progress() {
+				@Override
+				public void stage(String en, String ja) {
+					Ctx.later(() -> step.setText(c.t(en, ja)));
+				}
+
+				@Override
+				public void count(long done, long total) {
+					Ctx.later(() -> {
+						progress.setIndeterminate(false);
+						progress.setMaximum((int) Math.max(1, total));
+						progress.setValue((int) done);
+					});
+				}
+			}, stop::get);
+			java.nio.file.Path natives = c.launcherDir.resolve("natives").resolve(c.pins.versionId());
+			List<String> cmd = GameLauncher.command(prepared, c.settings.instance(), natives, session, c.settings.msClientId,
+					new GameLauncher.Options(c.settings.memoryMb, c.settings.extraJvmArgs, c.settings.width, c.settings.height, c.settings.joinHypixel));
+			LauncherLog.info("starting the game: " + GameLauncher.describe(cmd, session));
+			return GameLauncher.start(cmd, c.settings.instance(), natives, c.launcherDir);
+		}, process -> {
+			finishDirect();
+			c.playedAt = System.currentTimeMillis();
+			step.setText(c.t("Minecraft is starting…", "Minecraft を起動しています…"));
+			c.toast("play", Theme.ACCENT, c.t("Minecraft is starting", "Minecraft を起動しています"), c.settings.joinHypixel
+					? c.t("It joins Hypixel (mc.hypixel.net) when the game has loaded.", "ゲームの読み込み後に Hypixel（mc.hypixel.net）に接続します。")
+					: c.t("Have fun!", "楽しんでください！"));
+			process.onExit().thenAccept(p -> Ctx.later(() -> {
+				step.setText(" ");
+				if (p.exitValue() != 0 && System.currentTimeMillis() - c.playedAt > 3_000) {
+					c.toast("alert", Theme.BAD, c.t("The game stopped with an error", "ゲームがエラーで終了しました"), c.t("Exit code " + p.exitValue(), "終了コード " + p.exitValue()),
+							c.t("Analyze", "分析"), () -> c.navigate.accept("logs"));
+				}
+				refresh();
+			}));
+			if (c.settings.closeAfterPlay) new Timer(1500, e -> System.exit(0)).start();
+		}, e -> {
+			finishDirect();
+			step.setText(" ");
+			if (e instanceof MicrosoftAuth.AuthException a) {
+				c.toast("alert", Theme.BAD, c.t("Sign-in needed", "サインインが必要です"), a.text(c.l == dev.skypilot.mod.core.Lang.JA),
+						c.t("Sign in", "サインイン"), () -> SignInDialog.open(c, root, c.rebuild));
+			} else {
+				c.fail(c.t("Could not start the game", "ゲームを起動できませんでした"), e);
+			}
+		});
+	}
+
+	private void finishDirect() {
+		installing = false;
+		play.setBusy(false);
+		progress.setIndeterminate(false);
+		progress.setVisible(false);
+		refresh();
 	}
 
 	private void watch() {

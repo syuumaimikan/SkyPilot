@@ -22,7 +22,7 @@ import java.util.WeakHashMap;
  * to a chest can't drop the item on the cursor.
  */
 final class ScreenOverlays {
-	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, AuctionHighlight auction, SackValue sack, String flipKind) {
+	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, AuctionHighlight auction, SackValue sack, BazaarOrders orders, String flipKind) {
 	}
 
 	private static final Map<Screen, Panels> PANELS = new WeakHashMap<>();
@@ -34,7 +34,7 @@ final class ScreenOverlays {
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			if (!(screen instanceof AbstractContainerScreen<?> container) || !(screen instanceof ContainerScreenAccessor)) return;
 			Panels p = new Panels(new ItemBrowser(screen), new ChestValue(container), new VisitorPanel(container), new AuctionHighlight(container),
-					new SackValue(container), ContainerPanel.kindOf(screen.getTitle().getString()));
+					new SackValue(container), new BazaarOrders(container), ContainerPanel.kindOf(screen.getTitle().getString()));
 			PANELS.put(screen, p);
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
 				ContainerScreenAccessor box = (ContainerScreenAccessor) s;
@@ -50,14 +50,18 @@ final class ScreenOverlays {
 					p.sack().render(g, font);
 				}
 				p.auction().render(g);
+				p.orders().render(g, font, mouseX, mouseY);
 				ItemIcons.flush();
 			});
 			ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
 				boolean browser = p.browser().layout(((ContainerScreenAccessor) s).skypilot$leftPos() + ((ContainerScreenAccessor) s).skypilot$imageWidth() + 6)
 						&& p.browser().click(event.x(), event.y(), event.button());
 				boolean chest = !browser && p.flipKind() == null && p.chest().layout() && p.chest().click(event.x(), event.y());
-				return !(browser || chest);
+				boolean flips = !browser && p.flipKind() != null && SkyPilot.get().config().market.containerPanel && ContainerPanel.click(p.flipKind(), event.x(), event.y());
+				return !(browser || chest || flips);
 			});
+			ScreenMouseEvents.allowMouseDrag(screen).register((s, event, dx, dy) -> !p.browser().drag(event.x()));
+			ScreenMouseEvents.allowMouseRelease(screen).register((s, event) -> !p.browser().release(event.x()));
 			ScreenMouseEvents.allowMouseScroll(screen).register((s, mx, my, sx, sy) -> {
 				boolean used = p.browser().scroll(mx, my, sy) || (p.flipKind() == null && p.chest().layout() && p.chest().scroll(mx, my, sy));
 				return !used;
@@ -100,6 +104,18 @@ final class ScreenOverlays {
 	static AuctionHighlight auctionOf(Screen screen) {
 		Panels p = PANELS.get(screen);
 		return p == null ? null : p.auction();
+	}
+
+	/** For tests. */
+	static ItemBrowser browserOf(Screen screen) {
+		Panels p = PANELS.get(screen);
+		return p == null ? null : p.browser();
+	}
+
+	/** For tests. */
+	static BazaarOrders ordersOf(Screen screen) {
+		Panels p = PANELS.get(screen);
+		return p == null ? null : p.orders();
 	}
 
 	/** For tests. */

@@ -21,7 +21,8 @@ public final class Features {
 	public enum Category {
 		CHAT("Chat", "チャット"), TOOLTIP("Tooltips", "説明欄"), INVENTORY("Inventory", "インベントリ"), HUD("HUD", "HUD"), MINING("Mining", "採掘"),
 		FARMING("Farming", "農業"), FISHING("Fishing", "釣り"), COMBAT("Combat", "戦闘"), DUNGEONS("Dungeons", "ダンジョン"), RIFT("Rift", "リフト"),
-		GUIDES("Guides", "ガイド"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール"), PERFORMANCE("Performance", "軽量化");
+		GUIDES("Guides", "ガイド"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール"), PERFORMANCE("Performance", "軽量化"),
+		AFK("AFK guard", "AFKガード");
 
 		public final String en;
 		public final String ja;
@@ -322,6 +323,9 @@ public final class Features {
 			"Toast when a fire sale is running (Hypixel firesales data), once per sale.", "ファイアセール開催中に通知（Hypixelのデータ・1回ずつ）。", "nr");
 	public static final Feature MARKET_DARK_AUCTION = f("market.dark_auction_alert", Category.MARKET, "Dark Auction alert", "ダークオークション通知",
 			"Toast one minute before the Dark Auction.", "ダークオークション開始1分前に通知。", "n");
+	public static final Feature MARKET_ORDER_HELPER = f("market.bazaar_order_helper", Category.MARKET, "Bazaar order helper", "バザー注文チェック",
+			"In \"Your Bazaar Orders\": green = your order has the best price, red = outbid (the tooltip says by how much), gold = filled and ready to claim. Reads the window only; orders are never clicked or changed.",
+			"「Your Bazaar Orders」で、緑 = 自分の注文が最良価格、赤 = 他の注文に上回られている（差額は説明欄に表示）、金 = 約定済みで受け取り可能、と色分けします。画面を読むだけで、注文の操作はしません。", "nr");
 
 	// ---------------------------------------------------------------- tools
 	public static final Feature TOOLS_CALC = f("tools.calculator", Category.TOOLS, "Calculator", "電卓",
@@ -379,6 +383,20 @@ public final class Features {
 			"Shows the game's memory use, e.g. \"RAM 1.8 / 4.0 GB\".", "ゲームのメモリ使用量（例: RAM 1.8 / 4.0 GB）を表示します。", "");
 	public static final Feature PERF_HUD_COUNTS = f("perf.hud_counts", Category.PERFORMANCE, "Entities and particles on the info HUD", "エンティティ数・パーティクル数をHUDに表示",
 			"Shows how many entities and particles the client is handling right now.", "今処理しているエンティティとパーティクルの数を表示します。", "");
+
+	// ---------------------------------------------------------------- AFK guard
+	// Notification only: nothing is pressed or moved for you (no "anti-AFK"), nothing is sent.
+	public static final Feature AFK_DETECT = f("afk.detect", Category.AFK, "AFK detection", "放置の検知",
+			"After a few minutes without keyboard or mouse input (default 3; /skypilot afk) you are marked AFK; the info HUD shows for how long.",
+			"キーボードとマウスの操作が数分（既定 3 分、/skypilot afk）ないと放置中として扱い、情報HUDに放置時間を表示します。", "r");
+	public static final Feature AFK_ALERTS = f("afk.alerts", Category.AFK, "AFK alerts", "放置中の通知",
+			"While AFK: a sound, a toast and a flashing taskbar button for private messages, party invites, your name in chat, Limbo / AFK notices, restart warnings, deaths, big health drops and disconnects.",
+			"放置中に個人メッセージ・パーティ招待・チャットでの名前・Limbo送り/AFK通知・再起動予告・死亡・体力の大幅な低下・切断があると、音とトースト、タスクバーの点滅で知らせます。", "r");
+	public static final Feature AFK_SUMMARY = f("afk.summary", Category.AFK, "Welcome-back summary", "戻ったときのまとめ",
+			"When you are back, one chat line (only you see it) lists what happened while you were away.", "戻ったとき、離席中に起きたことを1行にまとめてチャットに表示します（自分だけに表示）。", "r");
+	public static final Feature AFK_FPS = f("afk.low_fps", Category.AFK, "Low FPS while AFK", "放置中はFPSを下げる",
+			"While AFK the frame rate is capped (default 10 FPS) to keep the PC cool and quiet. Any input brings it back.",
+			"放置中はFPSを抑えて（既定 10 FPS）PCの発熱と騒音を減らします。操作するとすぐ元に戻ります。", "r");
 
 	private Features() {
 	}

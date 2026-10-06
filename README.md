@@ -101,7 +101,7 @@ cd apps/mod && ./gradlew build
 
 成果物: `apps/mod/platform/mc26_2/build/libs/skypilot-<version>.jar`（共通モジュールを Jar-in-Jar で同梱）と SHA-256 チェックサム `.jar.sha256`。署名鍵（`SKYPILOT_SIGN_KEYSTORE` / `SKYPILOT_SIGN_ALIAS` / `SKYPILOT_SIGN_STOREPASS`）がある場合は `jarsigner` で署名され、`jarsigner -verify -strict` で検証できます。
 
-- 導入: [ランチャー](#ランチャー)の「セットアップ／修復」で自動的に用意できます。手動の場合は Fabric Loader と Fabric API を入れた 26.2 の `mods` フォルダに jar を置きます
+- 導入: [ランチャー](#ランチャー)のプレイ（または「修復」）で自動的に用意できます。手動の場合は Fabric Loader と Fabric API を入れた 26.2 の `mods` フォルダに jar を置きます
 - 連携: ゲーム内で `/skypilot link` → 表示された URL（Web の `/link`）でコードを入力して承認。MOD が受け取るのは SkyPilot 専用の失効可能なトークンだけです（Microsoft / Minecraft のパスワードやセッショントークンは扱いません）。Web の「設定」から連携解除できます
 - 接続先の変更: `/skypilot server https://your-skypilot.example`（http は localhost のみ許可）
 
@@ -116,35 +116,35 @@ cd apps/mod && ./gradlew build
 | `/skypilot hud edit\|on\|off` | HUD の移動・サイズ変更（ドラッグ/スクロール）・表示切替 |
 | `/skypilot session [reset \| upload on\|off]` | セッション統計 |
 | `/skypilot settings` | 設定画面（キー割り当ても可能） |
+| `/skypilot perf` | 軽量化（非アクティブ時・メニュー中の FPS 制限、遠くのエンティティ・パーティクルを描画しない、軽量ビデオ設定と元に戻す） |
+| `/skypilot afk [minutes <n> \| fps <n>]` | AFK ガード（離席中の通知・戻ったときのまとめ・放置中の FPS 低下。自動操作はしません） |
+
+インベントリ右側の**アイテム一覧**は画面いっぱいに並び、カテゴリで絞り込み、マウスを重ねると説明文と価格（バザー・最安 BIN・NPC・クラフト費用）を表示します。左端をドラッグすると幅を変えたり画面端に収納したりできます（Ctrl+F で検索、R / U でレシピ・使い道）。AH・バザーのフリップ欄は並び替え・所持金内だけの表示・クリックでコマンドをチャット欄へ入力でき、「Your Bazaar Orders」では自分の注文が最良価格か上回られているかを色で示します（表示のみ）。
 
 MOD の構成はバージョン分離しています: `core` / `network` / `translation` / `session` / `hud`（Minecraft 非依存・単体テスト済み）と `platform/mc26_2`（26.2 固有の Fabric 層）。新しい Minecraft バージョンは `platform/mcXX_Y` を追加するだけで共通部分を再利用できます。詳しくは [docs/mod.md](docs/mod.md)。
 
 ## ランチャー
 
-**SkyPilot Launcher**（`apps/launcher`）は、公式 Minecraft ランチャーに **「SkyPilot (SkyBlock)」プロファイル**を用意するデスクトップアプリです。「セットアップ／修復」を押すと次をまとめて行います。
+**SkyPilot Launcher**（`apps/launcher`）は、SkyPilot（Fabric 26.2）を入れて Minecraft を起動するデスクトップアプリです。起動方法は 2 通りです。
 
-- Fabric Loader 0.19.5（Minecraft 26.2）のバージョンファイルを入れる（Fabric 公式インストーラーと同じ方式）
-- 同梱の SkyPilot MOD を入れる（SHA-256 確認）
-- Fabric API 0.161.0+26.2 を入れる（Modrinth から。SHA-512 とサイズを固定）
-- 専用ゲームフォルダとメモリ設定付きのプロファイルを追加する（他のプロファイルはそのまま、初回にバックアップ）
+| 方法 | サインイン | 起動するもの |
+|---|---|---|
+| **このランチャー**（サインイン時の既定） | ブラウザで Microsoft のデバイスコード方式 | SkyPilot Launcher（Mojang の本体・Java ランタイムを SHA-1 確認して使用） |
+| **公式 Minecraft ランチャー** | 公式ランチャー | 公式ランチャー（このランチャーが「SkyPilot (SkyBlock)」プロファイルを用意） |
 
-その後は公式ランチャーでサインインしてプレイを押すだけです。
-
-- **Microsoft / Minecraft のアカウント・パスワード・トークンは一切扱いません**（サインインとゲーム起動は公式ランチャーが行います）
-- ダウンロード先は `meta.fabricmc.net` と `cdn.modrinth.com` だけです（https・サイズ上限・ハッシュ固定）
+- **Microsoft サインイン**: パスワードは Microsoft のページにだけ入力します。更新用のサインイン情報はこの PC に Windows DPAPI で暗号化して保存し、ゲームのセッションはメモリ上だけで扱います。SkyPilot サーバーには送りません。
+  - 初回だけ、自分で登録した Azure アプリの**クライアント ID**（Mojang の承認済み: <https://aka.ms/mce-reviewappid>）が必要です。SkyPilot は他のランチャーの ID を借用しません。未設定の間は公式ランチャー経由で起動します。
+- **プレイ**: 足りないファイル（Fabric・SkyPilot MOD・Fabric API・ゲーム本体・アセット・Java 25）を確認・取得して起動。「起動したら Hypixel に接続」（Quick Play）にも対応。
+- **インストーラーと自動更新**: ユーザー単位のインストーラー（管理者権限不要、スタートメニュー・デスクトップのショートカット）。更新は SkyPilot サーバーから取得し、**Ed25519 署名とインストーラーの SHA-256 を確認できたものだけ**を、クリックしたときにインストールします。
+- 画面: ホーム（市長・イベント・ニュース・インストール状態）、MOD（互換性チェック・プリセット・トラブルシュート）、機能、スクリーンショット、ログとクラッシュ解析、ツール（取り込み・バックアップ・サーバー一覧）、設定（アカウントと起動・ゲーム・更新）、このランチャーについて
 - ファイルは削除しません（置き換えた MOD は `.jar.disabled` に変えるだけ）
-- 画面:
-  - ホーム: 状態チェック、セットアップ、公式ランチャー / Web を開く
-  - MOD: 一覧、有効/無効の切り替え、手元の jar の追加
-  - 設定: 言語、メモリ、フォルダ、SkyPilot サーバー
-  - ログ: latest.log、クラッシュレポート
-  - このランチャーについて
 
 ```bash
 cd apps/mod
-./gradlew :launcher:run              # ソースから起動
-./gradlew :launcher:jpackageImage    # Java 同梱アプリ → apps/launcher/build/jpackage/SkyPilot Launcher/
-java -jar ../launcher/build/libs/skypilot-launcher-0.1.0-all.jar --status   # 状態だけ確認（Java 25）
+./gradlew :launcher:run                 # ソースから起動
+./gradlew :launcher:jpackageImage       # Java 同梱のポータブル版 → apps/launcher/build/jpackage/SkyPilot Launcher/
+./gradlew :launcher:jpackageInstaller   # Windows インストーラー（WiX 5 が必要）→ apps/launcher/build/installer/
+./gradlew :launcher:launcherRelease     # 署名付きの更新ファイル（SKYPILOT_UPDATE_KEY が必要）→ apps/launcher/build/release/
 ```
 
 詳しくは [docs/launcher.md](docs/launcher.md)。
@@ -156,7 +156,7 @@ java -jar ../launcher/build/libs/skypilot-launcher-0.1.0-all.jar --status   # �
 | Rust（全クレート、プロパティテスト含む） | `cargo test --workspace` |
 | Web（型チェック・Lint・本番ビルド） | `pnpm typecheck` / `pnpm lint` / `pnpm build` |
 | MOD・ランチャー（単体テスト + jar） | `cd apps/mod && ./gradlew build` |
-| ランチャーのアプリ化（Java 同梱） | `cd apps/mod && ./gradlew :launcher:jpackageImage` |
+| ランチャーのアプリ化（Java 同梱）・インストーラー | `cd apps/mod && ./gradlew :launcher:jpackageImage :launcher:jpackageInstaller` |
 | MOD（実際の Minecraft 26.2 を起動してワールド内で検証） | `cd apps/mod && ./gradlew :platform:mc26_2:runClientGameTest` |
 | MOD ↔ API 実通信（API 起動中に） | `cd apps/mod && SKYPILOT_E2E_URL=http://localhost:3000 ./gradlew :network:test` |
 | スタック全体の E2E スモークテスト | `node tests/e2e/smoke.mjs http://localhost:3000` |
@@ -173,7 +173,7 @@ apps/
   api/          Rust (Axum/Tokio/SQLx) HTTP + WebSocket API
   web/          Next.js 16 / React 19 / Tailwind CSS v4 / shadcn 風 UI
   mod/          Fabric MOD (core, network, translation, session, hud, platform/mc26_2)
-  launcher/     SkyPilot Launcher（公式ランチャー用の Fabric 26.2 プロファイルを用意。Swing + FlatLaf）
+  launcher/     SkyPilot Launcher（Microsoft サインインで直接起動 / 公式ランチャー用プロファイル。Swing + FlatLaf）
 services/
   market-collector/      AH・終了オークション・バザーの巡回（429 を尊重）
   pricing-engine/        正規化・適正価格・相場操作検出・フリップ・バザー・クラフト・バックテスト・資産評価

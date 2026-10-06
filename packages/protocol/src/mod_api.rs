@@ -202,6 +202,30 @@ pub struct ModMarketPanel {
     pub note: String,
 }
 
+/// Live Bazaar prices for products named in the player's "Your Bazaar Orders" window.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBazaarQuote {
+    /// The name as asked for.
+    pub name: String,
+    pub product_id: Option<String>,
+    /// Lowest sell offer (what an instant buy pays).
+    pub instant_buy: Option<f64>,
+    /// Highest buy order (what an instant sell gets).
+    pub instant_sell: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBazaarQuotes {
+    pub quotes: Vec<ModBazaarQuote>,
+    #[ts(type = "number")]
+    pub age_seconds: i64,
+    pub stale: bool,
+}
+
 /// New AH flips matching the player's notification rules since `sinceMs`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

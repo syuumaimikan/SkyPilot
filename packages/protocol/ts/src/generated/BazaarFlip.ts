@@ -8,4 +8,8 @@ export type BazaarFlip = { kind: BazaarFlipKind, productId: string, name: string
 /**
  * Suggested amount respecting volume & capital.
  */
-suggestedAmount: number, expectedProfit: number, capitalRequired: number, buyFillMinutes: Range | null, sellFillMinutes: Range | null, profitPerHour: number | null, risk: RiskLevel, confidence: Confidence, score: number, notes: Array<string>, };
+suggestedAmount: number, expectedProfit: number, capitalRequired: number, buyFillMinutes: Range | null, sellFillMinutes: Range | null, profitPerHour: number | null, risk: RiskLevel, confidence: Confidence, score: number, notes: Array<string>, 
+/**
+ * Prices far from their usual level (pushed offers or a crash): do not flip.
+ */
+manipulated: boolean, };

@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * What "Set up / Repair" does and what the status list checks. Nothing here touches Microsoft or
- * Minecraft accounts: signing in and starting the game stay in the official Minecraft Launcher.
+ * What "Set up / Repair" does and what the status list checks. Sign-in is separate
+ * ({@link MicrosoftAuth}); without it the game is started from the official Minecraft Launcher.
  */
 public final class Setup {
 	public record Check(String id, boolean ok, String label, String detail) {
@@ -64,6 +64,38 @@ public final class Setup {
 		for (Path f : profileFiles) LauncherProfiles.upsert(f, pins.versionId(), s.instance(), s.profileOptions(), icon);
 		progress.accept(l.t("Done. Start the official launcher, pick \"" + LauncherProfiles.NAME + "\" and press Play.",
 				"完了しました。公式ランチャーで「" + LauncherProfiles.NAME + "」を選んでプレイを押してください。"));
+	}
+
+	/**
+	 * Everything needed to start SkyPilot from this launcher (signed in with Microsoft): Fabric's
+	 * version file, the SkyPilot mod and Fabric API. The official launcher's profile is updated
+	 * too when that launcher is installed, so both ways keep working.
+	 */
+	public static void runDirect(LauncherSettings s, Pins pins, Lang l, FabricInstaller.Fetch fetch, Consumer<String> progress) throws IOException {
+		Path mc = s.minecraft();
+		Files.createDirectories(mc);
+		if (!FabricInstaller.installed(mc, pins)) {
+			progress.accept(l.t("Installing Fabric Loader " + pins.loader() + "…", "Fabric Loader " + pins.loader() + " をインストール中…"));
+			FabricInstaller.install(mc, pins, fetch);
+		}
+		if (!Mods.skyPilotInstalled(s.mods(), pins)) {
+			progress.accept(l.t("Installing the SkyPilot mod…", "SkyPilot MODをインストール中…"));
+			Mods.installSkyPilot(s.mods(), pins, Pins.bundledMod());
+		}
+		if (!Mods.fabricApiInstalled(s.mods(), pins)) {
+			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
+			Mods.installFabricApi(s.mods(), pins, fetch);
+		}
+		Files.createDirectories(s.instance());
+		List<Path> profileFiles = LauncherProfiles.files(mc);
+		for (Path f : profileFiles) {
+			if (!LauncherProfiles.upToDate(f, pins.versionId(), s.instance())) LauncherProfiles.upsert(f, pins.versionId(), s.instance(), s.profileOptions(), iconDataUri());
+		}
+	}
+
+	/** True when this launcher can start the game itself without installing anything first. */
+	public static boolean directReady(LauncherSettings s, Pins pins) {
+		return FabricInstaller.installed(s.minecraft(), pins) && Mods.skyPilotInstalled(s.mods(), pins) && Mods.fabricApiInstalled(s.mods(), pins);
 	}
 
 	/** The profile icon (the mod's icon as a data URI, as Fabric's installer does). */

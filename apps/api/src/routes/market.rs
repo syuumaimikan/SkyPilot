@@ -46,11 +46,13 @@ pub async fn flips(State(state): State<Arc<AppState>>, Query(p): Query<FlipParam
 #[derive(Deserialize)]
 pub struct CapitalParams {
     pub capital: Option<f64>,
+    /// Bazaar Flipper account upgrade level (0-2): lowers the tax.
+    pub flipper: Option<u32>,
 }
 
 pub async fn bazaar(State(state): State<Arc<AppState>>, Query(p): Query<CapitalParams>) -> Json<BazaarList> {
     let capital = p.capital.filter(|c| c.is_finite() && *c > 0.0).unwrap_or(50_000_000.0).min(1e12);
-    Json(state.market.bazaar_list(capital))
+    Json(state.market.bazaar_list_for(capital, p.flipper.unwrap_or(0)))
 }
 
 pub async fn craft(State(state): State<Arc<AppState>>) -> Json<Value> {

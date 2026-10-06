@@ -66,11 +66,24 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Build the app image
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install WiX Toolset 5 (for the installer)
+        shell: bash
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+          wix extension add -g WixToolset.Util.wixext/5.0.2
+      - name: Build the app image and the installer
         working-directory: apps/mod
         shell: bash
-        run: ./gradlew :launcher:jpackageImage --no-daemon
+        run: ./gradlew :launcher:jpackageImage :launcher:jpackageInstaller --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: skypilot-launcher-windows
           path: apps/launcher/build/jpackage/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skypilot-launcher-installer
+          path: apps/launcher/build/installer/*.exe

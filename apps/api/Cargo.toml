@@ -25,6 +25,7 @@ thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 futures.workspace = true
 axum.workspace = true
 axum-extra.workspace = true

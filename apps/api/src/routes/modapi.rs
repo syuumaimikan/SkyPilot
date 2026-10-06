@@ -246,7 +246,7 @@ fn bazaar_row(registry: &skypilot_data::Registry, f: &skypilot_protocol::market:
         confidence_label: confidence_label(&f.confidence),
         risk: enum_name(&f.risk),
         sell_time: f.sell_fill_minutes.as_ref().map(minutes),
-        do_not_flip: false,
+        do_not_flip: f.manipulated,
         notes: f.notes.clone(),
         command: Some(format!("/bz {}", f.name)),
         icon: icon_of(registry, &f.product_id),
@@ -258,6 +258,60 @@ pub struct MarketQuery {
     pub kind: Option<String>,
     pub limit: Option<usize>,
     pub lang: Option<String>,
+    /// Coins the player can spend (purse): AH flips above it are left out, Bazaar amounts fit it.
+    pub budget: Option<f64>,
+    /// Bazaar Flipper upgrade level (0-2).
+    pub flipper: Option<u32>,
+    /// "score" (default), "profit", "roi" or "hour".
+    pub sort: Option<String>,
+}
+
+fn sort_rows(rows: &mut [ModFlipRow], sort: &str) {
+    match sort {
+        "profit" => rows.sort_by(|a, b| b.profit.total_cmp(&a.profit)),
+        "roi" => rows.sort_by(|a, b| b.roi.total_cmp(&a.roi)),
+        "hour" => rows.sort_by(|a, b| b.profit_per_hour.unwrap_or(f64::MIN).total_cmp(&a.profit_per_hour.unwrap_or(f64::MIN))),
+        _ => {}
+    }
+}
+
+#[derive(Deserialize)]
+pub struct QuotesQuery {
+    /// Product names separated by "|" (as shown in the orders window).
+    pub names: String,
+}
+
+/// Live instant-buy / instant-sell prices for Bazaar products by display name (for the
+/// in-game order helper, which only colours the player's own order items).
+pub async fn bazaar_quotes(State(state): State<Arc<AppState>>, Query(q): Query<QuotesQuery>) -> ApiResult<Json<ModBazaarQuotes>> {
+    let names: Vec<&str> = q.names.split('|').map(str::trim).filter(|n| !n.is_empty()).collect();
+    if names.len() > 40 || names.iter().any(|n| n.chars().count() > 64) {
+        return Err(AppError::bad_request("at most 40 names of 64 characters"));
+    }
+    let registry = state.registry();
+    let st = state.market.state.read();
+    let quotes = names
+        .iter()
+        .map(|name| {
+            let id = registry
+                .search_items(name, 1)
+                .into_iter()
+                .next()
+                .filter(|d| d.name.eq_ignore_ascii_case(name))
+                .map(|d| d.id.clone())
+                .filter(|id| st.bazaar.contains_key(id));
+            let p = id.as_ref().and_then(|id| st.bazaar.get(id));
+            ModBazaarQuote {
+                name: name.to_string(),
+                instant_buy: p.and_then(skypilot_pricing::bazaar::instant_buy),
+                instant_sell: p.and_then(skypilot_pricing::bazaar::instant_sell),
+                product_id: id,
+            }
+        })
+        .collect();
+    drop(st);
+    let (_, _, bz) = state.market.freshness();
+    Ok(Json(ModBazaarQuotes { quotes, age_seconds: bz.age_seconds, stale: bz.stale }))
 }
 
 /// AH / Bazaar flips for the in-game GUI (public market data, no account needed).
@@ -269,25 +323,37 @@ pub async fn market(State(state): State<Arc<AppState>>, Query(q): Query<MarketQu
         "Information only - SkyPilot never buys or sells. Commands are put into your chat box; you decide whether to send them.",
         "情報表示のみです。SkyPilotは売買しません。コマンドはチャット欄に入力されるだけで、送信するかはご自身で判断してください。",
     );
+    let budget = q.budget.filter(|b| b.is_finite() && *b > 0.0).map(|b| b.min(1e12));
+    let sort = q.sort.as_deref().unwrap_or("score");
+    if !["score", "profit", "roi", "hour"].contains(&sort) {
+        return Err(AppError::bad_request("sort must be score, profit, roi or hour"));
+    }
     let panel = match q.kind.as_deref().unwrap_or("ah") {
         "bazaar" | "bz" => {
-            let list = state.market.bazaar_list(f64::MAX);
+            let list = state.market.bazaar_list_for(budget.unwrap_or(f64::MAX), q.flipper.unwrap_or(0));
+            let mut rows: Vec<ModFlipRow> = list.flips.iter().map(|f| bazaar_row(&registry, f)).collect();
+            sort_rows(&mut rows, sort);
+            rows.truncate(limit);
             ModMarketPanel {
                 kind: "BAZAAR".into(),
                 title: lang.t("Bazaar order flips", "バザーの注文フリップ"),
-                rows: list.flips.iter().take(limit).map(|f| bazaar_row(&registry, f)).collect(),
+                rows,
                 age_seconds: list.freshness.age_seconds as i64,
                 stale: list.freshness.stale,
                 note,
             }
         }
         "ah" => {
-            let query = skypilot_protocol::market::FlipQuery { max_budget: None, min_profit: None, min_roi: None, min_confidence: None, max_risk: None, search: None, limit: Some(limit as u32) };
+            // sorted after filtering, so ask for more than shown
+            let query = skypilot_protocol::market::FlipQuery { max_budget: budget, min_profit: None, min_roi: None, min_confidence: None, max_risk: None, search: None, limit: Some(if sort == "score" { limit as u32 } else { 300 }) };
             let list = state.market.flips(&query, true);
+            let mut rows: Vec<ModFlipRow> = list.flips.iter().map(|f| ah_row(&registry, f)).collect();
+            sort_rows(&mut rows, sort);
+            rows.truncate(limit);
             ModMarketPanel {
                 kind: "AH".into(),
                 title: lang.t("Auction House flips", "オークションのフリップ"),
-                rows: list.flips.iter().map(|f| ah_row(&registry, f)).collect(),
+                rows,
                 age_seconds: list.freshness.age_seconds as i64,
                 stale: list.freshness.stale,
                 note,
@@ -625,8 +691,42 @@ fn valid_item_id(id: &str) -> bool {
 #[derive(Deserialize)]
 pub struct ItemsQuery {
     pub q: Option<String>,
+    /// One of [ITEM_GROUPS] ("all" or missing = everything).
+    pub category: Option<String>,
     pub offset: Option<usize>,
     pub limit: Option<usize>,
+}
+
+/// Browser categories, grouped from the items resource's `category` (values checked against
+/// api.hypixel.net/v2/resources/skyblock/items, 2026-10).
+pub const ITEM_GROUPS: [&str; 12] =
+    ["all", "weapons", "armor", "equipment", "accessories", "tools", "materials", "minions", "pet_items", "reforge_stones", "cosmetics", "other"];
+
+pub fn item_group(id: &str, category: Option<&str>, on_bazaar: bool) -> &'static str {
+    match category.unwrap_or("") {
+        "SWORD" | "LONGSWORD" | "BOW" | "WAND" | "ARROW" | "ARROW_POISON" | "GAUNTLET" | "FISHING_WEAPON" => "weapons",
+        "HELMET" | "CHESTPLATE" | "LEGGINGS" | "BOOTS" => "armor",
+        "NECKLACE" | "CLOAK" | "BELT" | "GLOVES" | "BRACELET" => "equipment",
+        "ACCESSORY" => "accessories",
+        "PICKAXE" | "DRILL" | "AXE" | "SPADE" | "SHEARS" | "HOE" | "FARMING_TOOL" | "FISHING_ROD" | "FISHING_ROD_PART" | "FISHING_NET" | "BAIT"
+        | "VACUUM" | "WATERING_CAN" | "CHISEL" | "LASSO" | "TRAP" => "tools",
+        "PET_ITEM" => "pet_items",
+        "REFORGE_STONE" => "reforge_stones",
+        "COSMETIC" | "CARNIVAL_MASK" | "MEMENTO" => "cosmetics",
+        _ if is_minion(id) => "minions",
+        _ if on_bazaar => "materials",
+        _ => "other",
+    }
+}
+
+fn is_minion(id: &str) -> bool {
+    id.rsplit_once("_GENERATOR_").is_some_and(|(_, tier)| !tier.is_empty() && tier.chars().all(|c| c.is_ascii_digit()))
+}
+
+#[derive(Deserialize)]
+pub struct ItemQuery {
+    /// Only name, lore and prices (hover cards); skips recipes, drop sources and uses.
+    pub brief: Option<bool>,
 }
 
 /// Item list for the in-game browser: all items by name, or search results (static data + prices).
@@ -643,14 +743,27 @@ pub async fn items(State(state): State<Arc<AppState>>, Query(q): Query<ItemsQuer
     } else {
         registry.search_items(query, 400).into_iter().map(|d| d.id.clone()).collect()
     };
+    let group = q.category.as_deref().unwrap_or("all");
+    if !ITEM_GROUPS.contains(&group) {
+        return Err(AppError::bad_request("unknown category"));
+    }
+    let ids: Vec<String> = if group == "all" {
+        ids
+    } else {
+        ids.into_iter()
+            .filter(|id| item_group(id, registry.item(id).and_then(|d| d.category.as_deref()), state.market.is_bazaar(id)) == group)
+            .collect()
+    };
     let offset = q.offset.unwrap_or(0).min(ids.len());
-    let limit = q.limit.unwrap_or(60).clamp(1, 120);
+    // a tall browser panel at GUI scale 1 shows a few hundred cells
+    let limit = q.limit.unwrap_or(60).clamp(1, 600);
     let items = ids[offset..(offset + limit).min(ids.len())].iter().map(|id| entry(&state, &registry, id)).collect();
     Ok(Json(ModItemPage { total: ids.len() as u32, offset: offset as u32, items }))
 }
 
 /// One item: value, description, recipes (crafting grid / forge / Kat / NPC shop), drop sources and uses.
-pub async fn item(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> ApiResult<Json<ModItemDetail>> {
+pub async fn item(State(state): State<Arc<AppState>>, Path(id): Path<String>, Query(iq): Query<ItemQuery>) -> ApiResult<Json<ModItemDetail>> {
+    let brief = iq.brief.unwrap_or(false);
     if !valid_item_id(&id) {
         return Err(AppError::bad_request("invalid item id"));
     }
@@ -664,6 +777,7 @@ pub async fn item(State(state): State<Arc<AppState>>, Path(id): Path<String>) ->
         .neu
         .recipes
         .get(&id)
+        .filter(|_| !brief)
         .map(|rs| {
             rs.iter()
                 .map(|r| match r {
@@ -729,6 +843,7 @@ pub async fn item(State(state): State<Arc<AppState>>, Path(id): Path<String>) ->
         .neu
         .drops
         .values()
+        .filter(|_| !brief)
         .flat_map(|t| t.drops.iter().filter(|d| d.id == id).map(move |d| ModDropSource { source: t.name.clone(), chance: d.chance, amount: d.amount }))
         .collect();
     drops.sort_by(|a, b| b.chance.total_cmp(&a.chance));
@@ -738,7 +853,7 @@ pub async fn item(State(state): State<Arc<AppState>>, Path(id): Path<String>) ->
         Recipe::Kat { input, items, .. } => input == &id || items.iter().any(|s| s.id == id),
         Recipe::NpcShop { cost, .. } => cost.iter().any(|s| s.id == id),
     };
-    let mut used: Vec<String> = registry.neu.recipes.iter().filter(|(out, rs)| *out != &id && rs.iter().any(uses)).map(|(out, _)| out.clone()).collect();
+    let mut used: Vec<String> = registry.neu.recipes.iter().filter(|(out, rs)| !brief && *out != &id && rs.iter().any(uses)).map(|(out, _)| out.clone()).collect();
     used.sort();
     used.truncate(40);
     let fair = state.market.fair_value(&id);
@@ -795,4 +910,22 @@ pub async fn values(State(state): State<Arc<AppState>>, Json(req): Json<ModValue
         })
         .collect();
     Ok(Json(ModValues { values, total }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn groups_items_for_the_browser() {
+        assert_eq!(item_group("HYPERION", Some("SWORD"), false), "weapons");
+        assert_eq!(item_group("NECRON_HELMET", Some("HELMET"), false), "armor");
+        assert_eq!(item_group("MOLTEN_BELT", Some("BELT"), false), "equipment");
+        assert_eq!(item_group("TITANIUM_DRILL_4", Some("DRILL"), false), "tools");
+        assert_eq!(item_group("COBBLESTONE_GENERATOR_11", None, false), "minions");
+        assert_eq!(item_group("ENCHANTED_DIAMOND", None, true), "materials");
+        assert_eq!(item_group("BOOSTER_COOKIE", None, false), "other");
+        assert_eq!(item_group("FAKE_GENERATOR_", None, false), "other");
+        assert!(ITEM_GROUPS.iter().all(|g| *g == "all" || ["weapons", "armor", "equipment", "accessories", "tools", "materials", "minions", "pet_items", "reforge_stones", "cosmetics", "other"].contains(g)));
+    }
 }

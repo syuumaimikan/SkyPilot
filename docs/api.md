@@ -41,6 +41,11 @@ state-changing request. The mod uses `Authorization: Bearer spm_…` from the de
 | GET | `/translate/dictionary`, `/translate/status` | - | Dictionary, provider + privacy notice |
 | GET | `/mod/hud?area=&lang=`, `/mod/text/{goal|next|roadmap|market|mining|slayer|farming}` | bearer | Mod HUD and panels |
 | POST | `/mod/price`, `/mod/session` | bearer | Price check, session statistics upload |
+| GET | `/mod/market?kind=ah\|bazaar&limit=&sort=score\|profit\|roi\|hour&budget=&flipper=0..2` | - | Flip panel rows (budget = the player's purse; flipper = Bazaar Flipper level for the tax) |
+| GET | `/mod/items?q=&category=&offset=&limit≤600`, `/mod/item/{id}[?brief=true]` | - | Item browser pages (categories: all, weapons, armor, equipment, accessories, tools, materials, minions, pet_items, reforge_stones, cosmetics, other); item page or hover card |
+| GET | `/mod/bazaar/quotes?names=A\|B` | - | Live instant buy / sell by product name (≤40 names) for the order helper |
+| GET | `/mod/news` | - | Hypixel SkyBlock news (cached 30 min) |
+| GET | `/launcher/latest`, `/launcher/files/{name}` | - | Launcher update feed from `LAUNCHER_RELEASES_DIR`: signed `latest.json` + installer (the launcher checks the Ed25519 signature and SHA-256) |
 
 Limits: request body 256 KB; general 240 req/min/IP; analyze 6/min/IP; auth 10/min/IP;
 translate 240/min/user.

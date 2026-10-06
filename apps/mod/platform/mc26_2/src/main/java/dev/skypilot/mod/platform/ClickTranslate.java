@@ -10,11 +10,13 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.multiplayer.chat.GuiMessage;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.sounds.SoundEvents;
 
 import java.util.List;
 
@@ -129,6 +131,7 @@ final class ClickTranslate {
 			sp.saveConfig();
 		}
 		if (e.translated != null) {
+			ding(false);
 			show(e, e.shown == e.translated ? e.withButton : e.translated);
 			return 1;
 		}
@@ -144,6 +147,7 @@ final class ClickTranslate {
 		}
 		if (e.pending) return 1;
 		e.pending = true;
+		ding(false);
 		String plain = e.flat.line().plain();
 		ChannelClassifier.Classified c = ChannelClassifier.classify(plain);
 		StyledLine[] parts = e.flat.line().splitAt(c.bodyStart());
@@ -161,8 +165,18 @@ final class ClickTranslate {
 			if (e.prefix != null) translated.append(e.prefix);
 			e.translated = translated.append(McText.rebuild(line, e.flat.styles())).append(button(id, true, plain, l));
 			show(e, e.translated);
+			ding(true);
 		}));
 		return 1;
+	}
+
+	/** "Chin": a short ding on click, a bell when the translation is in (translation.sound). */
+	static void ding(boolean done) {
+		SkyPilot sp = SkyPilot.get();
+		if (sp == null || !sp.config().translation.sound) return;
+		var sounds = Minecraft.getInstance().getSoundManager();
+		if (done) sounds.play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, 1.6f));
+		else sounds.play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.25f, 0.6f));
 	}
 
 	/** Put {@code next} where the line is shown now; if it left the chat history, add it at the bottom. */

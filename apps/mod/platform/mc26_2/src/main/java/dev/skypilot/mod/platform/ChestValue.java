@@ -238,7 +238,7 @@ final class ChestValue {
 			String tip = hovered.name + (hovered.count > 1 ? " ×" + hovered.count : "") + "\n"
 					+ (hovered.value == null ? l.t("No market price", "市場価格なし") : l.t("Value ", "価値 ") + Text.coins(hovered.value) + (hovered.unknown ? l.t(" (some unpriced)", "（一部価格不明）") : ""))
 					+ "\n" + l.t("Click to outline its slots", "クリックでスロットを縁取り");
-			Ui.tooltip(g, Component.literal(tip), mouseX, mouseY);
+			Ui.overlayTooltip(g, Component.literal(tip), mouseX, mouseY);
 		}
 	}
 

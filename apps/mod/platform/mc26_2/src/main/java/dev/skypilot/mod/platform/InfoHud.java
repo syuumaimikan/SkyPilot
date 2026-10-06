@@ -67,6 +67,7 @@ final class InfoHud {
 			PlayerInfo me = mc.getConnection() == null ? null : mc.getConnection().getPlayerInfo(mc.player.getUUID());
 			out.add(HudRow.text(mc.getFps() + " FPS" + (me != null ? "  " + me.getLatency() + " ms" : ""), HudRow.MUTED));
 		}
+		if (Afk.afk()) out.add(HudRow.text("AFK " + dev.skypilot.mod.core.Text.duration(Afk.awayMs()), HudRow.WARN));
 		if (Feat.on(Features.PERF_HUD_MEMORY)) {
 			Runtime rt = Runtime.getRuntime();
 			long used = rt.totalMemory() - rt.freeMemory();

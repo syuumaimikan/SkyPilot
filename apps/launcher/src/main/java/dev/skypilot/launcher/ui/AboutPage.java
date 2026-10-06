@@ -42,8 +42,8 @@ final class AboutPage {
 		t.add(Ui.muted(c.t("Version ", "バージョン ") + Net.versionName() + "  ·  SkyPilot " + c.pins.modVersion() + "  ·  Minecraft " + c.pins.minecraft() + "  ·  Fabric Loader "
 				+ c.pins.loader() + "  ·  Fabric API " + c.pins.fabricApi()));
 		t.add(Box.createVerticalStrut(6));
-		t.add(Ui.wrap(c.t("Prepares SkyPilot for the official Minecraft Launcher. Not affiliated with Mojang, Microsoft or Hypixel.",
-				"公式Minecraftランチャー向けにSkyPilotを準備します。Mojang・Microsoft・Hypixelとは無関係です。"), Theme.MUTED, 13f));
+		t.add(Ui.wrap(c.t("Installs SkyPilot and starts Minecraft with it - after a Microsoft sign-in, or through the official Minecraft Launcher. Not affiliated with Mojang, Microsoft or Hypixel.",
+				"SkyPilot を入れて Minecraft を起動します（Microsoft でサインイン、または公式 Minecraft ランチャー経由）。Mojang・Microsoft・Hypixel とは無関係です。"), Theme.MUTED, 13f));
 		head.add(t, BorderLayout.CENTER);
 		page.add(head, BorderLayout.NORTH);
 
@@ -56,13 +56,15 @@ final class AboutPage {
 						"同梱の SkyPilot MOD（SHA-256確認）と、Modrinth の Fabric API " + c.pins.fabricApi() + "（SHA-512固定）を配置します。"),
 				c.t("Adds the \"" + LauncherProfiles.NAME + "\" profile; your other profiles stay, and the file is backed up first.",
 						"「" + LauncherProfiles.NAME + "」プロファイルを追加します。他のプロファイルはそのままで、事前にバックアップします。"),
+				c.t("Signs in with Microsoft's device code page (your password is typed only there) and starts the game with Minecraft's own files and Java runtime from Mojang, each SHA-1 checked.",
+						"Microsoft のデバイスコードのページでサインインし（パスワードはそのページにだけ入力）、Mojang の Minecraft 本体と Java ランタイム（各ファイル SHA-1 確認）でゲームを起動します。"),
 				c.t("Shows public information only: SkyBlock mayor, events and news from your SkyPilot server, Modrinth version pages, your public Minecraft head.",
 						"公開情報だけを表示します: SkyPilotサーバー経由の市長・イベント・ニュース、Modrinthのページ、公開されているMinecraftの頭の画像。")));
 		cards.add(list("shield", c.t("What it never does", "行わないこと"), Theme.ACCENT,
-				c.t("Ask for, read or store a Microsoft or Minecraft account, password or token. You sign in and press Play in the official launcher.",
-						"Microsoft / Minecraft のアカウント・パスワード・トークンを尋ねる・読む・保存すること。サインインとプレイは公式ランチャーで行います。"),
-				c.t("Start or change the game, or run anything it downloads. Installs come only from meta.fabricmc.net and cdn.modrinth.com, checked against pinned hashes.",
-						"ゲームの起動・改変や、ダウンロードしたものの実行。インストールは meta.fabricmc.net と cdn.modrinth.com からのみで、固定ハッシュで確認します。"),
+				c.t("Ask for your password or a token, or send your sign-in anywhere: the renewable sign-in stays on this PC, encrypted for your Windows account; the game session lives in memory only.",
+						"パスワードやトークンを尋ねたり、サインイン情報をどこかへ送信すること。更新用のサインイン情報はこのPCにだけ、Windowsアカウント用に暗号化して保存し、ゲームのセッションはメモリ上だけで扱います。"),
+				c.t("Change the game or run unchecked downloads: game files only from Mojang / Fabric (SHA-1 from their metadata), mods only from meta.fabricmc.net and cdn.modrinth.com (pinned hashes), launcher updates only with SkyPilot's signature.",
+						"ゲームの改変や、未確認のダウンロードの実行。ゲームファイルは Mojang / Fabric から（メタデータの SHA-1 で確認）、MODは meta.fabricmc.net と cdn.modrinth.com から（固定ハッシュ）、ランチャーの更新は SkyPilot の署名付きのみです。"),
 				c.t("Download other mods for you - update checks only link to Modrinth.", "他のMODのダウンロード（更新確認はModrinthへのリンクのみ）。"),
 				c.t("Delete your files - mods are switched off by renaming, settings are backed up before changes.", "ファイルの削除（MODは名前の変更でオフにし、設定は変更前にバックアップします）。")));
 		JPanel body = new JPanel(new BorderLayout(0, 16));

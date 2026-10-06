@@ -72,6 +72,13 @@ public final class Dto {
 	public record Alerts(long nowMs, List<FlipRow> rows, List<String> rules) {
 	}
 
+	/** Live Bazaar prices of one product (by its display name). */
+	public record BazaarQuote(String name, String productId, Double instantBuy, Double instantSell) {
+	}
+
+	public record BazaarQuotes(List<BazaarQuote> quotes, long ageSeconds, boolean stale) {
+	}
+
 	public record ItemRef(String itemId, String name, Double price, ItemIcon icon) {
 	}
 

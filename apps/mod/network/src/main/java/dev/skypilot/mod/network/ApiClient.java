@@ -143,7 +143,21 @@ public final class ApiClient {
 
 	/** AH ({@code "ah"}) or Bazaar ({@code "bazaar"}) flips - public market data, no account needed. */
 	public CompletableFuture<Dto.MarketPanel> market(String kind, int limit, String lang) {
-		return getPublic("/api/mod/market?kind=" + enc(kind) + "&limit=" + limit + "&lang=" + enc(lang), Dto.MarketPanel.class, 20_000);
+		return market(kind, limit, lang, "score", 0, 0);
+	}
+
+	/**
+	 * Flips sorted by {@code sort} (score, profit, roi, hour). {@code budget} &gt; 0 leaves out AH
+	 * flips above it and sizes Bazaar amounts to it; {@code flipper} is the Bazaar Flipper level.
+	 */
+	public CompletableFuture<Dto.MarketPanel> market(String kind, int limit, String lang, String sort, long budget, int flipper) {
+		return getPublic("/api/mod/market?kind=" + enc(kind) + "&limit=" + limit + "&lang=" + enc(lang) + "&sort=" + enc(sort)
+				+ (budget > 0 ? "&budget=" + budget : "") + "&flipper=" + flipper, Dto.MarketPanel.class, 20_000);
+	}
+
+	/** Live prices for Bazaar products named in the player's orders window (at most 40 names). */
+	public CompletableFuture<Dto.BazaarQuotes> bazaarQuotes(java.util.Collection<String> names) {
+		return getPublic("/api/mod/bazaar/quotes?names=" + enc(String.join("|", names)), Dto.BazaarQuotes.class, 15_000);
 	}
 
 	public CompletableFuture<Dto.Plan> plan(String lang) {
@@ -177,12 +191,22 @@ public final class ApiClient {
 
 	/** Item list for the browser: everything by name ({@code query} empty) or search results. */
 	public CompletableFuture<Dto.ItemPage> items(String query, int offset, int limit) {
-		return getPublic("/api/mod/items?q=" + enc(query) + "&offset=" + offset + "&limit=" + limit, Dto.ItemPage.class, 120_000);
+		return items(query, "all", offset, limit);
+	}
+
+	/** Item list limited to one browser category ("all", "weapons", "armor", … - see the server's ITEM_GROUPS). */
+	public CompletableFuture<Dto.ItemPage> items(String query, String category, int offset, int limit) {
+		return getPublic("/api/mod/items?q=" + enc(query) + "&category=" + enc(category) + "&offset=" + offset + "&limit=" + limit, Dto.ItemPage.class, 120_000);
 	}
 
 	/** Recipes, drop sources, uses, value and description of one item. */
 	public CompletableFuture<Dto.ItemDetail> item(String id) {
 		return getPublic("/api/mod/item/" + enc(id), Dto.ItemDetail.class, 60_000);
+	}
+
+	/** Description and prices only (hover cards): recipes, drop sources and uses come back empty. */
+	public CompletableFuture<Dto.ItemDetail> itemBrief(String id) {
+		return getPublic("/api/mod/item/" + enc(id) + "?brief=true", Dto.ItemDetail.class, 60_000);
 	}
 
 	/** Values of item stacks: each element is {@code {customData, count}}. */

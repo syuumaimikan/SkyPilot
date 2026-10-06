@@ -8,6 +8,8 @@
 		"ContainerScreenAccessor",
 		"EntityRenderMixin",
 		"FramerateLimitMixin",
+		"KeyboardInputMixin",
+		"MouseInputMixin",
 		"ParticleEngineMixin",
 		"PlayerTabOverlayAccessor",
 		"SlotRenderMixin"

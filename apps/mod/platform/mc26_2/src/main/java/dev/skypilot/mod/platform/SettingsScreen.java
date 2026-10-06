@@ -439,6 +439,11 @@ final class SettingsScreen extends Screen {
 			c.translation.clickToTranslate = !c.translation.clickToTranslate;
 		});
 		y += ROW;
+		toggle(x, y, colW, onOff(l, l.t("Ding sound", "チン音"), c.translation.sound), b -> {
+			c.translation.sound = !c.translation.sound;
+			if (c.translation.sound) ClickTranslate.ding(true);
+		});
+		y += ROW;
 		if (remote == null) {
 			String msg = loading || (!loadTried && sp.linked()) ? l.t("Loading your translation settings…", "翻訳設定を読み込み中…")
 					: !sp.linked() ? l.t("Link this client (General page) to choose your translation provider or use your own API key. Until then the server's provider is used.",
@@ -541,6 +546,14 @@ final class SettingsScreen extends Screen {
 		y += ROW;
 		addRenderableWidget(Button.builder(Component.literal(l.t("Recent alerts…", "最近の通知…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.ALERTS)))
 				.bounds(x, y, colW, 20).build());
+		toggle(right, y, colW, Component.literal(l.t("Bazaar Flipper: ", "Bazaar Flipper: ") + (c.market.bazaarFlipper == 0 ? l.t("none", "なし") : "Lv" + c.market.bazaarFlipper)),
+				b -> c.market.bazaarFlipper = (c.market.bazaarFlipper + 1) % 3);
+		y += ROW;
+		toggle(x, y, colW, Component.literal(l.t("Flip order: ", "並び順: ") + ContainerPanel.sortLabel(c.market.flipSort, l)), b -> {
+			int i = SkyPilotConfig.FLIP_SORTS.indexOf(c.market.flipSort);
+			c.market.flipSort = SkyPilotConfig.FLIP_SORTS.get((i + 1) % SkyPilotConfig.FLIP_SORTS.size());
+		});
+		toggle(right, y, colW, onOff(l, l.t("Purse only", "所持金内のみ"), c.market.affordableOnly), b -> c.market.affordableOnly = !c.market.affordableOnly);
 		y += ROW + 4;
 		labels.add(new Label(l.t("Display only: SkyPilot never buys, sells or clicks for you. Alert rules are edited on the web; commands are only put into the chat box.",
 				"表示のみ: SkyPilotが代わりに売買やクリックをすることはありません。通知ルールはWebで編集します。コマンドはチャット欄に入力されるだけです。"), x, y, 0xFF888888, false, pw));

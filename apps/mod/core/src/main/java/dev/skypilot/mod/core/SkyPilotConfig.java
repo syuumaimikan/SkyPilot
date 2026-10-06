@@ -16,6 +16,7 @@ public final class SkyPilotConfig {
 	public Session session = new Session();
 	public Market market = new Market();
 	public Inventory inventory = new Inventory();
+	public Afk afk = new Afk();
 	/** Adds a SkyPilot price line to SkyBlock item tooltips (display only). */
 	public boolean priceTooltip = true;
 	/** On/off switch of every feature in {@link Features} without a field of its own (missing = off). */
@@ -128,6 +129,8 @@ public final class SkyPilotConfig {
 		 * translation (click "[原文]" to switch back). Only clicked lines are sent anywhere.
 		 */
 		public boolean clickToTranslate = false;
+		/** A "ding" when a line is clicked for translation and again when its translation arrives. */
+		public boolean sound = true;
 	}
 
 	/** Market features in game. Display only: SkyPilot never buys, sells or clicks for you. */
@@ -137,7 +140,15 @@ public final class SkyPilotConfig {
 		/** Toast + chat line for new AH flips matching your alert rules (polls your SkyPilot server). */
 		public boolean alerts = false;
 		public boolean alertSound = true;
+		/** Flip panel order: score (default), profit, roi or hour. */
+		public String flipSort = "score";
+		/** Flip panel: only flips your purse can pay for (AH) / amounts sized to it (Bazaar). */
+		public boolean affordableOnly = false;
+		/** Your Bazaar Flipper account upgrade level (0-2): lowers the Bazaar tax in the numbers. */
+		public int bazaarFlipper = 0;
 	}
+
+	public static final java.util.List<String> FLIP_SORTS = java.util.List.of("score", "profit", "roi", "hour");
 
 	/** Panels beside inventory windows. Display only; nothing is clicked or moved for you. */
 	public static final class Inventory {
@@ -145,7 +156,24 @@ public final class SkyPilotConfig {
 		public boolean itemBrowser = true;
 		/** Total and per-item value of chests, backpacks and the ender chest (left of the window). */
 		public boolean chestValue = true;
+		/** Item list width in GUI pixels, dragged by its left edge (0 = all the space right of the window). */
+		public int itemBrowserWidth = 0;
+		/** Item list pushed into the screen edge (a small tab brings it back). */
+		public boolean itemBrowserCollapsed = false;
+		/** Item list category: all, weapons, armor, equipment, accessories, tools, materials, minions, pet_items, reforge_stones, cosmetics, other. */
+		public String itemBrowserCategory = "all";
 	}
+
+	/** AFK guard settings (afk.* features). */
+	public static final class Afk {
+		/** Minutes without keyboard or mouse input before you count as AFK. */
+		public int minutes = 3;
+		/** Frame cap while AFK (afk.low_fps). */
+		public int fps = 10;
+	}
+
+	public static final java.util.List<String> ITEM_CATEGORIES = java.util.List.of("all", "weapons", "armor", "equipment", "accessories", "tools", "materials",
+			"minions", "pet_items", "reforge_stones", "cosmetics", "other");
 
 	public static final class Session {
 		public boolean enabled = true;
@@ -171,6 +199,8 @@ public final class SkyPilotConfig {
 		if (session == null) session = new Session();
 		if (market == null) market = new Market();
 		if (inventory == null) inventory = new Inventory();
+		inventory.itemBrowserWidth = inventory.itemBrowserWidth <= 0 ? 0 : (int) clamp(inventory.itemBrowserWidth, 40, 4000);
+		if (!ITEM_CATEGORIES.contains(inventory.itemBrowserCategory)) inventory.itemBrowserCategory = "all";
 		if (features == null) features = new java.util.LinkedHashMap<>();
 		features.values().removeIf(v -> v == null || !v);
 		if (infoHud == null) infoHud = new InfoHud();
@@ -192,6 +222,11 @@ public final class SkyPilotConfig {
 		todos.removeIf(t -> t == null || t.text == null || t.text.isBlank() || t.text.length() > 80);
 		while (todos.size() > 30) todos.remove(todos.size() - 1);
 		if (!(valuableThreshold > 0) || Double.isInfinite(valuableThreshold)) valuableThreshold = 1_000_000;
+		if (!FLIP_SORTS.contains(market.flipSort)) market.flipSort = "score";
+		market.bazaarFlipper = (int) clamp(market.bazaarFlipper, 0, 2);
+		if (afk == null) afk = new Afk();
+		afk.minutes = (int) clamp(afk.minutes, 1, 30);
+		afk.fps = (int) clamp(afk.fps, 5, 30);
 		if (perf == null) perf = new Performance();
 		perf.backgroundFps = (int) clamp(perf.backgroundFps, 5, 60);
 		perf.menuFps = (int) clamp(perf.menuFps, 15, 240);
