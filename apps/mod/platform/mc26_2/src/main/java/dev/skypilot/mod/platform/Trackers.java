@@ -83,6 +83,7 @@ final class Trackers {
 	}
 
 	static void actionBar(String text) {
+		Activity.actionBar(text);
 		ActionBarStats.Stats s = ActionBarStats.stats(text);
 		long now = System.currentTimeMillis();
 		if (s.any()) {

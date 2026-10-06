@@ -237,6 +237,173 @@ pub struct ModPlanAction {
     pub cost: Option<f64>,
     pub hours: Option<f64>,
     pub items: Vec<ModItemRef>,
+    /// Where the action is done (curated places.toml), for the guide line.
+    pub place: Option<ModPlace>,
+}
+
+/// A public place to walk to, with the warp landing closest to it (only put into the chat box).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModPlace {
+    pub waypoint: ModWaypoint,
+    pub warp: Option<String>,
+    pub note: String,
+}
+
+// ---------------------------------------------------------------- fit (適性)
+
+/// How well each dungeon class fits the player now (class level + the weapons they own).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModClassFit {
+    pub class: String,
+    pub level: u32,
+    pub progress: f64,
+    /// 0..=1 (heuristic)
+    pub score: f64,
+    pub reasons: Vec<String>,
+    pub selected: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModFloorFit {
+    pub floor: String,
+    pub readiness: f64,
+    pub unlocked: bool,
+    pub recommended: bool,
+    pub completions: u64,
+    pub missing: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModSlayerFit {
+    pub id: String,
+    pub name: String,
+    /// Highest tier the player can start.
+    pub unlocked_tier: u8,
+    /// Tier with the best readiness worth doing now.
+    pub tier: u8,
+    pub readiness: f64,
+    pub gear_tier: Option<String>,
+}
+
+/// Path from now to being ready for one goal: progress, what is left and the next action.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModGoalPath {
+    pub title: String,
+    pub progress: f64,
+    pub remaining_cost: Option<f64>,
+    pub remaining_hours: Option<f64>,
+    pub next_steps: Vec<ModPlanStep>,
+    pub next_action: Option<ModPlanAction>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModFit {
+    pub classes: Vec<ModClassFit>,
+    pub recommended_class: Option<String>,
+    pub floors: Vec<ModFloorFit>,
+    pub slayers: Vec<ModSlayerFit>,
+    pub goals: Vec<ModGoalPath>,
+    pub notes: Vec<String>,
+    pub message: Option<String>,
+}
+
+// ---------------------------------------------------------------- builds
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBuildSlot {
+    pub slot: String,
+    pub items: Vec<ModGearItem>,
+    /// The player owns one of this tier's items for the slot.
+    pub done: bool,
+    /// Cheapest way to fill the slot at this tier (None when done or unpriced).
+    pub cost: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBuildTier {
+    /// REQUIRED / RECOMMENDED / LUXURY
+    pub tier: String,
+    pub slots: Vec<ModBuildSlot>,
+    pub complete: bool,
+    pub cost_to_complete: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBuild {
+    pub id: String,
+    pub title: String,
+    pub tiers: Vec<ModBuildTier>,
+    /// The player's goals include this activity.
+    pub goal: bool,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModBuilds {
+    pub builds: Vec<ModBuild>,
+    pub message: Option<String>,
+}
+
+// ---------------------------------------------------------------- money
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModMoneyMethod {
+    pub id: String,
+    pub name: String,
+    pub category: String,
+    pub low_per_hour: Option<f64>,
+    pub high_per_hour: Option<f64>,
+    pub setup_cost: Option<f64>,
+    pub risk: String,
+    pub requirements_met: bool,
+    pub missing: Vec<String>,
+    pub why: String,
+    pub confidence: f64,
+    pub place: Option<ModPlace>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModMoney {
+    pub methods: Vec<ModMoneyMethod>,
+    pub message: Option<String>,
+}
+
+// ---------------------------------------------------------------- dungeon puzzles
+
+/// What a dungeon puzzle asks for (curated from the wiki; general rules, not a solver).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModPuzzle {
+    pub name: String,
+    pub floors: String,
+    pub rule: String,
+    pub can_fail: bool,
+    pub source: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

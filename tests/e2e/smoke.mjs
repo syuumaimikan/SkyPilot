@@ -132,6 +132,8 @@ async function main() {
   );
   ok("price has NPC sell price", typeof modPrice.json?.npcSell === "number", JSON.stringify(modPrice.json));
   ok("bazaar price has the tax rate", modPrice.json?.bazaarTaxRate === 0.0125);
+  const puzzles = await req("GET", "/api/mod/puzzles?lang=ja");
+  ok("dungeon puzzle rules (wiki)", puzzles.json?.length >= 10 && puzzles.json.some((p) => p.name === "Three Weirdos" && p.canFail));
   const sea = await req("GET", "/api/mod/sea-creatures");
   ok(
     "sea creatures (SkyHanni-REPO)",
@@ -189,6 +191,20 @@ async function main() {
     console.log("analysis (Hypixel key configured)");
     const r = await req("POST", "/api/analyze?lang=en", { username: process.env.SKYPILOT_E2E_PLAYER ?? "Technoblade", goal: "Enderman Slayer 7 and Terminator", secondaryGoals: [], playStyle: "FASTEST", profileId: null, budget: null }, { "x-csrf-token": csrf });
     ok("analyze", r.status === 200 && Array.isArray(r.json?.actions), `status ${r.status} ${r.json?.code ?? ""}`);
+    // in-game panels computed from that analysis
+    const plan = await req("GET", "/api/mod/plan?lang=en");
+    const placed = (plan.json?.actions ?? []).filter((a) => a.place);
+    ok("plan actions carry guide places", placed.length > 0 && placed.every((a) => a.place.waypoint.island && a.place.warp?.startsWith("/")), JSON.stringify(plan.json?.actions?.map((a) => a.title)));
+    const fit = await req("GET", "/api/mod/fit?lang=en");
+    ok(
+      "class / floor / slayer fit and goal path",
+      fit.json?.classes?.length === 5 && fit.json.floors.length > 0 && fit.json.slayers.length > 0 && fit.json.goals.length > 0 && fit.json.notes.length > 0,
+      JSON.stringify(fit.json)?.slice(0, 300),
+    );
+    const builds = await req("GET", "/api/mod/builds?lang=en");
+    ok("builds with tiers", builds.json?.builds?.length > 0 && builds.json.builds.every((b) => b.tiers.length === 3) && builds.json.builds[0].goal === true);
+    const money = await req("GET", "/api/mod/money?lang=en");
+    ok("money methods with places", money.json?.methods?.length > 0 && money.json.methods.some((m) => m.place?.waypoint));
   } else {
     console.log("analysis skipped (server has no HYPIXEL_API_KEY)");
   }

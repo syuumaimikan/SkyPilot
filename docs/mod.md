@@ -55,8 +55,18 @@ unit-tested without the game, and nested into the mod jar (jar-in-jar).
 Everything is display only: no clicks, purchases, movement or packets on the player's behalf.
 Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestCommand`).
 
-- **Menu** (`J`, `/skypilot menu`): Now / Roadmap / Guides / Advice / Gear / AH / Bazaar / Alerts
-  tabs with item icons (`/api/mod/{plan,market,alerts,guides,gear,icons}`).
+- **Menu** (`J`, `/skypilot menu`): Now / Roadmap / Fit / Guides / Advice / Builds / Gear / Money /
+  AH / Bazaar / Alerts tabs with item icons (`/api/mod/{plan,fit,builds,money,market,alerts,guides,gear,icons}`).
+  Actions and money methods with a known place have a "▶ Guide" link: it draws the guide line to
+  that public place (curated `places.toml`, SkyHanni-REPO place names) and, off the island, puts
+  the closest warp landing (graph nodes tagged `warp`) into the chat box for the player to send.
+- **Fit**: dungeon class fit (class level + the most valuable owned weapon of that class, from
+  Hypixel's item category/stats; labelled heuristic), floor readiness, slayer readiness, and per
+  goal the remaining steps, cost and time with the action that moves it most.
+- **Builds**: each slayer's Required / Recommended / Luxury loadout (curated `slayers.toml`) with
+  what the player owns and the cost to complete every tier; items open their recipe page.
+- **Money**: money methods ranked for the player (coins/h ranges from live prices), missing
+  requirements, and where to do them.
 - **Side panels** (`ScreenOverlays`): AH/Bazaar flips beside Hypixel's market windows
   (`market.containerPanel`), the item browser right of inventory windows
   (`inventory.itemBrowser`: search, click for value / recipes with a 3×3 grid / drop sources /
@@ -96,6 +106,9 @@ features that use the SkyPilot server (never Hypixel), ✉ those that send chat 
 | Fishing | rare sea creature alert ☁ (SkyHanni-REPO names), fishing tracker (sea creatures by name, treasure, trophy tiers, per hour) ☁, bobber timer, trophy fish alert, trophy fish widget |
 | Combat | slayer tracker, boss spawned title, rare drop title, drop tracker |
 | Dungeons | chat filter (healing, damage taken, orbs, tethers, cooldowns; never player chat), run timer (floor, time, boss room split, cleared % from the sidebar), boss room title |
+| Dungeons (helpers) | puzzle list with each puzzle's rules ☁ (wiki text; never a solver), boss / phase splits from [BOSS] lines |
+| Rift | Rift time (action bar) and Motes (sidebar), low Rift time titles, Rift guide on entry ☁ |
+| Guides | next action on the info HUD ☁, automatic guide line to where the next action is done ☁ |
 | Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |
 | Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), to-do list (`todo`), stopwatch (`timer start/lap/stop`), item lookup (`lookup <name>`) ☁, session tracking, session upload ☁ |
 

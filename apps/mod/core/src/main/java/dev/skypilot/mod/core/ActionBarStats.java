@@ -5,9 +5,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Health / defense / mana and the latest skill XP gain from the SkyBlock action bar, e.g.
- * {@code "1500/1500❤     300❈ Defense     500/500✎ Mana"} and
- * {@code "+12.5 Farming (12,345/50,000)"}.
+ * Health / defense / mana, Rift time and the latest skill XP gain from the SkyBlock action bar.
+ * Hypixel now draws the stat icons with private-use glyphs (health U+E010, defense U+E008,
+ * intelligence U+E003, Rift time U+E020 - SkyHanni ActionBarStatsData / SkyblockStat, Oct 2026);
+ * the older ❤ / ❈ Defense / ✎ symbols are still accepted.
  */
 public final class ActionBarStats {
 	public record Stats(Integer health, Integer maxHealth, Integer defense, Integer mana, Integer maxMana) {
@@ -20,9 +21,10 @@ public final class ActionBarStats {
 	public record SkillGain(String skill, double gained, Double current, Double needed, Double percent) {
 	}
 
-	private static final Pattern HEALTH = Pattern.compile("([\\d,]+)/([\\d,]+)❤");
-	private static final Pattern DEFENSE = Pattern.compile("([\\d,]+)❈ Defense");
-	private static final Pattern MANA = Pattern.compile("([\\d,]+)/([\\d,]+)✎");
+	private static final Pattern HEALTH = Pattern.compile("([\\d,]+)/([\\d,]+)(?:❤|\uE010)");
+	private static final Pattern DEFENSE = Pattern.compile("([\\d,]+)(?:❈ Defense|\uE008)");
+	private static final Pattern MANA = Pattern.compile("([\\d,]+)/([\\d,]+)(?:✎|\uE003)");
+	private static final Pattern RIFT_TIME = Pattern.compile("((?:\\d+m ?)?(?:\\d+s)?) ?(?:ф|\uE020)");
 	private static final Pattern SKILL = Pattern.compile("\\+([\\d,]+(?:\\.\\d+)?) ([A-Z][a-z]+) \\((?:([\\d,]+(?:\\.\\d+)?)/([\\d,]+(?:\\.\\d+)?[kKmM]?)|([\\d.]+)%)\\)");
 
 	private ActionBarStats() {
@@ -44,6 +46,24 @@ public final class ActionBarStats {
 			maxMana = num(m.group(2));
 		}
 		return new Stats(hp, max, def, mana, maxMana);
+	}
+
+	/** Rift time left in seconds ("7m 30s" before the Rift time icon), if shown. */
+	public static Optional<Integer> riftSeconds(String actionBar) {
+		Matcher m = RIFT_TIME.matcher(Text.strip(actionBar));
+		while (m.find()) {
+			String t = m.group(1).strip();
+			if (t.isEmpty()) continue;
+			int secs = 0;
+			Matcher p = Pattern.compile("(\\d+)([ms])").matcher(t);
+			boolean any = false;
+			while (p.find()) {
+				any = true;
+				secs += Integer.parseInt(p.group(1)) * (p.group(2).equals("m") ? 60 : 1);
+			}
+			if (any) return Optional.of(secs);
+		}
+		return Optional.empty();
 	}
 
 	public static Optional<SkillGain> skill(String actionBar) {

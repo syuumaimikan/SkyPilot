@@ -1,6 +1,6 @@
 "use client";
 
-import type { FloorReadiness } from "@skypilot/protocol";
+import type { FloorReadiness, ModPuzzle } from "@skypilot/protocol";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Progress, Table, TBody, TD, TH, THead, TR } from "@skypilot/ui";
 import { ErrorView, Loading, MetricView, PageHeader } from "@/components/common";
 import { EmbeddedReport } from "@/components/report";
@@ -65,7 +65,67 @@ export function DungeonsView() {
           )}
         </CardContent>
       </Card>
+      <Puzzles />
       <EmbeddedReport domain="dungeons" />
     </div>
+  );
+}
+
+/** What each puzzle room asks for (curated from the wiki). Rules only - SkyPilot has no puzzle solver. */
+function Puzzles() {
+  const { t } = useI18n();
+  const q = useApi<ModPuzzle[]>("/api/mod/puzzles");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("Puzzle rooms", "パズル部屋")}</CardTitle>
+        <CardDescription>
+          {t(
+            "The rules of each Catacombs puzzle, in short. SkyPilot never reads a room to work out its answer and never acts for you; the mod shows these rules next to the tab list's puzzle list.",
+            "カタコンベの各パズルのルール概要です。SkyPilotが部屋を読み取って答えを出したり、代わりに操作したりすることはありません。MODではタブリストのパズル一覧の横にこのルールを表示します。",
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {q.isLoading ? (
+          <div className="p-5">
+            <Loading />
+          </div>
+        ) : q.error ? (
+          <div className="p-5">
+            <ErrorView error={q.error} retry={() => q.refetch()} />
+          </div>
+        ) : (
+          <Table>
+            <THead>
+              <TR>
+                <TH>{t("Puzzle", "パズル")}</TH>
+                <TH>{t("Floors", "フロア")}</TH>
+                <TH>{t("What to do", "やること")}</TH>
+                <TH>{t("Can fail", "失敗あり")}</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {(q.data ?? []).map((p) => (
+                <TR key={p.name}>
+                  <TD className="font-medium">{p.name}</TD>
+                  <TD>{p.floors === "all" ? t("all", "全て") : p.floors}</TD>
+                  <TD className="text-sm">{p.rule}</TD>
+                  <TD>{p.canFail ? <Badge tone="warn">{t("yes (-14 Skill score)", "あり（スキルスコア-14）")}</Badge> : <Badge tone="good">{t("no", "なし")}</Badge>}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+        {q.data?.[0] ? (
+          <p className="px-5 py-3 text-xs text-muted-foreground">
+            {t("Source: ", "出典: ")}
+            <a className="underline" href={q.data[0].source} target="_blank" rel="noreferrer">
+              Hypixel SkyBlock Wiki
+            </a>
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

@@ -67,6 +67,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 				FlipAlerts.tickSecond(mc);
 				Trackers.tickSecond(mc);
 				Activity.tickSecond(mc);
+				Guides.tickSecond(mc);
 				Timers.tickSecond(mc);
 			}
 		});

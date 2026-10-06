@@ -15,7 +15,8 @@ pub const ISLANDS: &[&str] = &[
 ];
 
 /// Tags of nodes that are never shown (collectibles and editor-only nodes).
-pub const EXCLUDED_TAGS: &[&str] = &["fairy_soul", "hoppity", "rift_enigma"];
+/// Rift collectibles (Montezuma soul pieces, eyes, button quest) count as collectibles too.
+pub const EXCLUDED_TAGS: &[&str] = &["fairy_soul", "hoppity", "rift_enigma", "rift_montezuma", "rift_eye", "rift_buttons_quest"];
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Location {
@@ -79,6 +80,11 @@ impl Locations {
 
     pub fn find(&self, island: &str, name: &str) -> Option<&Location> {
         self.by_island.get(island)?.iter().find(|l| l.name == name)
+    }
+
+    /// Warp commands that land on the island (nodes tagged `warp`, e.g. "/warp crypt"), lower-cased.
+    pub fn warps(&self, island: &str) -> Vec<&Location> {
+        self.on(island).iter().filter(|l| l.tags.iter().any(|t| t == "warp") && l.name.starts_with('/')).collect()
     }
 
     pub fn on(&self, island: &str) -> &[Location] {

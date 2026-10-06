@@ -186,11 +186,11 @@ pub async fn session(State(state): State<Arc<AppState>>, headers: HeaderMap, Jso
 
 // ---------------------------------------------------------------- in-game GUI
 
-fn enum_name<T: serde::Serialize>(v: &T) -> String {
+pub(crate) fn enum_name<T: serde::Serialize>(v: &T) -> String {
     serde_json::to_value(v).ok().and_then(|x| x.as_str().map(str::to_string)).unwrap_or_default()
 }
 
-fn icon_of(registry: &skypilot_data::Registry, id: &str) -> ItemIcon {
+pub(crate) fn icon_of(registry: &skypilot_data::Registry, id: &str) -> ItemIcon {
     let i = registry.icon(id);
     ItemIcon { item: i.item, texture: i.texture, color: i.color, glint: i.glint }
 }
@@ -340,6 +340,31 @@ pub async fn alerts(State(state): State<Arc<AppState>>, jar: CookieJar, headers:
     Ok(Json(ModAlerts { now_ms: now, rows, rules: rules.into_iter().map(|r| r.name).collect() }))
 }
 
+/// Where an action (or money method, "money-<id>") is done, for the mod's guide line.
+pub(crate) fn place(registry: &skypilot_data::Registry, action_id: &str, lang: skypilot_reco::ctx::Lang) -> Option<ModPlace> {
+    let p = registry.place_for(action_id)?;
+    Some(ModPlace {
+        waypoint: ModWaypoint { island: p.island, name: p.name, x: p.x, y: p.y, z: p.z },
+        warp: p.warp,
+        note: if matches!(lang, skypilot_reco::ctx::Lang::Ja) { p.note_ja } else { p.note },
+    })
+}
+
+pub(crate) fn plan_action(registry: &skypilot_data::Registry, a: &skypilot_protocol::goals::RecommendedAction, lang: skypilot_reco::ctx::Lang) -> ModPlanAction {
+    ModPlanAction {
+        title: a.title.clone(),
+        category: a.category.clone(),
+        why: a.why.clone(),
+        steps: a.steps.clone(),
+        metrics: a.metrics.iter().map(metric_line).collect(),
+        confidence: a.confidence.score,
+        cost: a.estimated_cost,
+        hours: a.estimated_hours,
+        items: a.purchases.iter().take(4).map(|p| ModItemRef { item_id: p.item_id.clone(), name: p.name.clone(), price: p.price, icon: icon_of(registry, &p.item_id) }).collect(),
+        place: place(registry, &a.id, lang),
+    }
+}
+
 fn metric_line(m: &skypilot_protocol::common::Metric) -> HudLine {
     let coins = m.unit.as_deref() == Some("coins");
     let num = |v: f64| if coins { fmt(v) } else if v.fract() == 0.0 { format!("{v:.0}") } else { format!("{v:.1}") };
@@ -391,17 +416,7 @@ pub async fn plan(State(state): State<Arc<AppState>>, jar: CookieJar, headers: H
         .actions
         .iter()
         .take(10)
-        .map(|a| ModPlanAction {
-            title: a.title.clone(),
-            category: a.category.clone(),
-            why: a.why.clone(),
-            steps: a.steps.clone(),
-            metrics: a.metrics.iter().map(metric_line).collect(),
-            confidence: a.confidence.score,
-            cost: a.estimated_cost,
-            hours: a.estimated_hours,
-            items: a.purchases.iter().take(4).map(|p| ModItemRef { item_id: p.item_id.clone(), name: p.name.clone(), price: p.price, icon: icon_of(&registry, &p.item_id) }).collect(),
-        })
+        .map(|a| plan_action(&registry, a, lang))
         .collect();
     Ok(Json(ModPlan {
         profile: Some(format!("{} · {}", resp.analysis.player.username, resp.analysis.cute_name)),

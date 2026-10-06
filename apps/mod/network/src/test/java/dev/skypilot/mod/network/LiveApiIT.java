@@ -128,6 +128,10 @@ class LiveApiIT {
 			assertNotNull(api.price("ENCHANTED_DIAMOND", null).join().npcSell(), "NPC sell price from the item list");
 			assertEquals(0.0125, api.price("ENCHANTED_DIAMOND", null).join().bazaarTaxRate());
 			assertTrue(api.seaCreatures().join().creatures().size() >= 80);
+			assertTrue(api.puzzles("ja").join().length >= 10);
+			assertNotNull(api.fit("ja").join().message(), "a fresh account has no analysis yet");
+			assertNotNull(api.builds("ja").join().message(), "builds need an analysis");
+			assertNotNull(api.money("ja").join().message(), "money methods need an analysis");
 
 			// Per-user translation provider: the key goes in, only "…last4" comes back.
 			Dto.UserSettings before = api.userSettings().join();

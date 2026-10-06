@@ -194,6 +194,32 @@ final class InfoHud {
 				out.add(HudRow.text(l.t("Last run ", "前回のラン ") + (Activity.lastRunFloor != null ? Activity.lastRunFloor + " " : "") + eta(Activity.lastRunSeconds * 1000L), HudRow.MUTED));
 			}
 		}
+		if (Feat.on(Features.DUNGEONS_SPLITS) && !Activity.BOSS_SPLITS.isEmpty()) {
+			StringBuilder sb = new StringBuilder();
+			Activity.BOSS_SPLITS.forEach((name, secs) -> sb.append(sb.isEmpty() ? "" : " → ").append(name).append(secs >= 0 ? " " + eta(secs * 1000L) : ""));
+			out.add(HudRow.text(sb.toString(), 0xFFFF8855));
+		}
+		if (Feat.on(Features.DUNGEONS_PUZZLES)) {
+			List<String> puzzles = TabSections.sectionStartingWith(Activity.tab, "Puzzles:");
+			for (String p : puzzles) {
+				boolean header = p.startsWith("Puzzles:");
+				out.add(HudRow.text((header ? "" : " ") + p, header ? 0xFFB07CFF : p.contains("✔") ? HudRow.GOOD : p.contains("✖") ? HudRow.BAD : HudRow.WHITE));
+				var rule = header ? null : Guides.puzzle(p);
+				if (rule != null && !p.contains("✔")) out.add(HudRow.text("   " + rule.rule(), HudRow.MUTED));
+			}
+		}
+		if (Feat.on(Features.RIFT_TIMER) && (Activity.riftSeconds != null && now - Activity.riftAt < 5_000 || Activity.motes != null)) {
+			StringBuilder sb = new StringBuilder(l.t("Rift", "リフト"));
+			if (Activity.riftSeconds != null && now - Activity.riftAt < 5_000) sb.append("  ").append(eta(Activity.riftSeconds * 1000L)).append(l.t(" left", " 残り"));
+			if (Activity.motes != null) sb.append("  ").append(Text.coins(Activity.motes)).append(l.t(" Motes", " モート"));
+			out.add(HudRow.text(sb.toString(), Activity.riftSeconds != null && Activity.riftSeconds <= 60 ? HudRow.BAD : 0xFF55FF55));
+		}
+		if (Feat.on(Features.GUIDE_NEXT) && Guides.next != null) {
+			var a = Guides.next;
+			out.add(HudRow.text(l.t("Next: ", "次: ") + a.title(), HudRow.ACCENT));
+			if (a.place() != null) out.add(HudRow.text("  → " + a.place().waypoint().name() + " (" + Guides.island(a.place().waypoint().island()) + ")"
+					+ (a.place().warp() != null ? "  " + a.place().warp() : ""), HudRow.MUTED));
+		}
 		if (Feat.on(Features.TOOLS_STOPWATCH) && (Activity.stopwatchRunning || Activity.stopwatchElapsed > 0)) {
 			long ms = Activity.stopwatchMs();
 			out.add(HudRow.text(String.format(Locale.ROOT, "⏱ %d:%02d.%d", ms / 60_000, (ms / 1000) % 60, (ms / 100) % 10) + (Activity.LAPS.isEmpty() ? "" : l.t("  laps ", "  ラップ ") + Activity.LAPS.size()),

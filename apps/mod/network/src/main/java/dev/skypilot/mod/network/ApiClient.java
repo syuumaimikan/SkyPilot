@@ -221,6 +221,26 @@ public final class ApiClient {
 		return request("POST", "/api/me/settings/translation/test", "{}", true).thenApply(r -> parse(r, Dto.TranslationTest.class));
 	}
 
+	/** Class / floor / slayer fit and the path to each goal (needs a linked account and an analysis). */
+	public CompletableFuture<Dto.Fit> fit(String lang) {
+		return getCached("/api/mod/fit?lang=" + enc(lang), Dto.Fit.class, 60_000);
+	}
+
+	/** Tiered loadouts with what the player owns and the cost to complete each tier. */
+	public CompletableFuture<Dto.Builds> builds(String lang) {
+		return getCached("/api/mod/builds?lang=" + enc(lang), Dto.Builds.class, 60_000);
+	}
+
+	/** Money-making methods ranked for the player, with where to do them. */
+	public CompletableFuture<Dto.Money> money(String lang) {
+		return getCached("/api/mod/money?lang=" + enc(lang), Dto.Money.class, 60_000);
+	}
+
+	/** Dungeon puzzle rules (public, cached 1 hour). */
+	public CompletableFuture<Dto.Puzzle[]> puzzles(String lang) {
+		return getPublic("/api/mod/puzzles?lang=" + enc(lang), Dto.Puzzle[].class, 3_600_000);
+	}
+
 	/** Sea creatures and their chat lines (public data, cached 1 hour). */
 	public CompletableFuture<Dto.SeaCreatures> seaCreatures() {
 		return getPublic("/api/mod/sea-creatures", Dto.SeaCreatures.class, 3_600_000);

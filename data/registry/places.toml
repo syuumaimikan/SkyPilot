@@ -1,0 +1,140 @@
+# Where a recommended action is done, so the mod's "Guide" button can draw a line to a fixed
+# public place. `action` is an action-id prefix (longest match wins); `place` is a place name
+# from SkyHanni-REPO's island graphs (MIT) and is checked by `cargo test`. Without `place`, the
+# guide points at the island's warp landing. The warp shown to the player is the island's warp
+# landing closest to the place (graph nodes tagged `warp`); it is only put into the chat box.
+# NPC roles: Hypixel SkyBlock Wiki (pages linked per entry), checked 2026-10-06.
+
+[[places]]
+action = "slayer-gear-"
+island = "HUB"
+place = "Auction House"
+note = "Buy the gear at the Auction House or Bazaar."
+note_ja = "装備はオークションハウスかバザーで購入します。"
+
+[[places]]
+action = "slayer-"
+island = "HUB"
+place = "Maddox the Slayer"
+note = "Maddox the Slayer starts slayer quests (https://hypixelskyblock.minecraft.wiki/w/Maddox_the_Slayer)."
+note_ja = "Maddox the Slayerでスレイヤークエストを開始します。"
+
+[[places]]
+action = "dungeon-"
+island = "DUNGEON_HUB"
+place = "Mort"
+note = "Mort stands at the Catacombs entrance (https://hypixelskyblock.minecraft.wiki/w/Mort)."
+note_ja = "Mortはカタコンベの入口にいます。"
+
+[[places]]
+action = "kuudra-"
+island = "CRIMSON_ISLE"
+warp = "/warp kuudra"
+note = "Kuudra runs start from Kuudra's Hollow on the Crimson Isle (https://hypixelskyblock.minecraft.wiki/w/Kuudra)."
+note_ja = "クードラはクリムゾン島のKuudra's Hollowから始まります。"
+
+[[places]]
+action = "mining-gear"
+island = "DWARVEN_MINES"
+place = "The Forge"
+note = "Drills and mining gear are forged in the Dwarven Mines (https://hypixelskyblock.minecraft.wiki/w/The_Forge)."
+note_ja = "ドリル等の採掘装備はドワーフ鉱山のフォージで作ります。"
+
+[[places]]
+action = "mining-"
+island = "DWARVEN_MINES"
+warp = "/warp mines"
+note = "Mithril powder and HOTM XP come from mining in the Dwarven Mines."
+note_ja = "ミスリルパウダーとHOTM XPはドワーフ鉱山での採掘で得られます。"
+
+[[places]]
+action = "foraging-"
+island = "THE_PARK"
+warp = "/warp park"
+note = "The Park is the foraging island (https://hypixelskyblock.minecraft.wiki/w/The_Park)."
+note_ja = "パークは伐採の島です。"
+
+[[places]]
+action = "museum-"
+island = "HUB"
+place = "Museum"
+note = "Donations are made at the Museum (https://hypixelskyblock.minecraft.wiki/w/Museum)."
+note_ja = "寄贈は博物館で行います。"
+
+[[places]]
+action = "acc-buy"
+island = "HUB"
+place = "Auction House"
+note = "Buy accessories at the Auction House."
+note_ja = "アクセサリーはオークションハウスで購入します。"
+
+[[places]]
+action = "gear-"
+island = "HUB"
+place = "Auction House"
+note = "Buy the upgrade at the Auction House or Bazaar."
+note_ja = "装備はオークションハウスかバザーで購入します。"
+
+[[places]]
+action = "liquidate-"
+island = "HUB"
+place = "Auction House"
+note = "Sell at the Auction House / Bazaar."
+note_ja = "オークションハウス／バザーで売却します。"
+
+# money methods (action ids are "money-<method id>")
+[[places]]
+action = "money-mining"
+island = "DWARVEN_MINES"
+warp = "/warp mines"
+note = "Mine in the Dwarven Mines."
+note_ja = "ドワーフ鉱山で採掘します。"
+
+[[places]]
+action = "money-slayer"
+island = "HUB"
+place = "Maddox the Slayer"
+note = "Start slayer quests at Maddox the Slayer."
+note_ja = "Maddox the Slayerでクエストを開始します。"
+
+[[places]]
+action = "money-dungeons"
+island = "DUNGEON_HUB"
+place = "Mort"
+note = "Enter the Catacombs at Mort."
+note_ja = "Mortからカタコンベに入ります。"
+
+[[places]]
+action = "money-ah_flipping"
+island = "HUB"
+place = "Auction House"
+note = "Flip at the Auction House."
+note_ja = "オークションハウスでフリップします。"
+
+[[places]]
+action = "money-bazaar_flipping"
+island = "HUB"
+place = "Bazaar"
+note = "Place buy orders and sell offers at the Bazaar."
+note_ja = "バザーで買い注文と売り注文を出します。"
+
+[[places]]
+action = "money-craft_flipping"
+island = "HUB"
+place = "Bazaar"
+note = "Buy the ingredients at the Bazaar."
+note_ja = "材料はバザーで購入します。"
+
+[[places]]
+action = "money-forge_flipping"
+island = "DWARVEN_MINES"
+place = "The Forge"
+note = "Forge items in the Dwarven Mines."
+note_ja = "ドワーフ鉱山のフォージで鍛造します。"
+
+[[places]]
+action = "money-kat_flipping"
+island = "HUB"
+place = "Kat"
+note = "Kat upgrades pets (https://hypixelskyblock.minecraft.wiki/w/Kat)."
+note_ja = "Katがペットをアップグレードします。"

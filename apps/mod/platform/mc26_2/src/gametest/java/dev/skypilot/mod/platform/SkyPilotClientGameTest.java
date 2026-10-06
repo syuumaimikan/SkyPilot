@@ -264,9 +264,10 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 								new Dto.PlanStep("Magical Power 300", "Voidgloom Seraph T2の推奨値", "IN_PROGRESS", 0.6, 6.0e6, 0.6),
 								new Dto.PlanStep("Enderman Slayer 7", "T1×1 → T2×1 → T3×1 → T4×200", "NOT_STARTED", 0, 1.0e7, 14.0)))),
 						List.of(new Dto.PlanAction("所持中のアクセサリー1個をバッグに入れる", "Accessories", "無料でMPが上がります。", List.of("Book of Progression (Ender Chest) +3 MP"),
-								List.of(new Dto.HudLine("MP", "181 → 184")), 0.95, null, 0.05, List.of()),
+								List.of(new Dto.HudLine("MP", "181 → 184")), 0.95, null, 0.05, List.of(), null),
 								new Dto.PlanAction("Voidgloom Seraph用の武器を購入", "Slayer", "武器ティアが周回できるTierを制限しています。", List.of(),
-										List.of(), 0.6, 1.4e6, 0.1, List.of(new Dto.ItemRef("VOIDEDGE_KATANA", "Voidedge Katana", 1.4e6, book)))),
+										List.of(), 0.6, 1.4e6, 0.1, List.of(new Dto.ItemRef("VOIDEDGE_KATANA", "Voidedge Katana", 1.4e6, book)),
+										new Dto.Place(new Dto.Waypoint("HUB", "Auction House", -25, 73, -13), "/hub", "オークションハウスかバザーで購入します。"))),
 						List.of(), null));
 				MenuScreen.setReport("money", new Dto.Report("money", "金策", List.of(new Dto.Metric("流動資金", null, null, 2162.0, "coins", null)),
 						List.of(new Dto.ReportSection("best", "あなたに最適な金策", null, List.of(), null, List.of("Garden farming 1.6M〜2.1M/時"), List.of())), List.of()));
@@ -718,6 +719,80 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				SkyPilot.get().config().keywords.clear();
 				SkyPilot.get().config().todos.clear();
 				Activity.reset();
+				Activity.tab = List.of();
+			});
+
+			// ---------------------------------------------------------------- fit, builds, money, rift, dungeon helpers
+			ctx.runOnClient(mc -> {
+				Dto.Place maddox = new Dto.Place(new Dto.Waypoint("HUB", "Maddox the Slayer", -83, 69, -131), "/warp crypt", "Maddox the Slayerでスレイヤークエストを開始します。");
+				Dto.PlanAction slay = new Dto.PlanAction("Voidgloom Seraph T2を周回", "Slayer", "目標に最も近づきます。", List.of(), List.of(), 0.7, 2.0e5, 1.0, List.of(), maddox);
+				MenuScreen.setFit(new Dto.Fit(
+						List.of(new Dto.ClassFit("Mage", 34, 0.4, 0.71, List.of("Mage レベル 34", "Hyperion を所持"), true),
+								new Dto.ClassFit("Archer", 21, 0.1, 0.25, List.of("Archer レベル 21"), false),
+								new Dto.ClassFit("Berserk", 18, 0.6, 0.22, List.of("Berserk レベル 18"), false)),
+						"Mage",
+						List.of(new Dto.FloorFit("F6", 0.92, true, false, 40, List.of()), new Dto.FloorFit("F7", 0.74, true, true, 3, List.of("Catacombs: 28 / 30", "Magical Power: 410 / 550"))),
+						List.of(new Dto.SlayerFit("enderman", "Voidgloom Seraph", 2, 2, 0.64, "REQUIRED")),
+						List.of(new Dto.GoalPath("Enderman Slayer 7", 0.12, 1.6e7, 15.0,
+								List.of(new Dto.PlanStep("Magical Power 300", "Voidgloom Seraph T2の推奨値", "IN_PROGRESS", 0.6, 6.0e6, 0.6)), slay)),
+						List.of("クラス適性はSkyPilotの推定です。"), null));
+				Dto.ItemIcon katanaIcon = new Dto.ItemIcon("minecraft:diamond_sword", null, null, false);
+				MenuScreen.setBuilds(new Dto.Builds(List.of(new Dto.Build("enderman", "Voidgloom Seraph の装備構成", List.of(
+						new Dto.BuildTier("REQUIRED", List.of(new Dto.BuildSlot("weapon", List.of(new Dto.GearItem("VOIDEDGE_KATANA", "Voidedge Katana", katanaIcon, "weapon", "REQUIRED", true, 1.4e6, null)), true, null)),
+								true, 0.0),
+						new Dto.BuildTier("RECOMMENDED", List.of(new Dto.BuildSlot("weapon", List.of(new Dto.GearItem("VORPAL_KATANA", "Vorpal Katana", katanaIcon, "weapon", "RECOMMENDED", false, 9.5e6, null)), false, 9.5e6)),
+								false, 9.5e6)), true, "data/registry/slayers.toml")), null));
+				MenuScreen.setMoney(new Dto.Money(List.of(new Dto.MoneyMethod("slayer_best", "Slayer bosses (expected value)", "Slayer", 1.2e6, 2.0e6, 0.0, "MEDIUM", true, List.of(),
+						"T3 Revenant Horror の期待値", 0.6, maddox)), null));
+				// a "Guide" sends the line to Maddox and, off the island, offers the warp in the chat box
+				Waypoints.setIslandOverride("DUNGEON_HUB");
+				Guides.go(maddox, false);
+				check(Waypoints.target() != null && Waypoints.target().name().equals("Maddox the Slayer"), "guide line to the action's place");
+				check(!Waypoints.onTargetIsland(), "different island");
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc -> {
+				check(mc.gui.screen() instanceof net.minecraft.client.gui.screens.ChatScreen, "warp offered in the chat box (not sent)");
+				mc.gui.setScreen(null);
+				Waypoints.clear();
+				Waypoints.setIslandOverride(null);
+			});
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.FIT));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-fit"));
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.BUILD));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-builds"));
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.MONEY));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-money"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				var c = SkyPilot.get().config();
+				for (var f : List.of(dev.skypilot.mod.core.Features.RIFT_TIMER, dev.skypilot.mod.core.Features.RIFT_ALERT, dev.skypilot.mod.core.Features.DUNGEONS_PUZZLES,
+						dev.skypilot.mod.core.Features.DUNGEONS_SPLITS, dev.skypilot.mod.core.Features.HUD_STATS)) {
+					dev.skypilot.mod.core.Features.set(c, f, true);
+				}
+				// the current action bar uses private-use icons
+				Trackers.actionBar("§c1,200/1,500     §a300§a     §b400/620     §a0m 45s Left");
+				check(Trackers.stats != null && Trackers.stats.health() == 1200, "health from the U+E010 icon");
+				check(Activity.riftSeconds == 45, "Rift time from the U+E020 icon");
+				Guides.setPuzzles(new Dto.Puzzle[] {new Dto.Puzzle("Three Weirdos", "all", "本当のことを言っている人の宝箱を開けます。", true, "wiki")});
+				Activity.tab = List.of("Puzzles: (2)", " Three Weirdos: [✦]", " Water Board: [✔]");
+				Activity.BOSS_SPLITS.put("Maxor", 130);
+				Activity.BOSS_SPLITS.put("Storm", 185);
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, System.currentTimeMillis());
+				check(rows.stream().anyMatch(r -> r.text().contains("本当のことを言っている人")), "puzzle rule shown");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Maxor 2m 10s → Storm")), "boss phase splits");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Rift") && r.text().contains("45s")), "Rift time line");
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-rift-dungeon-hud"));
+			ctx.runOnClient(mc -> {
+				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
+				SkyPilot.get().config().priceTooltip = true;
+				SkyPilot.get().config().hud.enabled = true;
+				Activity.BOSS_SPLITS.clear();
 				Activity.tab = List.of();
 			});
 

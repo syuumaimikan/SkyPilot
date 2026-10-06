@@ -210,4 +210,19 @@ class FeaturesTest {
 		assertEquals(45, d.clearedPercent());
 		assertNull(DungeonInfo.parse(List.of("Purse: 1,000")));
 	}
+
+	@Test
+	void currentHypixelGlyphsAndRift() {
+		// Hypixel's current action bar uses private-use icons (SkyHanni SkyblockStat): health U+E010, defense U+E008, intelligence U+E003, Rift time U+E020
+		ActionBarStats.Stats s = ActionBarStats.stats("§c1,200/1,500     §a300§a     §b400/620");
+		assertEquals(1200, s.health());
+		assertEquals(300, s.defense());
+		assertEquals(620, s.maxMana());
+		assertEquals(450, ActionBarStats.riftSeconds("§a7m 30s Left").orElseThrow());
+		assertEquals(42, ActionBarStats.riftSeconds("§742s Left").orElseThrow());
+		assertTrue(ActionBarStats.riftSeconds("§c1,200/1,500").isEmpty());
+		SkyBlockContext c = ContextParser.parse("SKYBLOCK", List.of(" Dwarven Mines", "Purse: 10"), List.of());
+		assertEquals("Dwarven Mines", c.area());
+		assertTrue(Features.all().size() >= 95, "features: " + Features.all().size());
+	}
 }

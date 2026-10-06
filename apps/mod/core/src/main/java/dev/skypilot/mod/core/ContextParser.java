@@ -24,7 +24,8 @@ public final class ContextParser {
 		OptionalLong bits = OptionalLong.empty();
 		for (String raw : sidebarLines) {
 			String line = Text.strip(raw);
-			if (line.startsWith("⏣") || line.startsWith("ф")) {
+			// "⏣ The Hub", "ф Wizard Tower" (Rift), or a private-use icon glyph Hypixel draws instead
+			if (line.startsWith("⏣") || line.startsWith("ф") || line.length() > 2 && line.charAt(0) >= '\uE000' && line.charAt(0) <= '\uF8FF' && line.charAt(1) == ' ') {
 				area = line.substring(1).strip();
 			} else if (line.startsWith("Purse:") || line.startsWith("Piggy:")) {
 				purse = Text.parseLong(line.substring(line.indexOf(':') + 1));

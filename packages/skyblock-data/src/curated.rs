@@ -444,6 +444,39 @@ pub struct PatternDef {
 // ------------------------------------------------------------------ guides
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct PuzzlesFile {
+    pub source: String,
+    pub puzzles: Vec<PuzzleDef>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PuzzleDef {
+    pub name: String,
+    pub floors: String,
+    pub rule: String,
+    pub rule_ja: String,
+    pub can_fail: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlacesFile {
+    pub places: Vec<PlaceDef>,
+}
+
+/// Where actions with this id prefix are done (see `places.toml`).
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlaceDef {
+    pub action: String,
+    pub island: String,
+    #[serde(default)]
+    pub place: Option<String>,
+    #[serde(default)]
+    pub warp: Option<String>,
+    pub note: String,
+    pub note_ja: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct GuidesFile {
     pub guides: Vec<GuideDef>,
 }
@@ -492,6 +525,8 @@ pub struct Curated {
     pub daily: Vec<DailyTask>,
     pub translation: TranslationDictionaryFile,
     pub guides: Vec<GuideDef>,
+    pub places: Vec<PlaceDef>,
+    pub puzzles: PuzzlesFile,
 }
 
 impl Curated {
@@ -511,6 +546,8 @@ impl Curated {
             daily: load::<DailyFile>(registry_dir, "daily.toml")?.tasks,
             translation: load(translation_dir, "dictionary.toml")?,
             guides: load::<GuidesFile>(registry_dir, "guides.toml")?.guides,
+            places: load::<PlacesFile>(registry_dir, "places.toml")?.places,
+            puzzles: load(registry_dir, "dungeon_puzzles.toml")?,
         })
     }
 

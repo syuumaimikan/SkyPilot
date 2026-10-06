@@ -1,0 +1,77 @@
+# Catacombs puzzle rooms: what each one asks for, in our own words, from the Hypixel SkyBlock
+# Wiki (https://hypixelskyblock.minecraft.wiki/w/Dungeon_Puzzle_Rooms, checked 2026-10-06).
+# These are the general rules a player reads before a room - SkyPilot never inspects a room to
+# work out its answer (no solver), and never acts in it.
+# `name` is the name the tab list's "Puzzles:" widget shows.
+
+source = "https://hypixelskyblock.minecraft.wiki/w/Dungeon_Puzzle_Rooms"
+
+[[puzzles]]
+name = "Tic Tac Toe"
+floors = "all"
+rule = "Play Tic Tac Toe against the room and reach at least a tie."
+rule_ja = "部屋を相手に三目並べをして、引き分け以上にします。"
+can_fail = true
+
+[[puzzles]]
+name = "Three Weirdos"
+floors = "all"
+rule = "Three NPCs each make a statement about who has the reward; work out which one is telling the truth and open that NPC's chest."
+rule_ja = "3人のNPCが報酬の持ち主について話します。本当のことを言っている人を見極め、その人の宝箱を開けます。"
+can_fail = true
+
+[[puzzles]]
+name = "Creeper Beams"
+floors = "all"
+rule = "Make four different beams between the room's lanterns that pass through the creeper in the middle."
+rule_ja = "部屋のランタン同士を結ぶ4本の異なるビームが、中央のクリーパーを通るようにします。"
+can_fail = false
+
+[[puzzles]]
+name = "Water Board"
+floors = "all"
+rule = "Use the levers to steer the water through the board so that all doors to the chest are open at the same time."
+rule_ja = "レバーで水の流れを変え、宝箱への扉がすべて同時に開くようにします。"
+can_fail = false
+
+[[puzzles]]
+name = "Teleport Maze"
+floors = "all"
+rule = "Use the teleport pads to reach the chest in the centre."
+rule_ja = "テレポートパッドを使って中央の宝箱にたどり着きます。"
+can_fail = false
+
+[[puzzles]]
+name = "Higher Or Lower"
+floors = "2+"
+rule = "Kill the blazes in health order - lowest to highest or highest to lowest, depending on where the chest is. Killing one out of order fails the room."
+rule_ja = "ブレイズを体力の順番（宝箱の位置により低い順か高い順）に倒します。順番を間違えると失敗です。"
+can_fail = true
+
+[[puzzles]]
+name = "Boulder"
+floors = "3+"
+rule = "Push the boxes to clear a path to the chest at the back of the room; boxes can get stuck."
+rule_ja = "箱を押して奥の宝箱までの道を作ります。箱は動かせなくなることがあります。"
+can_fail = true
+
+[[puzzles]]
+name = "Ice Path"
+floors = "3+"
+rule = "Guide the silverfish across the ice to the gate by hitting it in the direction it should slide."
+rule_ja = "シルバーフィッシュを叩いて滑らせ、氷の上をゲートまで運びます。"
+can_fail = true
+
+[[puzzles]]
+name = "Quiz"
+floors = "4+"
+rule = "Answer three SkyBlock trivia questions correctly."
+rule_ja = "SkyBlockのクイズ3問に正解します。"
+can_fail = true
+
+[[puzzles]]
+name = "Ice Fill"
+floors = "7"
+rule = "Walk over every ice block to turn it into packed ice, over three stages, without moving diagonally."
+rule_ja = "斜め移動をせずに全ての氷の上を歩いて固めます（3段階）。"
+can_fail = false

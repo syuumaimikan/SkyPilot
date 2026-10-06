@@ -201,3 +201,23 @@ fn sea_creatures_from_skyhanni_repo() {
     assert_eq!(squid.rarity, "COMMON");
     assert!(r.sea_creatures.all.iter().any(|c| c.rarity == "MYTHIC"));
 }
+
+#[test]
+fn every_action_place_resolves_on_its_island() {
+    let r = registry();
+    assert!(r.curated.places.len() >= 15);
+    for p in &r.curated.places {
+        let probe = format!("{}x", p.action);
+        let resolved = r.place_for(&probe).unwrap_or_else(|| panic!("{} ({} / {:?} / {:?}) not found in the island graphs", p.action, p.island, p.place, p.warp));
+        assert_eq!(resolved.island, p.island);
+        assert!(resolved.warp.as_deref().is_some_and(|w| w.starts_with('/')), "{} has a warp", p.action);
+    }
+    // longest prefix wins: slayer gear is bought, slayer quests start at Maddox
+    assert_eq!(r.place_for("slayer-gear-zombie").unwrap().name, "Auction House");
+    let maddox = r.place_for("slayer-zombie-next").unwrap();
+    assert_eq!(maddox.name, "Maddox the Slayer");
+    assert_eq!(maddox.warp.as_deref(), Some("/warp crypt"), "closest Hub warp to Maddox");
+    assert!(r.place_for("collection-wheat").is_none());
+    // Rift collectibles are never places
+    assert!(r.locations.on("THE_RIFT").iter().all(|l| !l.tags.iter().any(|t| t == "rift_montezuma" || t == "rift_eye")));
+}

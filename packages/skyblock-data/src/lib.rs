@@ -24,6 +24,20 @@ use anyhow::Context;
 use serde_json::Value;
 
 pub use curated::Curated;
+
+/// A curated place resolved against the island graphs.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResolvedPlace {
+    pub island: String,
+    pub name: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    /// Warp command landing closest to the place (put into the chat box, never sent).
+    pub warp: Option<String>,
+    pub note: String,
+    pub note_ja: String,
+}
 pub use farms::FarmDesignDef;
 pub use hypixel::{CollectionDef, Election, ItemDef, Requirement, SkillDef};
 pub use neu::NeuData;
@@ -172,6 +186,33 @@ impl Registry {
 
     pub fn item(&self, id: &str) -> Option<&ItemDef> {
         self.items.get(id)
+    }
+
+    /// The public place where an action with this id is done, with the closest warp landing.
+    /// None when no curated place matches or the place is missing from the island graphs.
+    pub fn place_for(&self, action_id: &str) -> Option<ResolvedPlace> {
+        let def = self.curated.places.iter().filter(|p| action_id.starts_with(&p.action)).max_by_key(|p| p.action.len())?;
+        let warps = self.locations.warps(&def.island);
+        let target = match (&def.place, &def.warp) {
+            (Some(name), _) => self.locations.find(&def.island, name)?,
+            (None, Some(w)) => *warps.iter().find(|l| l.name.eq_ignore_ascii_case(w))?,
+            (None, None) => return None,
+        };
+        let dist = |l: &locations::Location| (l.x - target.x).powi(2) + (l.y - target.y).powi(2) + (l.z - target.z).powi(2);
+        let warp = match &def.warp {
+            Some(w) => Some(w.to_lowercase()),
+            None => warps.iter().min_by(|a, b| dist(a).total_cmp(&dist(b))).map(|l| l.name.to_lowercase()),
+        };
+        Some(ResolvedPlace {
+            island: def.island.clone(),
+            name: def.place.clone().unwrap_or_else(|| target.name.clone()),
+            x: target.x,
+            y: target.y,
+            z: target.z,
+            warp,
+            note: def.note.clone(),
+            note_ja: def.note_ja.clone(),
+        })
     }
 
     /// How the mod's GUI draws an item: Hypixel items resource first (material, skin,

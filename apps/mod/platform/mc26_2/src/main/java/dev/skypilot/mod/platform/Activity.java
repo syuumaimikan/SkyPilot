@@ -44,6 +44,15 @@ final class Activity {
 	static Integer lastRunSeconds;
 	static String lastRunFloor;
 
+	/** Boss / phase name → elapsed run seconds at its first [BOSS] line, in order. */
+	static final Map<String, Integer> BOSS_SPLITS = new LinkedHashMap<>();
+
+	// rift
+	static Integer riftSeconds;
+	static long riftAt;
+	static Long motes;
+	private static int riftAlerted = Integer.MAX_VALUE;
+
 	// mining chests
 	static int chests;
 	static long chestsSince;
@@ -98,6 +107,9 @@ final class Activity {
 			}
 		});
 		ChatRules.boss(plain).ifPresent(name -> {
+			if (dungeon != null && !BOSS_SPLITS.containsKey(name) && BOSS_SPLITS.size() < 12) {
+				BOSS_SPLITS.put(name, dungeon.elapsedSeconds() == null ? -1 : dungeon.elapsedSeconds());
+			}
 			if (dungeon == null || bossAt != 0) return;
 			bossAt = now;
 			bossName = name;
@@ -156,10 +168,22 @@ final class Activity {
 				bossAt = 0;
 				bossElapsed = null;
 				bossName = null;
+				if (d != null) BOSS_SPLITS.clear();
 			}
 			dungeon = d;
 		}
 		if (tabWanted()) tab = Sidebar.tabLines(mc);
+		// Motes (sidebar "Motes: 137,242", Rift only)
+		motes = null;
+		if (Feat.on(Features.RIFT_TIMER)) {
+			for (String line : Sidebar.lines(mc)) {
+				String s = dev.skypilot.mod.core.Text.strip(line);
+				if (s.startsWith("Motes:")) {
+					var v = dev.skypilot.mod.core.Text.parseLong(s.substring(6));
+					if (v.isPresent()) motes = v.getAsLong();
+				}
+			}
+		}
 		// sea creature names (SkyHanni-REPO, via the SkyPilot server)
 		ApiClient api = sp.api();
 		boolean fishing = Feat.on(Features.FISHING_TRACKER) || Feat.on(Features.FISHING_SEA_CREATURE);
@@ -171,6 +195,26 @@ final class Activity {
 		}
 	}
 
+	/** The action bar: Rift time left, with alerts at 60 and 20 seconds. */
+	static void actionBar(String text) {
+		dev.skypilot.mod.core.ActionBarStats.riftSeconds(text).ifPresent(secs -> {
+			riftSeconds = secs;
+			riftAt = System.currentTimeMillis();
+			if (!Feat.on(Features.RIFT_ALERT)) return;
+			Lang l = SkyPilot.get().lang();
+			for (int limit : new int[] {20, 60}) {
+				if (secs <= limit && riftAlerted > limit) {
+					riftAlerted = limit;
+					Feat.title(l.t(limit + "s of Rift time left", "リフト時間 残り" + limit + "秒"), 0xFFFF5555, l.t("Collect orbs or leave the Rift", "オーブを集めるかリフトを出ましょう"));
+					Feat.ping(0.6f);
+					break;
+				}
+			}
+			if (secs > 60) riftAlerted = Integer.MAX_VALUE;
+			else if (secs > 20 && riftAlerted < 60) riftAlerted = 60;
+		});
+	}
+
 	static void setSeaCreatures(List<Dto.SeaCreature> list) {
 		Map<String, Dto.SeaCreature> m = new LinkedHashMap<>();
 		for (Dto.SeaCreature c : list) m.put(c.message(), c);
@@ -180,7 +224,7 @@ final class Activity {
 
 	private static boolean tabWanted() {
 		return Feat.on(Features.HUD_PET) || Feat.on(Features.HUD_PROFILE) || Feat.on(Features.MINING_FORGES) || Feat.on(Features.MINING_CRYSTALS)
-				|| Feat.on(Features.FARMING_GARDEN) || Feat.on(Features.FARMING_CONTEST_TAB) || Feat.on(Features.FISHING_TROPHY_TAB);
+				|| Feat.on(Features.FARMING_GARDEN) || Feat.on(Features.FARMING_CONTEST_TAB) || Feat.on(Features.FISHING_TROPHY_TAB) || Feat.on(Features.DUNGEONS_PUZZLES);
 	}
 
 	/** Horizontal blocks per second over the last second; NaN without samples. */
@@ -243,6 +287,8 @@ final class Activity {
 		lastPurse = OptionalLong.empty();
 		dungeon = null;
 		bossAt = 0;
+		BOSS_SPLITS.clear();
+		riftSeconds = null;
 		castAt = 0;
 		tab = List.of();
 	}

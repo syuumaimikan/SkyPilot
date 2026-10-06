@@ -76,7 +76,53 @@ public final class Dto {
 	}
 
 	public record PlanAction(String title, String category, String why, List<String> steps, List<HudLine> metrics, double confidence, Double cost, Double hours,
-			List<ItemRef> items) {
+			List<ItemRef> items, Place place) {
+	}
+
+	/** Where something is done: a public place, the closest warp (only put into the chat box) and a note. */
+	public record Place(Waypoint waypoint, String warp, String note) {
+	}
+
+	// ---------------------------------------------------------------- fit, builds, money, puzzles
+
+	public record ClassFit(@com.google.gson.annotations.SerializedName("class") String className, int level, double progress, double score, List<String> reasons,
+			boolean selected) {
+	}
+
+	public record FloorFit(String floor, double readiness, boolean unlocked, boolean recommended, long completions, List<String> missing) {
+	}
+
+	public record SlayerFit(String id, String name, int unlockedTier, int tier, double readiness, String gearTier) {
+	}
+
+	public record GoalPath(String title, double progress, Double remainingCost, Double remainingHours, List<PlanStep> nextSteps, PlanAction nextAction) {
+	}
+
+	public record Fit(List<ClassFit> classes, String recommendedClass, List<FloorFit> floors, List<SlayerFit> slayers, List<GoalPath> goals, List<String> notes,
+			String message) {
+	}
+
+	public record BuildSlot(String slot, List<GearItem> items, boolean done, Double cost) {
+	}
+
+	public record BuildTier(String tier, List<BuildSlot> slots, boolean complete, Double costToComplete) {
+	}
+
+	public record Build(String id, String title, List<BuildTier> tiers, boolean goal, String source) {
+	}
+
+	public record Builds(List<Build> builds, String message) {
+	}
+
+	public record MoneyMethod(String id, String name, String category, Double lowPerHour, Double highPerHour, Double setupCost, String risk, boolean requirementsMet,
+			List<String> missing, String why, double confidence, Place place) {
+	}
+
+	public record Money(List<MoneyMethod> methods, String message) {
+	}
+
+	/** A dungeon puzzle's general rules (wiki), never a solution. */
+	public record Puzzle(String name, String floors, String rule, boolean canFail, String source) {
 	}
 
 	public record PlanStep(String title, String detail, String status, double progress, Double cost, Double hours) {

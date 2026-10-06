@@ -34,8 +34,8 @@ import java.util.function.Supplier;
  */
 final class MenuScreen extends Screen {
 	enum Tab {
-		NOW("Now", "今やること"), ROADMAP("Roadmap", "ロードマップ"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"), GEAR("Gear", "装備"),
-		AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), ALERTS("Alerts", "通知・表示");
+		NOW("Now", "今やること"), ROADMAP("Roadmap", "ロードマップ"), FIT("Fit", "適性"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"),
+		BUILD("Builds", "ビルド"), GEAR("Gear", "装備"), MONEY("Money", "金策"), AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), ALERTS("Alerts", "通知・表示");
 
 		final String en;
 		final String ja;
@@ -75,6 +75,13 @@ final class MenuScreen extends Screen {
 	private static Dto.FarmSummary[] farms;
 	private static Dto.Gear gear;
 	private static String gearError;
+	private static Dto.Fit fit;
+	private static String fitError;
+	private static Dto.Builds builds;
+	private static String buildsError;
+	private static String buildId;
+	private static Dto.Money money;
+	private static String moneyError;
 
 	private record Line(int height, Drawer drawer, IntConsumer onClick, Supplier<Component> tooltip) {
 	}
@@ -196,6 +203,45 @@ final class MenuScreen extends Screen {
 					}));
 				}
 			}
+			case FIT -> {
+				if (api != null && (force || fit == null)) {
+					api.fit(lang).whenComplete((f, err) -> minecraft.execute(() -> {
+						if (f != null) {
+							fit = f;
+							fitError = null;
+						} else {
+							fitError = errorText(err);
+						}
+						dataVersion++;
+					}));
+				}
+			}
+			case BUILD -> {
+				if (api != null && (force || builds == null)) {
+					api.builds(lang).whenComplete((b, err) -> minecraft.execute(() -> {
+						if (b != null) {
+							builds = b;
+							buildsError = null;
+						} else {
+							buildsError = errorText(err);
+						}
+						dataVersion++;
+					}));
+				}
+			}
+			case MONEY -> {
+				if (api != null && (force || money == null)) {
+					api.money(lang).whenComplete((m, err) -> minecraft.execute(() -> {
+						if (m != null) {
+							money = m;
+							moneyError = null;
+						} else {
+							moneyError = errorText(err);
+						}
+						dataVersion++;
+					}));
+				}
+			}
 			case AH -> MarketData.refresh(MarketData.AH, force);
 			case BAZAAR -> MarketData.refresh(MarketData.BAZAAR, force);
 			case ALERTS -> {
@@ -259,6 +305,9 @@ final class MenuScreen extends Screen {
 			case GUIDE -> buildGuide(l);
 			case PROGRESS -> buildProgress(l);
 			case GEAR -> buildGear(l);
+			case FIT -> buildFit(l);
+			case BUILD -> buildBuilds(l);
+			case MONEY -> buildMoney(l);
 			case AH -> buildMarket(l, MarketData.AH);
 			case BAZAAR -> buildMarket(l, MarketData.BAZAAR);
 			case ALERTS -> buildAlerts(l);
@@ -359,12 +408,144 @@ final class MenuScreen extends Screen {
 			for (Dto.HudLine x : a.metrics()) m.add(x.label() + ": " + x.value());
 			if (!m.isEmpty()) para(String.join(" · ", m), Ui.AQUA, 10);
 			for (String s : a.steps()) para("• " + s, Ui.GRAY, 10);
+			guideLink(a.place(), l);
 			for (Dto.ItemRef ref : a.items()) {
 				itemRow(() -> ItemIcons.of(ref.icon()), ref.name(), Ui.WHITE, ref.price() != null ? Text.coins(ref.price()) : l.t("price unknown", "価格不明"), Ui.GOLD, null, 0,
 						null, null);
 			}
 		}
 		for (String w : plan.warnings()) para("! " + w, Ui.YELLOW, 0);
+	}
+
+	/** "▶ Guide: Maddox the Slayer (Hub) · /warp crypt" - draws the guide line there. */
+	private void guideLink(Dto.Place p, Lang l) {
+		if (p == null || p.waypoint() == null) return;
+		String text = "▶ " + l.t("Guide: ", "ガイド: ") + p.waypoint().name() + " (" + Guides.island(p.waypoint().island()) + ")" + (p.warp() != null ? " · " + p.warp() : "");
+		link(text, Ui.AQUA, () -> Guides.go(p, true), l.t("Draw a guide line to this place (the warp is only put into your chat box)", "この場所へのガイド線を表示（ワープはチャット欄に入れるだけです）")
+				+ (p.note() != null ? "\n" + p.note() : ""));
+	}
+
+	// ---------------------------------------------------------------- fit (適性)
+
+	private void buildFit(Lang l) {
+		if (fit == null) {
+			notLinkedOrError(l, fitError);
+			return;
+		}
+		if (fit.message() != null) {
+			para(fit.message(), Ui.YELLOW, 0);
+			return;
+		}
+		heading(l.t("Dungeon class fit", "ダンジョンのクラス適性"), Ui.PURPLE);
+		if (fit.recommendedClass() != null) para(l.t("Best fit now: ", "今の適性: ") + fit.recommendedClass(), Ui.GOLD, 0);
+		for (Dto.ClassFit c : fit.classes()) {
+			bar(c.score(), c.className().equals(fit.recommendedClass()) ? 0xFFFFAA00 : 0xFF9D8CFF,
+					c.className() + " " + l.t("Lv ", "Lv ") + c.level() + (c.selected() ? l.t(" (selected)", "（選択中）") : ""));
+			para(String.join(" · ", c.reasons()), Ui.GRAY, 10);
+		}
+		heading(l.t("Floors", "フロア"), Ui.PURPLE);
+		for (Dto.FloorFit f : fit.floors()) {
+			if (!f.unlocked() && f.readiness() < 0.3) continue;
+			bar(f.readiness(), f.recommended() ? Ui.GREEN : 0xFF9D8CFF, f.floor() + " " + Ui.pct(f.readiness()) + (f.recommended() ? l.t(" · recommended", " · おすすめ") : "")
+					+ (f.completions() > 0 ? " · " + f.completions() + l.t(" runs", "回") : ""));
+			if (f.recommended() || !f.missing().isEmpty() && f.readiness() >= 0.5) {
+				for (String m : f.missing()) para("• " + m, Ui.GRAY, 10);
+			}
+		}
+		heading(l.t("Slayers", "スレイヤー"), Ui.PURPLE);
+		for (Dto.SlayerFit s : fit.slayers()) {
+			bar(s.readiness(), 0xFFFF5555, s.name() + " T" + s.tier() + " " + Ui.pct(s.readiness()) + (s.gearTier() != null ? " · " + s.gearTier() : l.t(" · no gear tier", " · 装備未達")));
+		}
+		heading(l.t("Path to your goals", "目標までの道のり"), Ui.PURPLE);
+		if (fit.goals().isEmpty()) para(l.t("Set a goal on the SkyPilot web to see the path to it.", "SkyPilotのWebで目標を設定すると道のりを表示します。"), Ui.GRAY, 0);
+		for (Dto.GoalPath g : fit.goals()) {
+			gap(2);
+			para(g.title(), Ui.GOLD, 0);
+			StringBuilder rest = new StringBuilder(Ui.pct(g.progress()));
+			if (g.remainingCost() != null) rest.append(" · ").append(l.t("left ", "残り ")).append(Text.coins(g.remainingCost()));
+			if (g.remainingHours() != null) rest.append(" · ").append(Text.duration((long) (g.remainingHours() * 3_600_000)));
+			bar(g.progress(), 0xFF9D8CFF, rest.toString());
+			int n = 1;
+			for (Dto.PlanStep s : g.nextSteps()) {
+				para(n++ + ". " + s.title() + (s.cost() != null ? " · " + Text.coins(s.cost()) : ""), Ui.WHITE, 6);
+				if (s.detail() != null) para(s.detail(), Ui.GRAY, 14);
+			}
+			if (g.nextAction() != null) {
+				para(l.t("Do now: ", "今やること: ") + g.nextAction().title(), Ui.AQUA, 6);
+				guideLink(g.nextAction().place(), l);
+			}
+		}
+		gap(4);
+		for (String note : fit.notes()) para(note, Ui.DARK_GRAY, 0);
+	}
+
+	// ---------------------------------------------------------------- builds
+
+	private void buildBuilds(Lang l) {
+		if (builds == null) {
+			notLinkedOrError(l, buildsError);
+			return;
+		}
+		if (builds.message() != null) {
+			para(builds.message(), Ui.YELLOW, 0);
+			return;
+		}
+		if (builds.builds().isEmpty()) return;
+		Dto.Build current = builds.builds().get(0);
+		for (Dto.Build b : builds.builds()) if (b.id().equals(buildId)) current = b;
+		para(l.t("Pick a build:", "ビルドを選択:"), Ui.GRAY, 0);
+		for (Dto.Build b : builds.builds()) {
+			boolean on = b == current;
+			link((on ? "● " : "○ ") + b.title() + (b.goal() ? l.t(" ★ goal", " ★ 目標") : ""), on ? Ui.GOLD : Ui.AQUA, () -> {
+				buildId = b.id();
+				dataVersion++;
+			}, null);
+		}
+		para(l.t("Click an item: how to make it and its price. ✔ = you own it.", "アイテムをクリックで作り方と価格。✔ = 所持。"), Ui.DARK_GRAY, 0);
+		for (Dto.BuildTier t : current.tiers()) {
+			String tierName = switch (t.tier()) {
+				case "REQUIRED" -> l.t("Required", "必須");
+				case "RECOMMENDED" -> l.t("Recommended", "推奨");
+				default -> l.t("Luxury", "最上位");
+			};
+			String state = t.complete() ? l.t("complete ✔", "達成 ✔")
+					: t.costToComplete() != null ? l.t("to complete: ", "完成まで: ") + Text.coins(t.costToComplete()) : l.t("some parts have no price", "一部価格不明");
+			heading(tierName + " · " + state, t.complete() ? Ui.GREEN : Ui.GOLD);
+			for (Dto.BuildSlot s : t.slots()) {
+				para(s.slot() + (s.done() ? " ✔" : s.cost() != null ? " · " + Text.coins(s.cost()) : ""), s.done() ? Ui.GREEN : Ui.WHITE, 0);
+				for (Dto.GearItem it : s.items()) {
+					itemRow(() -> ItemIcons.of(it.icon()), it.name() + (it.owned() ? " ✔" : ""), it.owned() ? Ui.GREEN : Ui.WHITE,
+							it.price() != null ? Text.coins(it.price()) : l.t("price unknown", "価格不明"), Ui.GOLD, null, 0,
+							it.id().startsWith("PET:") ? null : () -> minecraft.gui.setScreen(new ItemDetailScreen(this, it.id())), null);
+				}
+			}
+		}
+		para(current.source(), Ui.DARK_GRAY, 0);
+	}
+
+	// ---------------------------------------------------------------- money
+
+	private void buildMoney(Lang l) {
+		if (money == null) {
+			notLinkedOrError(l, moneyError);
+			return;
+		}
+		if (money.message() != null) {
+			para(money.message(), Ui.YELLOW, 0);
+			return;
+		}
+		para(l.t("Coins per hour are ranges computed from your profile and live prices - not guarantees.", "時給はプロフィールと最新価格から計算した幅のある推定で、保証ではありません。"), Ui.DARK_GRAY, 0);
+		int n = 1;
+		for (Dto.MoneyMethod m : money.methods()) {
+			gap(2);
+			String range = m.lowPerHour() != null && m.highPerHour() != null ? Text.coins(m.lowPerHour()) + "–" + Text.coins(m.highPerHour()) + l.t("/h", "/時") : l.t("rate unknown", "時給不明");
+			para(n++ + ". " + m.name(), m.requirementsMet() ? Ui.WHITE : Ui.GRAY, 0);
+			para(range + " · " + m.category() + " · " + l.t("risk ", "リスク ") + m.risk() + (m.setupCost() != null && m.setupCost() > 0 ? " · " + l.t("setup ", "初期費用 ") + Text.coins(m.setupCost()) : ""),
+					m.requirementsMet() ? Ui.GOLD : Ui.DARK_GRAY, 10);
+			if (!m.requirementsMet() && !m.missing().isEmpty()) para(l.t("Needs: ", "必要: ") + String.join(", ", m.missing()), Ui.RED, 10);
+			para(m.why(), Ui.GRAY, 10);
+			guideLink(m.place(), l);
+		}
 	}
 
 	private static String goalRest(Dto.PlanGoal goal, Lang l) {
@@ -808,6 +989,21 @@ final class MenuScreen extends Screen {
 
 	static void setGear(Dto.Gear g) {
 		gear = g;
+		dataVersion++;
+	}
+
+	static void setFit(Dto.Fit f) {
+		fit = f;
+		dataVersion++;
+	}
+
+	static void setBuilds(Dto.Builds b) {
+		builds = b;
+		dataVersion++;
+	}
+
+	static void setMoney(Dto.Money m) {
+		money = m;
 		dataVersion++;
 	}
 

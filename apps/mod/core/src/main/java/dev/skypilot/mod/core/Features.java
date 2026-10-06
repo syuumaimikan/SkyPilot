@@ -20,8 +20,8 @@ import java.util.Map;
 public final class Features {
 	public enum Category {
 		CHAT("Chat", "チャット"), TOOLTIP("Tooltips", "説明欄"), INVENTORY("Inventory", "インベントリ"), HUD("HUD", "HUD"), MINING("Mining", "採掘"),
-		FARMING("Farming", "農業"), FISHING("Fishing", "釣り"), COMBAT("Combat", "戦闘"), DUNGEONS("Dungeons", "ダンジョン"), MARKET("Market", "マーケット"),
-		TOOLS("Tools", "ツール");
+		FARMING("Farming", "農業"), FISHING("Fishing", "釣り"), COMBAT("Combat", "戦闘"), DUNGEONS("Dungeons", "ダンジョン"), RIFT("Rift", "リフト"),
+		GUIDES("Guides", "ガイド"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール");
 
 		public final String en;
 		public final String ja;
@@ -233,6 +233,25 @@ public final class Features {
 			"Floor, time elapsed and cleared % from the sidebar, plus when the boss room started.", "サイドバーの階層・経過時間・攻略率と、ボス部屋に入った時刻。", "r");
 	public static final Feature DUNGEONS_BOSS = f("dungeons.boss_alert", Category.DUNGEONS, "Boss room alert", "ボス部屋の通知",
 			"Title when the first [BOSS] line of the run appears.", "そのランで最初の[BOSS]の発言でタイトル表示。", "");
+
+	public static final Feature DUNGEONS_PUZZLES = f("dungeons.puzzles", Category.DUNGEONS, "Puzzle list with rules", "パズル一覧とルール",
+			"The tab list's \"Puzzles:\" widget with each puzzle's rules from the wiki (no solver: the room is never read).", "タブリストの「Puzzles:」欄に各パズルのルール（Wiki）を添えて表示。部屋は読み取りません（ソルバーではありません）。", "nr");
+	public static final Feature DUNGEONS_SPLITS = f("dungeons.boss_splits", Category.DUNGEONS, "Boss phase splits", "ボスのフェーズ別タイム",
+			"Time of each boss / phase from its first [BOSS] line (e.g. Maxor → Storm → Goldor → Necron).", "[BOSS]の最初の発言から各ボス・フェーズの時刻を表示（例: Maxor → Storm → Goldor → Necron）。", "r");
+
+	// ---------------------------------------------------------------- rift
+	public static final Feature RIFT_TIMER = f("rift.timer", Category.RIFT, "Rift time and Motes", "リフト時間とモート",
+			"Rift time left (action bar) and Motes (sidebar) on the info HUD.", "残りリフト時間（アクションバー）とモート（サイドバー）を情報HUDに表示。", "r");
+	public static final Feature RIFT_ALERT = f("rift.time_alert", Category.RIFT, "Low Rift time alert", "リフト時間が少ない通知",
+			"Title when less than 60 and 20 seconds of Rift time are left.", "リフト時間が残り60秒・20秒を切るとタイトル表示。", "r");
+	public static final Feature RIFT_AUTO_GUIDE = f("rift.auto_guide", Category.RIFT, "Rift guide on entry", "リフトに入るとガイド開始",
+			"Entering the Rift starts the Rift guide (wiki progression) at your first unfinished area.", "リフトに入ると、まだ終えていない最初のエリアからリフトガイド（Wikiの進行順）を開始。", "nr");
+
+	// ---------------------------------------------------------------- guides
+	public static final Feature GUIDE_NEXT = f("guide.next_action", Category.GUIDES, "Next action on HUD", "次にやることをHUDに",
+			"Your top \"what to do now\" action and where it is done, on the info HUD.", "「今やること」の1位と、その場所を情報HUDに表示。", "nr");
+	public static final Feature GUIDE_AUTO_LINE = f("guide.auto_line", Category.GUIDES, "Guide line to next action", "次にやることへのガイド線",
+			"When no other guide runs, the guide line points at where your top action is done (public places only).", "他のガイドがないとき、1位の行動をする場所へガイド線を表示（公開されている場所のみ）。", "n");
 
 	// ---------------------------------------------------------------- market
 	public static final Feature MARKET_SIDE_PANEL = f("market.side_panel", Category.MARKET, "AH / Bazaar flip panel", "AH・バザーのフリップ欄",

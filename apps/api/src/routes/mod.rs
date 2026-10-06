@@ -4,6 +4,7 @@ pub mod auth_routes;
 pub mod market;
 pub mod misc;
 pub mod modapi;
+pub mod modfit;
 pub mod settings;
 
 use std::net::SocketAddr;
@@ -111,6 +112,10 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/gear", get(modapi::gear))
         .route("/mod/calendar", get(modapi::calendar))
         .route("/mod/sea-creatures", get(modapi::sea_creatures))
+        .route("/mod/fit", get(modfit::fit))
+        .route("/mod/builds", get(modfit::builds))
+        .route("/mod/money", get(modfit::money))
+        .route("/mod/puzzles", get(modfit::puzzles))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
     let origin: HeaderValue = state.config.public_web_url.trim_end_matches('/').parse().unwrap_or(HeaderValue::from_static("http://localhost:3000"));
