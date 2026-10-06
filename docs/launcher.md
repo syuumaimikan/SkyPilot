@@ -137,7 +137,7 @@ whoever has it can sign launcher updates.
 
 | Page | Contents |
 |---|---|
-| Home | Hero with PLAY (install / sign in / start / running), "Join Hypixel right away", mayor and perks, upcoming events, SkyBlock news, installation checks with Repair, quick actions (add Hypixel, import settings, FPS boost, game folder) |
+| Home | Hero with PLAY (install / sign in / start / running), "Join Hypixel right away", Hypixel server status (SkyBlock / server / login / API, maintenance with local times and countdowns, incidents; refreshed every 2 min), mayor and perks, upcoming events, SkyBlock news, installation checks with Repair, quick actions (add Hypixel, import settings, FPS boost, game folder) |
 | Mods | Search, filters, presets, troubleshoot (safe mode), compatibility problems (missing / wrong dependencies, conflicts, wrong Java), details, Modrinth update links, drag and drop |
 | Features | The mod's switchable features by category, recommended set, consent features |
 | Screenshots | Grid and viewer |

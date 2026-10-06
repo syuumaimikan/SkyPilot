@@ -115,6 +115,7 @@ final class Timers {
 			}
 		}
 		checkWatchlist(sp, now);
+		HypixelStatus.tick(mc, now);
 		// mayor / minister / fire sales
 		boolean wantSb = Feat.on(Features.HUD_MAYOR) || Feat.on(Features.MARKET_FIRE_SALE);
 		if (wantSb && api != null && now - skyblockAt > 300_000 && now - skyblockTriedAt > 60_000) {

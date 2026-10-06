@@ -478,6 +478,78 @@ pub struct ModNews {
     pub source: String,
 }
 
+// ---------------------------------------------------------------- Hypixel server status
+
+/// Hypixel's public status page (status.hypixel.net): service states, maintenance and incidents.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModServerStatus {
+    /// False when the status page could not be read (and nothing earlier is cached).
+    pub available: bool,
+    /// Statuspage indicator: none, minor, major, critical or maintenance.
+    pub indicator: String,
+    /// As the status page words it, e.g. "All Systems Operational".
+    pub description: String,
+    /// SkyBlock and the services it needs first, then any other service that is not operational.
+    pub services: Vec<ModServiceStatus>,
+    /// Maintenance in progress or scheduled, soonest first.
+    pub maintenances: Vec<ModMaintenance>,
+    /// Incidents that are not resolved yet.
+    pub incidents: Vec<ModIncident>,
+    /// The last finished SkyBlock maintenances, newest first.
+    pub recent_maintenances: Vec<ModMaintenance>,
+    pub checked_at_ms: i64,
+    pub page_url: String,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModServiceStatus {
+    pub name: String,
+    /// operational, degraded_performance, partial_outage, major_outage or under_maintenance.
+    pub status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModMaintenance {
+    pub id: String,
+    pub name: String,
+    /// scheduled, in_progress, verifying or completed.
+    pub status: String,
+    pub starts_ms: Option<i64>,
+    pub ends_ms: Option<i64>,
+    pub services: Vec<String>,
+    /// True when SkyBlock is among the affected services.
+    pub skyblock: bool,
+    /// What it is for: Hypixel's own update text (e.g. "SkyBlock will be in maintenance to roll
+    /// v0.27.2"), else the newest update.
+    pub update: Option<String>,
+    /// https://status.hypixel.net/incidents/… only.
+    pub link: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModIncident {
+    pub id: String,
+    pub name: String,
+    /// investigating, identified or monitoring.
+    pub status: String,
+    /// none, minor, major or critical.
+    pub impact: String,
+    pub started_ms: Option<i64>,
+    pub services: Vec<String>,
+    pub skyblock: bool,
+    pub update: Option<String>,
+    pub link: String,
+}
+
 // ---------------------------------------------------------------- other mods: update check
 
 /// Latest Modrinth version for one mod file (by SHA-1). Information only - nothing is downloaded.

@@ -45,6 +45,7 @@ state-changing request. The mod uses `Authorization: Bearer spm_…` from the de
 | GET | `/mod/items?q=&category=&offset=&limit≤600`, `/mod/item/{id}[?brief=true]` | - | Item browser pages (categories: all, weapons, armor, equipment, accessories, tools, materials, minions, pet_items, reforge_stones, cosmetics, other); item page or hover card |
 | GET | `/mod/bazaar/quotes?names=A\|B` | - | Live instant buy / sell by product name (≤40 names) for the order helper |
 | GET | `/mod/news` | - | Hypixel SkyBlock news (cached 30 min) |
+| GET | `/mod/server-status` | - | Hypixel's status page (status.hypixel.net): SkyBlock and core services, maintenance in progress / scheduled (with Hypixel's own text, e.g. the version), open incidents, the last 3 finished SkyBlock maintenances. Cached 2 min; the history is read at most every 30 min in the background; errors keep the last answer (`available: false` when there is none) |
 | GET | `/launcher/latest`, `/launcher/files/{name}` | - | Launcher update feed from `LAUNCHER_RELEASES_DIR`: signed `latest.json` + installer (the launcher checks the Ed25519 signature and SHA-256) |
 
 Limits: request body 256 KB; general 240 req/min/IP; analyze 6/min/IP; auth 10/min/IP;

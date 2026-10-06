@@ -8,6 +8,7 @@ pub mod modapi;
 pub mod modfit;
 pub mod modlist;
 pub mod settings;
+pub mod status_page;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -123,6 +124,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/puzzles", get(modfit::puzzles))
         .route("/mod/skyblock", get(modfit::skyblock_now))
         .route("/mod/news", get(modfit::news))
+        .route("/mod/server-status", get(status_page::server_status))
         .route("/mod/mod-updates", post(modlist::mod_updates))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 

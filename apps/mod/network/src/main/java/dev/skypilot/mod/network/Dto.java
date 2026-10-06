@@ -144,6 +144,20 @@ public final class Dto {
 	public record News(List<NewsItem> items, String source) {
 	}
 
+	/** Hypixel's public status page (status.hypixel.net, via the SkyPilot server). */
+	public record ServerStatus(boolean available, String indicator, String description, List<ServiceStatus> services, List<Maintenance> maintenances,
+			List<Incident> incidents, List<Maintenance> recentMaintenances, long checkedAtMs, String pageUrl, String source) {
+	}
+
+	public record ServiceStatus(String name, String status) {
+	}
+
+	public record Maintenance(String id, String name, String status, Long startsMs, Long endsMs, List<String> services, boolean skyblock, String update, String link) {
+	}
+
+	public record Incident(String id, String name, String status, String impact, Long startedMs, List<String> services, boolean skyblock, String update, String link) {
+	}
+
 	/** Current mayor / minister and fire sales (Hypixel resources, via the SkyPilot server). */
 	public record SkyblockNow(Mayor mayor, Mayor minister, Integer year, List<FireSale> fireSales) {
 	}

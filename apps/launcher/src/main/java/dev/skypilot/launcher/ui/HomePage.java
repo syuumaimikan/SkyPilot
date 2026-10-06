@@ -63,6 +63,8 @@ final class HomePage {
 	private final JPanel mayorBody = new JPanel();
 	private final JPanel eventsBody = new JPanel();
 	private final JPanel newsBody = new JPanel();
+	private final JPanel statusBody = new JPanel();
+	private Dto.ServerStatus serverStatus;
 	private List<Setup.Check> lastChecks = List.of();
 	private boolean installing;
 	private GameWatcher.State game = GameWatcher.State.IDLE;
@@ -78,6 +80,11 @@ final class HomePage {
 		loadLive();
 		// game state and countdowns
 		new Timer(3000, e -> watch()).start();
+		// Hypixel status (the server caches it for 2 minutes)
+		new Timer(120_000, e -> loadStatus()).start();
+		new Timer(30_000, e -> {
+			if (serverStatus != null) renderStatus(serverStatus);
+		}).start();
 	}
 
 	JComponent view() {
@@ -98,6 +105,8 @@ final class HomePage {
 		g.insets = new Insets(0, 0, 18, 0);
 		body.add(hero(), g);
 		g.gridy = 1;
+		body.add(statusCard(), g);
+		g.gridy = 2;
 		g.gridwidth = 1;
 		g.weightx = 1;
 		g.fill = GridBagConstraints.BOTH;
@@ -110,7 +119,7 @@ final class HomePage {
 		g.insets = new Insets(0, 9, 18, 0);
 		body.add(liveCard("news", c.t("SkyBlock news", "SkyBlockニュース"), newsBody), g);
 		g.gridx = 0;
-		g.gridy = 2;
+		g.gridy = 3;
 		g.gridwidth = 2;
 		g.insets = new Insets(0, 0, 0, 9);
 		body.add(installCard(), g);
@@ -224,6 +233,15 @@ final class HomePage {
 		Widgets.Card card = Widgets.card(icon, title, null, body);
 		card.setPreferredSize(new java.awt.Dimension(240, 230));
 		return card;
+	}
+
+	private JComponent statusCard() {
+		statusBody.setOpaque(false);
+		statusBody.setLayout(new BoxLayout(statusBody, BoxLayout.Y_AXIS));
+		statusBody.add(Ui.muted(c.t("Loading…", "読み込み中…")));
+		JButton open = Widgets.link(c.t("status.hypixel.net", "status.hypixel.net"), "external");
+		open.addActionListener(e -> Ui.browse("https://status.hypixel.net"));
+		return Widgets.card("server", c.t("Hypixel server status", "Hypixel サーバーの状態"), open, statusBody);
 	}
 
 	private JComponent installCard() {
@@ -381,6 +399,133 @@ final class HomePage {
 			if (err != null || news == null) unavailable(newsBody);
 			else renderNews(news);
 		}));
+		loadStatus();
+	}
+
+	/** For tests: shown instead of asking the server. */
+	static Dto.ServerStatus previewStatus;
+
+	private void loadStatus() {
+		if (previewStatus != null) {
+			showStatus(previewStatus);
+			return;
+		}
+		var api = c.api();
+		if (api == null) {
+			unavailable(statusBody);
+			return;
+		}
+		api.serverStatus().whenComplete((st, err) -> Ctx.later(() -> {
+			if (st != null) {
+				serverStatus = st;
+				renderStatus(st);
+			} else if (serverStatus == null) {
+				unavailable(statusBody);
+			}
+		}));
+	}
+
+	private static final java.time.format.DateTimeFormatter CLOCK = java.time.format.DateTimeFormatter.ofPattern("M/d HH:mm");
+
+	private static String clock(Long ms) {
+		return ms == null ? "?" : CLOCK.format(java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()));
+	}
+
+	private String serviceText(String status) {
+		return switch (status == null ? "" : status) {
+			case "operational" -> c.t("Online", "稼働中");
+			case "degraded_performance" -> c.t("Slow", "遅延");
+			case "partial_outage" -> c.t("Partial outage", "一部障害");
+			case "major_outage" -> c.t("Outage", "障害");
+			case "under_maintenance" -> c.t("Maintenance", "メンテナンス中");
+			default -> c.t("Unknown", "不明");
+		};
+	}
+
+	private static Color serviceColor(String status) {
+		return switch (status == null ? "" : status) {
+			case "operational" -> Theme.OK;
+			case "degraded_performance", "under_maintenance" -> Theme.WARN;
+			case "partial_outage", "major_outage" -> Theme.BAD;
+			default -> Theme.FAINT;
+		};
+	}
+
+	private String maintenanceText(Dto.Maintenance m, long now) {
+		String span = clock(m.startsMs()) + " – " + clock(m.endsMs());
+		if (dev.skypilot.mod.network.ServerStatusRules.running(m)) {
+			return c.t("In progress", "実施中") + "  ·  " + span + (m.endsMs() != null && m.endsMs() > now ? c.t("  ·  ends in ", "  ·  終了まで ") + Ui.duration(m.endsMs() - now) : "");
+		}
+		return c.t("Scheduled", "予定") + "  ·  " + span + (m.startsMs() != null && m.startsMs() > now ? c.t("  ·  in ", "  ·  開始まで ") + Ui.duration(m.startsMs() - now) : "");
+	}
+
+	private void renderStatus(Dto.ServerStatus st) {
+		statusBody.removeAll();
+		long now = System.currentTimeMillis();
+		if (!st.available()) {
+			statusBody.add(Ui.muted(c.t("Hypixel's status page is not available right now.", "Hypixel のステータスページを今は取得できません。")));
+		} else {
+			JPanel services = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+			services.setOpaque(false);
+			services.setAlignmentX(0);
+			for (Dto.ServiceStatus v : st.services() == null ? List.<Dto.ServiceStatus>of() : st.services()) {
+				JLabel name = new JLabel(v.name() + "  ");
+				name.setFont(Theme.font(Font.PLAIN, 13f));
+				services.add(name);
+				services.add(Widgets.badge(serviceText(v.status()), serviceColor(v.status())));
+				services.add(Box.createHorizontalStrut(18));
+			}
+			statusBody.add(services);
+			statusBody.add(Box.createVerticalStrut(8));
+			List<Dto.Maintenance> ms = st.maintenances() == null ? List.of() : st.maintenances();
+			List<Dto.Incident> incidents = st.incidents() == null ? List.of() : st.incidents();
+			if (ms.isEmpty() && incidents.isEmpty()) {
+				JLabel ok = Ui.muted(c.t("No maintenance announced", "予定されているメンテナンスはありません"));
+				ok.setIcon(Icons.of("check", 14, Theme.OK));
+				statusBody.add(ok);
+			}
+			for (Dto.Maintenance m : ms) {
+				boolean running = dev.skypilot.mod.network.ServerStatusRules.running(m);
+				statusBody.add(statusItem(running ? "x" : "calendar", running ? Theme.BAD : Theme.WARN, m.name(), maintenanceText(m, now), m.update(), m.link()));
+			}
+			for (Dto.Incident i : incidents) {
+				statusBody.add(statusItem("info", Theme.BAD, i.name(), (i.startedMs() != null ? c.t("since ", "発生 ") + clock(i.startedMs()) : "")
+						+ (i.services() == null || i.services().isEmpty() ? "" : "  ·  " + String.join(", ", i.services())), i.update(), i.link()));
+			}
+			JLabel src = Ui.muted(c.t("Source: status.hypixel.net  ·  checked ", "出典: status.hypixel.net  ·  確認 ") + Ui.duration(Math.max(0, now - st.checkedAtMs()))
+					+ c.t(" ago", " 前"));
+			src.setFont(Theme.font(Font.PLAIN, 11f));
+			src.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+			statusBody.add(src);
+		}
+		statusBody.revalidate();
+		statusBody.repaint();
+	}
+
+	private JComponent statusItem(String icon, Color color, String title, String when, String update, String link) {
+		JLabel item = new JLabel("<html><b>" + Ui.esc(title) + "</b>&nbsp;&nbsp;<span style='color:" + Theme.hex(color) + "'>" + Ui.esc(when) + "</span>"
+				+ (update == null || update.isBlank() ? "" : "<br><span style='color:" + Theme.hex(Theme.MUTED) + "'>" + Ui.esc(shorten(update, 160)) + "</span>") + "</html>");
+		item.setIcon(Icons.of(icon, 16, color));
+		item.setIconTextGap(10);
+		item.setFont(Theme.font(Font.PLAIN, 12.5f));
+		item.setBorder(BorderFactory.createEmptyBorder(3, 0, 5, 0));
+		item.setAlignmentX(0);
+		if (link != null && link.startsWith("https://status.hypixel.net/")) {
+			item.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+			item.setToolTipText(link);
+			item.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					Ui.browse(link);
+				}
+			});
+		}
+		return item;
+	}
+
+	private void showStatus(Dto.ServerStatus st) {
+		serverStatus = st;
+		renderStatus(st);
 	}
 
 	private void unavailable(JPanel body) {

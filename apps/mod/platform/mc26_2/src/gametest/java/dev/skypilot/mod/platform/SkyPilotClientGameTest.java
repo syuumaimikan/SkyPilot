@@ -1143,6 +1143,68 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				Performance.tick(mc);
 			});
 
+			// ---------------------------------------------------------------- Hypixel status, maintenance and events
+			ctx.runOnClient(mc -> {
+				var cfg = SkyPilot.get().config();
+				cfg.language = "ja";
+				cfg.features.put("hud.server_status", true);
+				cfg.features.put("hud.maintenance_alerts", true);
+				HypixelStatus.resetForTest();
+				long now = System.currentTimeMillis();
+				long h = 3_600_000L;
+				List<String> months = List.of("Early Spring", "Spring", "Late Spring", "Early Summer", "Summer", "Late Summer", "Early Autumn", "Autumn", "Late Autumn",
+						"Early Winter", "Winter", "Late Winter");
+				Timers.setCalendar(new Dto.Calendar(1_560_275_700_000L, 1_200_000L, 31, months, List.of(
+						new Dto.CalendarEvent("dark_auction", "Dark Auction", 0, 0, false, 3, 0, 0),
+						new Dto.CalendarEvent("jacobs_contest", "Jacob's Farming Contest", now - 300_000, now + 900_000, true, null, null, null),
+						new Dto.CalendarEvent("spooky", "Spooky Festival", now + 2 * h, now + 3 * h, false, null, null, null)), now));
+				Timers.skyblock = new Dto.SkyblockNow(new Dto.Mayor("Marina", List.of(new Dto.Perk("Fishing XP Buff", ""), new Dto.Perk("Luck of the Sea 2.0", ""))),
+						new Dto.Mayor("Foxy", List.of(new Dto.Perk("Sweet Benevolence", ""))), 517, List.of());
+				var running = new Dto.Maintenance("m1", "SkyBlock Maintenance", "in_progress", now - h, now + 3 * h, List.of("SkyBlock"), true,
+						"SkyBlock will be in maintenance to roll v0.27.2", "https://status.hypixel.net/incidents/m1");
+				var past = new Dto.Maintenance("m0", "SkyBlock Maintenance", "completed", now - 60 * 24 * h, now - 60 * 24 * h + 6 * h, List.of("SkyBlock"), true,
+						"SkyBlock will be undergoing maintenance to deploy 0.27 - Torrhus Canyon & Critter Safari.", "https://status.hypixel.net/incidents/m0");
+				var login = new Dto.Incident("i1", "Login issues", "identified", "major", now - 600_000, List.of("Minecraft Server Authentication"), false,
+						"We have identified the issue and are working on a fix.", "https://status.hypixel.net/incidents/i1");
+				MenuScreen.setStatus(new Dto.ServerStatus(true, "maintenance", "Service Under Maintenance",
+						List.of(new Dto.ServiceStatus("SkyBlock", "under_maintenance"), new Dto.ServiceStatus("Hypixel Minecraft Server", "operational"),
+								new Dto.ServiceStatus("Minecraft Server Authentication", "partial_outage"), new Dto.ServiceStatus("Public API", "operational")),
+						List.of(running), List.of(login), List.of(past), now, "https://status.hypixel.net", "status.hypixel.net"),
+						new Dto.News(List.of(new Dto.NewsItem("SkyBlock v0.27.2", "6th October 2026", "https://hypixel.net/threads/1/")), "Hypixel"));
+				check(shown(mc, "SkyBlockメンテナンス開始") != null, "maintenance started notice in chat");
+				check(shown(mc, "Login issues") != null, "login incident notice in chat");
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, now);
+				check(rows.stream().anyMatch(r -> r.text().startsWith("SkyBlock: メンテナンス中 · 終了まで")), "HUD maintenance row: " + rows);
+				check(rows.stream().anyMatch(r -> r.text().contains("Login issues")), "HUD incident row");
+				// notices are given once
+				MenuScreen.setStatus(HypixelStatus.status, null);
+			});
+			ctx.setScreen(() -> new MenuScreen(null, MenuScreen.Tab.STATUS));
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-menu-status"));
+			ctx.setScreen(() -> null);
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-status-hud"));
+			ctx.runOnClient(mc -> {
+				long now = System.currentTimeMillis();
+				long h = 3_600_000L;
+				var next = new Dto.Maintenance("m2", "SkyBlock Maintenance", "scheduled", now + 5 * h, now + 11 * h, List.of("SkyBlock"), true, null,
+						"https://status.hypixel.net/incidents/m2");
+				MenuScreen.setStatus(new Dto.ServerStatus(true, "none", "All Systems Operational", List.of(new Dto.ServiceStatus("SkyBlock", "operational")),
+						List.of(next), List.of(), List.of(), now, "https://status.hypixel.net", "status.hypixel.net"), null);
+				check(shown(mc, "SkyBlockが再開しました") != null, "back notice");
+				check(shown(mc, "SkyBlockメンテナンス予定") != null, "scheduled notice");
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, now);
+				check(rows.stream().anyMatch(r -> r.text().equals("SkyBlock: 稼働中")), "HUD online row: " + rows);
+				check(rows.stream().anyMatch(r -> r.text().contains("メンテまで 5h")), "HUD next maintenance row: " + rows);
+				var cfg = SkyPilot.get().config();
+				cfg.features.remove("hud.server_status");
+				cfg.features.remove("hud.maintenance_alerts");
+				cfg.language = "auto";
+				HypixelStatus.resetForTest();
+				Timers.skyblock = null;
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

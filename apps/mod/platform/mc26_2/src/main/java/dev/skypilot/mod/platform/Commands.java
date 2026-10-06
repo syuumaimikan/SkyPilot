@@ -59,6 +59,9 @@ final class Commands {
 						})
 						.executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.parse(StringArgumentType.getString(c, "tab")))))));
 		root.then(literal("flips").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.AH))));
+		for (String alias : new String[] {"hypixel", "events", "maintenance"}) {
+			root.then(literal(alias).executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.STATUS))));
+		}
 		root.then(literal("guide").executes(c -> openLater(() -> new MenuScreen(null, MenuScreen.Tab.PROGRESS)))
 				.then(literal("next").executes(c -> {
 					Waypoints.next();
@@ -145,7 +148,8 @@ final class Commands {
 		MccLang.info("SkyPilot - information only; it never plays, moves, clicks, buys or sells for you.", "SkyPilot は情報表示専用です。プレイ・移動・クリック・売買を代行することはありません。");
 		String[][] rows = {
 				{"/skypilot link", l.t("link this client to your SkyPilot workspace", "このクライアントをSkyPilotと連携")},
-				{"/skypilot menu [now|roadmap|guide|ah|bazaar|alerts]", l.t("SkyPilot menu (default key: J)", "SkyPilotメニュー（初期キー: J）")},
+				{"/skypilot menu [now|status|roadmap|guide|ah|bazaar|alerts]", l.t("SkyPilot menu (default key: J)", "SkyPilotメニュー（初期キー: J）")},
+				{"/skypilot hypixel | events", l.t("Hypixel server status, maintenance schedule and SkyBlock events", "Hypixelサーバー状態・メンテナンス予定・SkyBlockイベント予定")},
 				{"/skypilot flips | advice", l.t("menu: AH flips / advice for this area", "メニュー: AHフリップ / 現在地のアドバイス")},
 				{"/skypilot alerts on | off", l.t("flip alerts (toast + chat)", "フリップ通知（トースト+チャット）")},
 				{"/skypilot guide [next | prev | stop]", l.t("progression guides with waypoints", "進め方ガイド（ウェイポイント）")},

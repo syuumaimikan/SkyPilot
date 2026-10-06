@@ -61,6 +61,13 @@ class LauncherFrameTest {
 		Path launcherDir = dir.resolve("launcher");
 		Path out = Path.of("build", "launcher-screens");
 		Files.createDirectories(out);
+		long now = System.currentTimeMillis();
+		HomePage.previewStatus = new dev.skypilot.mod.network.Dto.ServerStatus(true, "maintenance", "Service Under Maintenance", List.of(
+				new dev.skypilot.mod.network.Dto.ServiceStatus("SkyBlock", "under_maintenance"), new dev.skypilot.mod.network.Dto.ServiceStatus("Hypixel Minecraft Server", "operational"),
+				new dev.skypilot.mod.network.Dto.ServiceStatus("Minecraft Server Authentication", "operational"), new dev.skypilot.mod.network.Dto.ServiceStatus("Public API", "operational")),
+				List.of(new dev.skypilot.mod.network.Dto.Maintenance("m1", "SkyBlock Maintenance", "in_progress", now - 3_600_000L, now + 5 * 3_600_000L, List.of("SkyBlock"), true,
+						"SkyBlock will be in maintenance to roll v0.27.2", "https://status.hypixel.net/incidents/m1")),
+				List.of(), List.of(), now - 60_000, "https://status.hypixel.net", "status.hypixel.net");
 		String[] pages = {"home", "mods", "features", "screenshots", "logs", "tools", "settings", "about"};
 		String[][] runs = {{"en", "dark"}, {"ja", "dark"}, {"ja", "light"}};
 		for (String[] run : runs) {

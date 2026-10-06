@@ -4,7 +4,21 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@skypilot/web", "start"],
+      "runtimeArgs": [
+        "--filter",
+        "@skypilot/web",
+        "start"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@skypilot/web",
+        "dev"
+      ],
       "port": 3000
     }
   ]

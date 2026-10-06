@@ -2,19 +2,23 @@ package dev.skypilot.mod.platform;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.skypilot.mod.core.Features;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.network.ApiClient;
 import dev.skypilot.mod.network.ApiException;
 import dev.skypilot.mod.network.Dto;
+import dev.skypilot.mod.network.ServerStatusRules;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -34,7 +38,7 @@ import java.util.function.Supplier;
  */
 final class MenuScreen extends Screen {
 	enum Tab {
-		NOW("Now", "今やること"), ROADMAP("Roadmap", "ロードマップ"), FIT("Fit", "適性"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"),
+		NOW("Now", "今やること"), STATUS("Status & events", "状態・予定"), ROADMAP("Roadmap", "ロードマップ"), FIT("Fit", "適性"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"),
 		BUILD("Builds", "ビルド"), GEAR("Gear", "装備"), MONEY("Money", "金策"), AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), ALERTS("Alerts", "通知・表示");
 
 		final String en;
@@ -82,6 +86,7 @@ final class MenuScreen extends Screen {
 	private static String buildId;
 	private static Dto.Money money;
 	private static String moneyError;
+	private static Dto.News news;
 
 	private record Line(int height, Drawer drawer, IntConsumer onClick, Supplier<Component> tooltip) {
 	}
@@ -242,6 +247,23 @@ final class MenuScreen extends Screen {
 					}));
 				}
 			}
+			case STATUS -> {
+				HypixelStatus.refresh(minecraft, force, () -> dataVersion++);
+				if (api != null) {
+					if (force || Timers.time() == null) api.calendar().whenComplete((c, err) -> minecraft.execute(() -> {
+						if (c != null) Timers.setCalendar(c);
+						dataVersion++;
+					}));
+					if (force || Timers.skyblock == null) api.skyblockNow().whenComplete((sb, err) -> minecraft.execute(() -> {
+						if (sb != null) Timers.skyblock = sb;
+						dataVersion++;
+					}));
+					if (force || news == null) api.news().whenComplete((n, err) -> minecraft.execute(() -> {
+						if (n != null) news = n;
+						dataVersion++;
+					}));
+				}
+			}
 			case AH -> MarketData.refresh(MarketData.AH, force);
 			case BAZAAR -> MarketData.refresh(MarketData.BAZAAR, force);
 			case ALERTS -> {
@@ -301,6 +323,7 @@ final class MenuScreen extends Screen {
 		Lang l = SkyPilot.get().lang();
 		switch (tab) {
 			case NOW -> buildNow(l);
+			case STATUS -> buildStatus(l);
 			case ROADMAP -> buildRoadmap(l);
 			case GUIDE -> buildGuide(l);
 			case PROGRESS -> buildProgress(l);
@@ -423,6 +446,141 @@ final class MenuScreen extends Screen {
 		String text = "▶ " + l.t("Guide: ", "ガイド: ") + p.waypoint().name() + " (" + Guides.island(p.waypoint().island()) + ")" + (p.warp() != null ? " · " + p.warp() : "");
 		link(text, Ui.AQUA, () -> Guides.go(p, true), l.t("Draw a guide line to this place (the warp is only put into your chat box)", "この場所へのガイド線を表示（ワープはチャット欄に入れるだけです）")
 				+ (p.note() != null ? "\n" + p.note() : ""));
+	}
+
+	// ---------------------------------------------------------------- status & events
+
+	private void buildStatus(Lang l) {
+		long now = System.currentTimeMillis();
+		Dto.ServerStatus s = HypixelStatus.status;
+		heading(l.t("Hypixel server status", "Hypixelサーバーの状態"), Ui.PURPLE);
+		if (s == null) {
+			if (HypixelStatus.error != null) para(HypixelStatus.error, Ui.RED, 0);
+			else para(l.t("Loading…", "読み込み中…"), Ui.GRAY, 0);
+		} else if (!s.available()) {
+			para(l.t("Hypixel's status page is not available right now.", "Hypixelのステータスページを今は取得できません。"), Ui.YELLOW, 0);
+		} else {
+			for (Dto.ServiceStatus v : orEmpty(s.services())) statusRow(v.name(), HypixelStatus.service(v.status(), l), HypixelStatus.serviceColor(v.status()));
+			para(l.t("Checked ", "確認: ") + Text.duration(Math.max(0, now - s.checkedAtMs())) + l.t(" ago · source: status.hypixel.net", "前 · 出典: status.hypixel.net"), Ui.DARK_GRAY, 0);
+			heading(l.t("Maintenance", "メンテナンス"), Ui.GOLD);
+			if (orEmpty(s.maintenances()).isEmpty()) para(l.t("No maintenance announced.", "予定されているメンテナンスはありません。"), Ui.GREEN, 0);
+			for (Dto.Maintenance m : orEmpty(s.maintenances())) {
+				gap(2);
+				boolean running = ServerStatusRules.running(m);
+				para(m.name() + " · " + HypixelStatus.maintenanceStatus(m.status(), l), running ? Ui.RED : Ui.YELLOW, 0);
+				para(HypixelStatus.when(m, now, l), Ui.WHITE, 10);
+				if (!m.skyblock() && !orEmpty(m.services()).isEmpty()) para(String.join(", ", m.services()), Ui.GRAY, 10);
+				para(m.update(), Ui.GRAY, 10);
+				webLink(m.link(), l);
+			}
+			if (!orEmpty(s.incidents()).isEmpty()) {
+				heading(l.t("Incidents", "障害"), Ui.RED);
+				for (Dto.Incident i : s.incidents()) {
+					gap(2);
+					para(i.name(), Ui.RED, 0);
+					para(HypixelStatus.impact(i.impact(), l) + " · " + HypixelStatus.incidentStatus(i.status(), l)
+							+ (i.startedMs() != null ? " · " + l.t("since ", "発生 ") + HypixelStatus.clock(i.startedMs(), now) : "")
+							+ (orEmpty(i.services()).isEmpty() ? "" : " · " + String.join(", ", i.services())), Ui.GRAY, 10);
+					para(i.update(), Ui.GRAY, 10);
+					webLink(i.link(), l);
+				}
+			}
+			if (!orEmpty(s.recentMaintenances()).isEmpty()) {
+				heading(l.t("Recent SkyBlock maintenance", "最近のSkyBlockメンテナンス"), Ui.GOLD);
+				for (Dto.Maintenance m : s.recentMaintenances()) {
+					para(HypixelStatus.clock(m.startsMs(), now) + " - " + HypixelStatus.clock(m.endsMs(), now), Ui.WHITE, 0);
+					para(m.update(), Ui.GRAY, 10);
+				}
+			}
+		}
+		gap(4);
+		toggle(l.t("Status line on the info HUD", "情報HUDに状態を表示"), Feat.on(Features.HUD_SERVER_STATUS), () -> flipFeature(Features.HUD_SERVER_STATUS));
+		toggle(l.t("Maintenance alerts", "メンテナンス通知"), Feat.on(Features.STATUS_ALERTS), () -> flipFeature(Features.STATUS_ALERTS));
+
+		heading(l.t("SkyBlock events", "SkyBlockのイベント予定"), Ui.PURPLE);
+		List<Timers.Upcoming> events = Timers.upcoming(now);
+		if (events.isEmpty()) para(SkyPilot.get().api() == null ? SkyPilot.get().apiError() : l.t("Loading…", "読み込み中…"), Ui.GRAY, 0);
+		var sbTime = Timers.time();
+		if (sbTime != null) para(l.t("Now: ", "現在: ") + sbTime.format(now), Ui.GRAY, 0);
+		int n = 0;
+		for (Timers.Upcoming u : events) {
+			if (n++ >= 20) break;
+			boolean active = u.active(now);
+			String right = active ? l.t("now · ", "開催中 · 残り ") + InfoHud.eta(u.endMs() - now)
+					: l.t("in ", "あと ") + InfoHud.eta(u.startMs() - now) + " · " + HypixelStatus.clock(u.startMs(), now);
+			statusRow(u.name(), right, active ? Ui.GREEN : Ui.GRAY);
+		}
+
+		var sb = Timers.skyblock;
+		if (sb != null && sb.mayor() != null) {
+			heading(l.t("Mayor", "市長"), Ui.GOLD);
+			para(sb.mayor().name() + (sb.year() != null ? l.t(" · Year ", " · ") + sb.year() + l.t("", "年") : ""), Ui.WHITE, 0);
+			for (var p : orEmpty(sb.mayor().perks())) para("• " + Text.strip(p.name()), Ui.GRAY, 10);
+			if (sb.minister() != null) {
+				para(l.t("Minister: ", "大臣: ") + sb.minister().name(), Ui.WHITE, 0);
+				for (var p : orEmpty(sb.minister().perks())) para("• " + Text.strip(p.name()), Ui.GRAY, 10);
+			}
+		}
+		if (sb != null && !orEmpty(sb.fireSales()).isEmpty()) {
+			heading(l.t("Fire sales", "ファイアセール"), Ui.RED);
+			for (Dto.FireSale f : sb.fireSales()) {
+				boolean on = f.startMs() <= now && now < f.endMs();
+				statusRow(f.name(), on ? l.t("now · ends in ", "開催中 · 残り ") + InfoHud.eta(f.endMs() - now) : l.t("in ", "あと ") + InfoHud.eta(f.startMs() - now),
+						on ? Ui.GREEN : Ui.GRAY);
+			}
+		}
+		if (news != null && !orEmpty(news.items()).isEmpty()) {
+			heading(l.t("SkyBlock news", "SkyBlockニュース"), Ui.PURPLE);
+			int k = 0;
+			for (Dto.NewsItem it : news.items()) {
+				if (k++ >= 6) break;
+				String text = it.title() + (it.date() == null || it.date().isBlank() ? "" : "  (" + it.date() + ")");
+				if (it.link() != null && it.link().startsWith("https://hypixel.net/")) {
+					link(text, Ui.AQUA, () -> openLink(it.link()), it.link());
+				} else {
+					para(text, Ui.GRAY, 0);
+				}
+			}
+		}
+	}
+
+	private static <T> List<T> orEmpty(List<T> l) {
+		return l == null ? List.of() : l;
+	}
+
+	/** Name on the left, value on the right. */
+	private void statusRow(String name, String value, int color) {
+		add(ROW + 1, (g, x, y, w, mx, hov) -> {
+			int vw = font.width(value);
+			g.fill(x, y + 3, x + 3, y + 6, color);
+			g.text(font, font.plainSubstrByWidth(name, Math.max(20, w - vw - 16)), x + 7, y, Ui.WHITE, false);
+			g.text(font, value, x + w - vw, y, color, false);
+		});
+	}
+
+	private void webLink(String url, Lang l) {
+		if (url == null || !url.startsWith("https://status.hypixel.net/")) return;
+		link("▶ " + l.t("Open on status.hypixel.net", "status.hypixel.net で開く"), Ui.AQUA, () -> openLink(url), url);
+	}
+
+	private void openLink(String url) {
+		minecraft.gui.setScreen(new ConfirmLinkScreen(yes -> {
+			if (yes) Util.getPlatform().openUri(url);
+			minecraft.gui.setScreen(this);
+		}, url, false));
+	}
+
+	private void flipFeature(Features.Feature f) {
+		var cfg = SkyPilot.get().config();
+		cfg.features.put(f.id(), !cfg.on(f));
+		if (cfg.on(f)) HypixelStatus.refresh(minecraft, false, () -> dataVersion++);
+	}
+
+	/** For tests: show this status without a server. */
+	static void setStatus(Dto.ServerStatus s, Dto.News n) {
+		HypixelStatus.set(s);
+		news = n;
+		dataVersion++;
 	}
 
 	// ---------------------------------------------------------------- fit (適性)
@@ -893,7 +1051,9 @@ final class MenuScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(g, mouseX, mouseY, delta);
-		int version = dataVersion * 31 + versionOf(MarketData.get(MarketData.AH)) * 7 + versionOf(MarketData.get(MarketData.BAZAAR));
+		int version = dataVersion * 31 + versionOf(MarketData.get(MarketData.AH)) * 7 + versionOf(MarketData.get(MarketData.BAZAAR))
+				// countdowns on the status tab
+				+ (tab == Tab.STATUS ? (int) (System.currentTimeMillis() / 1000) * 13 : 0);
 		if (version != builtVersion) {
 			builtVersion = version;
 			rebuild();

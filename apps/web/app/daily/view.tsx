@@ -2,22 +2,31 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@skypilot/ui";
 import { PageHeader } from "@/components/common";
+import { EventScheduleCard, ServerStatusCard } from "@/components/hypixel-status";
 import { EmbeddedReport } from "@/components/report";
 import { useI18n } from "@/lib/i18n";
 
 export function DailyView() {
   const { t } = useI18n();
   return (
-    <div>
+    <div className="flex flex-col gap-6">
       <PageHeader
         title={t("Daily & Events", "デイリー・イベント")}
-        description={t("Daily tasks worth doing for your profile, upcoming calendar events and the current mayor's perks.", "あなたのプロフィールで毎日やる価値のあること、今後のイベント、現在の市長の特典です。")}
+        description={t(
+          "Hypixel's server status and maintenance, the SkyBlock event schedule, daily tasks worth doing for your profile and the current mayor's perks.",
+          "Hypixel のサーバー状態とメンテナンス、SkyBlock のイベント予定、あなたのプロフィールで毎日やる価値のあること、現在の市長の特典です。",
+        )}
       />
-      <Tabs defaultValue="daily">
+      <ServerStatusCard />
+      <Tabs defaultValue="schedule">
         <TabsList>
+          <TabsTrigger value="schedule">{t("Event schedule", "イベント予定")}</TabsTrigger>
           <TabsTrigger value="daily">{t("Daily", "デイリー")}</TabsTrigger>
           <TabsTrigger value="events">{t("Events & mayor", "イベント・市長")}</TabsTrigger>
         </TabsList>
+        <TabsContent value="schedule">
+          <EventScheduleCard />
+        </TabsContent>
         <TabsContent value="daily">
           <EmbeddedReport domain="daily" />
         </TabsContent>
