@@ -39,6 +39,17 @@ impl CalendarConfig {
             + (date.day as i64 - 1) * self.day_ms
     }
 
+    /// Next (or current, while it runs) start of a recurring event.
+    pub fn next_recurring(&self, e: &crate::curated::RecurringEvent, now_ms: i64) -> (i64, i64) {
+        let period = self.day_ms * e.every_days.max(1) as i64;
+        let first = self.epoch_ms + self.day_ms * e.offset_days as i64;
+        let duration = self.day_ms * e.duration_days as i64;
+        let k = (now_ms - first).div_euclid(period);
+        let start = first + k * period;
+        let start = if now_ms < start + duration { start } else { start + period };
+        (start, start + duration)
+    }
+
     /// (event, start_ms, end_ms, active_now) for the next occurrence of each event.
     pub fn upcoming(&self, now_ms: i64) -> Vec<(CalendarEvent, i64, i64, bool)> {
         let today = self.date_at(now_ms);
@@ -69,7 +80,31 @@ mod tests {
             days_per_month: 31,
             months: (1..=12).map(|i| format!("M{i}")).collect(),
             events: vec![],
+            recurring: vec![],
         }
+    }
+
+    #[test]
+    fn recurring_dark_auction_and_jacob() {
+        let c = cfg();
+        let rec = |id: &str, offset: u32, duration: u32| crate::curated::RecurringEvent {
+            id: id.into(),
+            name: id.into(),
+            every_days: 3,
+            offset_days: offset,
+            duration_days: duration,
+            source: String::new(),
+            checked: String::new(),
+        };
+        // 2019-06-11 18:05 UTC (10 minutes after the epoch at 17:55)
+        let now = 1_560_275_700_000 + 600_000;
+        let (da, _) = c.next_recurring(&rec("da", 0, 0), now);
+        assert_eq!(da, 1_560_275_700_000 + 3_600_000, "next Dark Auction at 18:55");
+        let (jacob, end) = c.next_recurring(&rec("jacob", 1, 1), now);
+        assert_eq!(jacob, 1_560_275_700_000 + 1_200_000, "Jacob's contest at 18:15");
+        assert_eq!(end - jacob, 1_200_000);
+        // while it runs, the running contest is returned
+        assert_eq!(c.next_recurring(&rec("jacob", 1, 1), jacob + 60_000).0, jacob);
     }
 
     #[test]

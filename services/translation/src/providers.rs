@@ -33,7 +33,9 @@ impl Provider for DeepL {
     }
     async fn translate(&self, text: &str, source: &str, target: &str) -> Result<String, String> {
         let host = if self.key.ends_with(":fx") { "https://api-free.deepl.com" } else { "https://api.deepl.com" };
-        let body = json!({"text": [text], "source_lang": source.to_uppercase(), "target_lang": target.to_uppercase()});
+        // DeepL deprecated plain "EN" as a target language; it needs EN-US or EN-GB.
+        let target = if target.eq_ignore_ascii_case("en") { "EN-US".to_string() } else { target.to_uppercase() };
+        let body = json!({"text": [text], "source_lang": source.to_uppercase(), "target_lang": target});
         let resp = self
             .http
             .post(format!("{host}/v2/translate"))
@@ -96,13 +98,16 @@ impl Claude {
 
 const SYSTEM: &str = "You translate short Hypixel SkyBlock Minecraft chat messages from English into natural, casual Japanese as used by Japanese SkyBlock players. Rules: output only the translation, no quotes or notes; keep every token of the form ⟦...⟧ exactly as is and exactly once; keep SkyBlock jargon such as item names, F7, M5, T4, HOTM, MP, AH, BZ in English; never add information that is not in the message.";
 
+const SYSTEM_TO_ENGLISH: &str = "You translate a Japanese Hypixel SkyBlock player's short chat message into natural, casual English as SkyBlock players write it. Rules: output only the translation, no quotes or notes; keep every token of the form ⟦...⟧ exactly as is and exactly once; keep SkyBlock jargon such as item names, F7, M5, T4, HOTM, MP, AH, BZ as they are; never add information that is not in the message.";
+
 #[async_trait]
 impl Provider for Claude {
     fn name(&self) -> &'static str {
         "claude"
     }
-    async fn translate(&self, text: &str, _source: &str, _target: &str) -> Result<String, String> {
-        self.client.complete(SYSTEM, text, 1024, "low", Duration::from_secs(20)).await.map(|s| s.trim().to_string()).map_err(|e| e.to_string())
+    async fn translate(&self, text: &str, _source: &str, target: &str) -> Result<String, String> {
+        let system = if target == "en" { SYSTEM_TO_ENGLISH } else { SYSTEM };
+        self.client.complete(system, text, 1024, "low", Duration::from_secs(20)).await.map(|s| s.trim().to_string()).map_err(|e| e.to_string())
     }
 }
 

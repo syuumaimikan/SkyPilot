@@ -16,13 +16,17 @@ final class HudRenderer {
 	private HudRenderer() {
 	}
 
+	/** Where the SkyPilot HUD was drawn this frame (null when hidden); the info HUD goes below it. */
+	static HudLayout.Box lastBox;
+
 	static void render(GuiGraphicsExtractor g, DeltaTracker delta) {
+		lastBox = null;
 		SkyPilot sp = SkyPilot.get();
 		Minecraft mc = Minecraft.getInstance();
 		if (sp == null || !sp.config().hud.enabled || mc.player == null) return;
 		if (mc.gui.screen() instanceof HudEditorScreen) return; // the editor draws its own preview
 		if (!sp.context().inSkyBlock()) return;
-		draw(g, mc.font, rows(sp), sp.config().hud, g.guiWidth(), g.guiHeight(), false);
+		lastBox = draw(g, mc.font, rows(sp), sp.config().hud, g.guiWidth(), g.guiHeight(), false);
 	}
 
 	static List<HudRow> rows(SkyPilot sp) {
@@ -33,20 +37,25 @@ final class HudRenderer {
 
 	/** Returns the on-screen box so the HUD editor can hit-test it. */
 	static HudLayout.Box draw(GuiGraphicsExtractor g, Font font, List<HudRow> rows, SkyPilotConfig.Hud cfg, int screenW, int screenH, boolean outline) {
+		return draw(g, font, rows, cfg.x, cfg.y, cfg.scale, cfg.opacity, 320, screenW, screenH, outline);
+	}
+
+	static HudLayout.Box draw(GuiGraphicsExtractor g, Font font, List<HudRow> rows, int x, int y0, double scale, double opacity, int maxTextW, int screenW, int screenH,
+			boolean outline) {
 		int width = 0;
 		for (HudRow r : rows) width = Math.max(width, font.width(r.text()));
-		width = Math.min(width, 320) + HudLayout.PADDING * 2;
+		width = Math.min(width, maxTextW) + HudLayout.PADDING * 2;
 		int height = HudLayout.contentHeight(rows, font.lineHeight);
-		HudLayout.Box box = HudLayout.place(cfg.x, cfg.y, width, height, cfg.scale, screenW, screenH);
-		float s = (float) cfg.scale;
+		HudLayout.Box box = HudLayout.place(x, y0, width, height, scale, screenW, screenH);
+		float s = (float) scale;
 		g.pose().pushMatrix();
 		g.pose().translate(box.x(), box.y());
 		g.pose().scale(s, s);
-		g.fill(0, 0, width, height, HudLayout.background(cfg.opacity));
+		g.fill(0, 0, width, height, HudLayout.background(opacity));
 		if (outline) g.outline(0, 0, width, height, 0xFF9D8CFF);
 		int y = HudLayout.PADDING;
 		for (HudRow r : rows) {
-			String text = font.width(r.text()) > 320 ? font.plainSubstrByWidth(r.text(), 314) + "…" : r.text();
+			String text = font.width(r.text()) > maxTextW ? font.plainSubstrByWidth(r.text(), maxTextW - 6) + "…" : r.text();
 			g.text(font, text, HudLayout.PADDING, y, r.color(), false);
 			y += font.lineHeight;
 			if (r.progress() >= 0) {

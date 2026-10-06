@@ -122,6 +122,10 @@ class LiveApiIT {
 			Dto.Guides guides = api.guides("ja").join();
 			assertTrue(guides.guides().size() >= 3);
 			assertNotNull(api.gear("ja").join().sections());
+			Dto.Calendar cal = api.calendar().join();
+			assertEquals(1_200_000L, cal.dayMs());
+			assertTrue(cal.events().stream().anyMatch(e -> "jacobs_contest".equals(e.id()) && Integer.valueOf(3).equals(e.everyDays())));
+			assertNotNull(api.price("ENCHANTED_DIAMOND", null).join().npcSell(), "NPC sell price from the item list");
 
 			// Per-user translation provider: the key goes in, only "…last4" comes back.
 			Dto.UserSettings before = api.userSettings().join();

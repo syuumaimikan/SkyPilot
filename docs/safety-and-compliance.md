@@ -23,8 +23,20 @@ combat automation. Every in-game action is performed by the player.
 | Chest value | the open container's item stacks (as rendered) | a value list left of the window; clicking a name outlines that slot | on |
 | Guides and waypoints | the SkyPilot server (public SkyHanni place names) | a marker, a straight line and a HUD arrow to a fixed public place; no routes, no collectibles, the player walks | started by the player |
 | Farm build guide | blocks the player can see near the chosen origin | coloured outlines of blocks still to place; nothing is placed | started by the player |
+| Chat filters / timestamps / stacking / copy | incoming chat lines | hides the chosen groups from this client's chat, or adds a time, (x2), copy-on-click, a mention marker or a [Waypoint] button to the client's copy; the server message is never blocked or changed | **off** |
+| Slot decorations | items shown in an open window (lore, custom_data) | rarity colour, small numbers, search dimming; slot handling untouched | **off** |
+| Info HUD (coordinates, FPS, timers, bars, skill/powder/BPS/slayer/drop trackers) | own position, action bar, tab list widgets, sidebar, chat, blocks the player breaks | a second HUD box, titles, toasts and sounds | **off** |
+| R / U lookup keys | the hovered item | opens SkyPilot's item page (the window stays open) | **off** |
+| Garden visitor cost | the visitor menu's offer lore | a cost panel; accepting stays the player's click | **off** |
+| Watchlist / reminders / calculator / own waypoints | SkyPilot prices, the player's input | toasts, chat lines, a static marker at a saved spot | **off** |
+| Write in Japanese (`/skypilot en`) | the text the player typed | JA→EN translation put into the chat box; the player sends it | **off** (consent) |
 | Translation provider (settings) | - | sends the chosen provider and, if entered, the player's own DeepL/Anthropic key to the SkyPilot server only (stored encrypted, shown back as `…last4`) | server's provider |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |
+
+Hypixel has no list of explicitly allowed mods; its disallowed list (Fr0z3n, 2021-03-26:
+showing invisible entities, changing player movement, cancelling vanilla actions, automatically
+interacting with inventories or menus) is respected by every feature, and every optional feature
+is off until the player turns it on (Settings → Features).
 
 The mod sends no packets to the game server, simulates no input, never opens or clicks
 container GUIs, does not inspect hidden blocks or world data beyond what is rendered, and

@@ -19,7 +19,14 @@ public final class Dto {
 	}
 
 	public record PriceResponse(String skyblockId, String name, Double estimatedValue, Double median, Double lowestBin, Double bazaarBuy, Double bazaarSell,
-			Double salesPerDay, Double confidence, String confidenceLabel, String priceKey, Long ageSeconds) {
+			Double salesPerDay, Double confidence, String confidenceLabel, String priceKey, Long ageSeconds, Double npcSell, Double craftCost) {
+	}
+
+	/** SkyBlock calendar constants (from the server's curated registry) and the next events. */
+	public record Calendar(long epochMs, long dayMs, int daysPerMonth, List<String> months, List<CalendarEvent> events, long nowMs) {
+	}
+
+	public record CalendarEvent(String id, String name, long startMs, long endMs, boolean active, Integer everyDays, Integer offsetDays, Integer durationDays) {
 	}
 
 	public record TextResponse(String title, List<HudLine> lines) {

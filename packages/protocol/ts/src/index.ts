@@ -86,6 +86,8 @@ export type { MiningInfo } from "./generated/MiningInfo";
 export type { MiningTargetRate } from "./generated/MiningTargetRate";
 export type { MinionInfo } from "./generated/MinionInfo";
 export type { ModAlerts } from "./generated/ModAlerts";
+export type { ModCalendar } from "./generated/ModCalendar";
+export type { ModCalendarEvent } from "./generated/ModCalendarEvent";
 export type { ModDropSource } from "./generated/ModDropSource";
 export type { ModFlipRow } from "./generated/ModFlipRow";
 export type { ModGear } from "./generated/ModGear";

@@ -141,7 +141,7 @@ final class ItemBrowser {
 				if (i > 0) joined.append("\n");
 				joined.append(tip.get(i));
 			}
-			g.setTooltipForNextFrame(joined, mouseX, mouseY);
+			Ui.tooltip(g, joined, mouseX, mouseY);
 		}
 	}
 
@@ -197,6 +197,11 @@ final class ItemBrowser {
 		Dto.ItemPage p = data;
 		int pages = p == null ? 1 : Math.max(1, (p.total() + perPage() - 1) / perPage());
 		if (page + 1 < pages) page++;
+	}
+
+	/** The current search text (shared by all windows). */
+	static String query() {
+		return query;
 	}
 
 	private static void setQuery(String q) {

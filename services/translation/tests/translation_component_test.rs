@@ -123,6 +123,21 @@ async fn own_provider_failures_do_not_trip_the_shared_breaker() {
     assert!(!r.unchanged);
 }
 
+#[tokio::test]
+async fn japanese_to_english_for_the_players_own_messages() {
+    let echo = Arc::new(Echo("EN:", AtomicU32::new(0)));
+    let t = Translator::new(dict(), Some(echo.clone()));
+    let to_en = |text: &str| TranslateRequest { text: text.into(), source_lang: "ja".into(), target_lang: "en".into(), channel: None };
+    let r = t.translate(&to_en("Hyperion売ってる人いますか")).await;
+    assert!(!r.unchanged);
+    assert!(r.translated.starts_with("EN:") && r.translated.contains("Hyperion"), "{}", r.translated);
+    // English text asked "to English" is left alone; so is Japanese asked "to Japanese"
+    assert!(t.translate(&to_en("already english")).await.unchanged);
+    assert!(t.translate(&req("もう日本語です")).await.unchanged);
+    // the EN→JA dictionary is not applied in the other direction
+    assert_eq!(echo.1.load(Ordering::SeqCst), 1);
+}
+
 #[test]
 fn japanese_detection_and_protection() {
     assert!(is_japanese("F7行く人いる？"));

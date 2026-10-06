@@ -748,7 +748,7 @@ final class MenuScreen extends Screen {
 			g.fill(trackX, contentY, trackX + 3, contentY + contentH, 0x30FFFFFF);
 			g.fill(trackX, thumbY, trackX + 3, thumbY + thumbH, 0xFF9D8CFF);
 		}
-		if (tip != null) g.setTooltipForNextFrame(tip.get(), mouseX, mouseY);
+		if (tip != null) Ui.tooltip(g, tip.get(), mouseX, mouseY);
 	}
 
 	private static int versionOf(Dto.MarketPanel p) {

@@ -236,14 +236,17 @@ impl Translator {
     pub async fn translate_with(&self, req: &TranslateRequest, choice: ProviderChoice<'_>) -> TranslateResponse {
         let text: String = req.text.nfc().collect();
         let unchanged = |provider: &str| TranslateResponse { translated: text.clone(), provider: provider.into(), cached: false, unchanged: true };
-        if text.trim().is_empty() || text.chars().count() > 600 || req.target_lang != "ja" || is_japanese(&text) {
+        // English chat → Japanese (the dictionary applies), or the player's own Japanese → English.
+        let to_japanese = req.target_lang == "ja" && !is_japanese(&text);
+        let to_english = req.target_lang == "en" && req.source_lang == "ja" && is_japanese(&text);
+        if text.trim().is_empty() || text.chars().count() > 600 || !(to_japanese || to_english) {
             return unchanged("passthrough");
         }
-        if let Some(t) = match_pattern(&text, &self.dict) {
+        if to_japanese && let Some(t) = match_pattern(&text, &self.dict) {
             return TranslateResponse { translated: t, provider: "dictionary".into(), cached: false, unchanged: false };
         }
         let (protected, map) = protect(&text, &self.dict);
-        if let Some(t) = phrase_only(&protected, &self.dict) {
+        if to_japanese && let Some(t) = phrase_only(&protected, &self.dict) {
             return TranslateResponse { translated: unprotect(&t, &map), provider: "dictionary".into(), cached: false, unchanged: false };
         }
         // nothing left to translate besides placeholders/numbers

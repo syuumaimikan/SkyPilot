@@ -69,7 +69,45 @@ pub async fn price(State(state): State<Arc<AppState>>, Json(req): Json<ModPriceR
         confidence_label: conf.map(|c| format!("{:?}", c.level).to_uppercase()).unwrap_or_else(|| if bz.is_some() { "HIGH".into() } else { "UNKNOWN".into() }),
         price_key: Some(key),
         age_seconds: Some(if bz.is_some() { bzf.age_seconds } else { ah.age_seconds }),
+        npc_sell: registry.npc_price(&market_id),
+        craft_cost: skypilot_pricing::craft::CraftCalculator::new(&registry, state.market.as_ref()).craft_cost(&market_id).map(|(c, n, _)| c / n),
     }))
+}
+
+/// SkyBlock calendar constants and the next events (public, no player data).
+pub async fn calendar(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModCalendar>> {
+    let registry = state.registry();
+    let cal = &registry.curated.calendar;
+    let now = AppState::now_ms();
+    let mut events: Vec<ModCalendarEvent> = cal
+        .recurring
+        .iter()
+        .map(|e| {
+            let (start, end) = cal.next_recurring(e, now);
+            ModCalendarEvent {
+                id: e.id.clone(),
+                name: e.name.clone(),
+                start_ms: start,
+                end_ms: end,
+                active: start <= now && now < end,
+                every_days: Some(e.every_days),
+                offset_days: Some(e.offset_days),
+                duration_days: Some(e.duration_days),
+            }
+        })
+        .collect();
+    events.extend(cal.upcoming(now).into_iter().map(|(e, start, end, active)| ModCalendarEvent {
+        id: e.id,
+        name: e.name,
+        start_ms: start,
+        end_ms: end,
+        active,
+        every_days: None,
+        offset_days: None,
+        duration_days: None,
+    }));
+    events.sort_by_key(|e| e.start_ms);
+    Ok(Json(ModCalendar { epoch_ms: cal.epoch_ms, day_ms: cal.day_ms, days_per_month: cal.days_per_month, months: cal.months.clone(), events, now_ms: now }))
 }
 
 /// Text panels for `/skypilot <goal|next|roadmap|market|mining|slayer|farming>`.

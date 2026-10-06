@@ -375,6 +375,21 @@ pub struct CalendarConfig {
     pub days_per_month: u32,
     pub months: Vec<String>,
     pub events: Vec<CalendarEvent>,
+    #[serde(default)]
+    pub recurring: Vec<RecurringEvent>,
+}
+
+/// An event that repeats every `every_days` SkyBlock days (on days where
+/// `day % every_days == offset_days`, counted from the epoch).
+#[derive(Debug, Clone, Deserialize)]
+pub struct RecurringEvent {
+    pub id: String,
+    pub name: String,
+    pub every_days: u32,
+    pub offset_days: u32,
+    pub duration_days: u32,
+    pub source: String,
+    pub checked: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

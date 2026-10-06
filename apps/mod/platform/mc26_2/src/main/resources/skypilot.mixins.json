@@ -4,7 +4,9 @@
 	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"ChatComponentAccessor",
-		"ContainerScreenAccessor"
+		"ContainerScreenAccessor",
+		"PlayerTabOverlayAccessor",
+		"SlotRenderMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

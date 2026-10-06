@@ -450,6 +450,177 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				SkyPilot.get().config().language = "auto";
 			});
 
+			// ---------------------------------------------------------------- feature switches
+			ctx.setScreen(() -> new SettingsScreen(null, SettingsScreen.Page.FEATURES));
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-settings-features"));
+			// clicking a row in the list switches that feature
+			ctx.runOnClient(mc -> {
+				SettingsScreen s = (SettingsScreen) mc.gui.screen();
+				s.filterFeatures("timestamps", null);
+				check(!SkyPilot.get().config().on(dev.skypilot.mod.core.Features.CHAT_TIMESTAMPS), "timestamps start off");
+				s.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(s.width / 2.0, 74 + 13 + 10, new net.minecraft.client.input.MouseButtonInfo(0, 0)), false);
+				check(SkyPilot.get().config().on(dev.skypilot.mod.core.Features.CHAT_TIMESTAMPS), "clicking the row turned timestamps on");
+				s.filterFeatures("", null);
+			});
+			ctx.setScreen(() -> null);
+
+			// turn on a set of features and feed them what Hypixel would show
+			ctx.runOnClient(mc -> {
+				var c = SkyPilot.get().config();
+				for (dev.skypilot.mod.core.Features.Feature f : List.of(dev.skypilot.mod.core.Features.HUD_COORDS, dev.skypilot.mod.core.Features.HUD_FPS,
+						dev.skypilot.mod.core.Features.HUD_CLOCK, dev.skypilot.mod.core.Features.HUD_EVENTS, dev.skypilot.mod.core.Features.HUD_STATS,
+						dev.skypilot.mod.core.Features.HUD_SKILL, dev.skypilot.mod.core.Features.FARMING_BPS, dev.skypilot.mod.core.Features.COMBAT_DROP_TRACKER,
+						dev.skypilot.mod.core.Features.COMBAT_SLAYER_TRACKER, dev.skypilot.mod.core.Features.COMBAT_RARE_DROP, dev.skypilot.mod.core.Features.CHAT_COMPACT,
+						dev.skypilot.mod.core.Features.CHAT_HIDE_LOBBY, dev.skypilot.mod.core.Features.CHAT_COORDS, dev.skypilot.mod.core.Features.CHAT_COPY,
+						dev.skypilot.mod.core.Features.TOOLS_CALC, dev.skypilot.mod.core.Features.TOOLS_REMINDERS, dev.skypilot.mod.core.Features.TOOLS_WAYPOINTS,
+						dev.skypilot.mod.core.Features.INV_RARITY, dev.skypilot.mod.core.Features.INV_NUMBERS, dev.skypilot.mod.core.Features.INV_SEARCH_HIGHLIGHT,
+						dev.skypilot.mod.core.Features.TOOLTIP_ID, dev.skypilot.mod.core.Features.TOOLTIP_HIDE_FILLER, dev.skypilot.mod.core.Features.FARMING_VISITOR)) {
+					dev.skypilot.mod.core.Features.set(c, f, true);
+				}
+				long now = System.currentTimeMillis();
+				Timers.setCalendar(new Dto.Calendar(1560275700000L, 1200000L, 31,
+						List.of("Early Spring", "Spring", "Late Spring", "Early Summer", "Summer", "Late Summer", "Early Autumn", "Autumn", "Late Autumn", "Early Winter", "Winter",
+								"Late Winter"),
+						List.of(new Dto.CalendarEvent("dark_auction", "Dark Auction", 0, 0, false, 3, 0, 0),
+								new Dto.CalendarEvent("jacobs_contest", "Jacob's Farming Contest", 0, 0, false, 3, 1, 1)),
+						now));
+				check(Timers.upcoming(now).size() == 2, "recurring events computed locally");
+				Trackers.actionBar("§c1,200/1,500❤     §a300§a❈ Defense     §b400/620✎ Mana");
+				Trackers.actionBar("§3+12.5 Farming (12,345/50,000)");
+				Trackers.simulateBreaks(30);
+				Timers.remind(600_000, "Check the forge");
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, now);
+				check(rows.size() >= 8, "info HUD lines: " + rows.size());
+				check(rows.stream().anyMatch(r -> r.text().startsWith("XYZ")), "coordinates line");
+				check(rows.stream().anyMatch(r -> r.text().contains("Dark Auction")), "event timer line");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("BPS")), "BPS line");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Farming") && r.progress() > 0.24 && r.progress() < 0.25), "skill progress bar");
+			});
+			world.getServer().runOnServer(server -> {
+				var pl = server.getPlayerList();
+				pl.broadcastSystemMessage(Component.literal("[MVP+] Steve joined the lobby!"), false);
+				pl.broadcastSystemMessage(Component.literal("Your Bazaar order was filled!"), false);
+				pl.broadcastSystemMessage(Component.literal("Your Bazaar order was filled!"), false);
+				pl.broadcastSystemMessage(Component.literal("Alex: meet me at x: 12, y: 70, z: -40"), false);
+				pl.broadcastSystemMessage(Component.literal("  SLAYER QUEST STARTED!"), false);
+				pl.broadcastSystemMessage(Component.literal("  SLAYER QUEST COMPLETE!"), false);
+				pl.broadcastSystemMessage(Component.literal("RARE DROP! Enchanted Book (+208% ✯ Magic Find)"), false);
+			});
+			ctx.waitTicks(5);
+			ctx.runOnClient(mc -> {
+				check(shown(mc, "joined the lobby") == null, "lobby join line hidden");
+				long filled = history(mc).stream().filter(m -> m.content().getString().contains("Your Bazaar order was filled!")).count();
+				check(filled == 1 && shown(mc, "Your Bazaar order was filled!").getString().contains("(x2)"), "repeated line stacked: " + filled);
+				check(shown(mc, "Your Bazaar order was filled!").getString().startsWith("["), "timestamp in front");
+				Component coords = shown(mc, "meet me at");
+				String[] cmd = new String[1];
+				boolean[] copy = new boolean[1];
+				coords.visit((style, text) -> {
+					if (style.getClickEvent() instanceof ClickEvent.RunCommand(String command) && command.startsWith("/skypilot wp at")) cmd[0] = command;
+					if (style.getClickEvent() instanceof ClickEvent.CopyToClipboard) copy[0] = true;
+					return java.util.Optional.empty();
+				}, Style.EMPTY);
+				check("/skypilot wp at 12 70 -40".equals(cmd[0]), "waypoint button: " + cmd[0]);
+				check(copy[0], "click-to-copy on the text");
+				check(Trackers.dropTotal == 1 && Trackers.DROPS.get("Enchanted Book") == 1, "rare drop counted");
+				check(Trackers.slayerKills == 1, "slayer quest counted");
+				mc.player.connection.sendCommand("skypilot calc 1.5m*3+200k");
+				mc.player.connection.sendCommand("skypilot wp at 12 70 -40");
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc -> {
+				check(shown(mc, "4,700,000") != null, "calculator answer in chat");
+				check(Waypoints.target() != null && Waypoints.target().x() == 12, "chat coordinates became a waypoint");
+			});
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-info-hud"));
+			ctx.runOnClient(mc -> Waypoints.clear());
+
+			// slot decorations: rarity colour, numbers, search dimming; filler panes have no tooltip
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.threeRows(3, mc.player.getInventory());
+				ItemStack swordStack = skyblockItem(Items.IRON_SWORD, "HYPERION", 1);
+				swordStack.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Gear Score: 900"), Component.literal("LEGENDARY SWORD"))));
+				CompoundTag stars = swordStack.get(DataComponents.CUSTOM_DATA).copyTag();
+				stars.putInt("upgrade_level", 5);
+				CustomData.set(DataComponents.CUSTOM_DATA, swordStack, stars);
+				menu.getSlot(0).set(swordStack);
+				ItemStack bookStack = new ItemStack(Items.ENCHANTED_BOOK);
+				CompoundTag bt = new CompoundTag();
+				bt.putString("id", "ENCHANTED_BOOK");
+				CompoundTag ench = new CompoundTag();
+				ench.putInt("sharpness", 7);
+				bt.put("enchantments", ench);
+				CustomData.set(DataComponents.CUSTOM_DATA, bookStack, bt);
+				bookStack.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Sharpness VII"), Component.literal("MYTHIC"))));
+				menu.getSlot(1).set(bookStack);
+				ItemStack pet = new ItemStack(Items.PLAYER_HEAD);
+				CompoundTag pt = new CompoundTag();
+				pt.putString("id", "PET");
+				CustomData.set(DataComponents.CUSTOM_DATA, pet, pt);
+				pet.set(DataComponents.CUSTOM_NAME, Component.literal("[Lvl 100] Ender Dragon"));
+				pet.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("LEGENDARY"))));
+				menu.getSlot(2).set(pet);
+				ItemStack minion = new ItemStack(Items.COBBLESTONE);
+				CompoundTag mt = new CompoundTag();
+				mt.putString("id", "COBBLESTONE_GENERATOR_11");
+				CustomData.set(DataComponents.CUSTOM_DATA, minion, mt);
+				minion.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("RARE"))));
+				menu.getSlot(3).set(minion);
+				for (int i = 9; i < 18; i++) {
+					ItemStack pane = new ItemStack(Items.GLASS_PANE);
+					pane.set(DataComponents.CUSTOM_NAME, Component.literal(" "));
+					menu.getSlot(i).set(pane);
+				}
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Accessory Bag"));
+			});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-slot-decor"));
+			ctx.runOnClient(mc -> {
+				ItemStack pane = new ItemStack(Items.GLASS_PANE);
+				pane.set(DataComponents.CUSTOM_NAME, Component.literal(" "));
+				List<Component> lines = new ArrayList<>(List.of(Component.literal(" ")));
+				PriceCheck.tooltip(pane, lines);
+				check(lines.isEmpty(), "filler pane tooltip hidden");
+				List<Component> hyp = new ArrayList<>();
+				PriceCheck.tooltip(skyblockItem(Items.IRON_SWORD, "HYPERION", 1), hyp);
+				check(hyp.stream().anyMatch(c -> c.getString().equals("ID: HYPERION")), "item id line");
+				check(PriceCheck.binPrice(List.of(Component.literal("Buy it now: 750,000,000 coins"))) == 750_000_000d, "BIN from auction lore");
+				ItemBrowser.setData(new Dto.ItemPage(0, 0, List.of()), "hyperion");
+			});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-search-highlight"));
+			ctx.runOnClient(mc -> ItemBrowser.setData(new Dto.ItemPage(0, 0, List.of()), ""));
+
+			// Garden visitor: what the requested items cost
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.sixRows(4, mc.player.getInventory());
+				ItemStack offer = new ItemStack(Items.EMERALD);
+				offer.set(DataComponents.CUSTOM_NAME, Component.literal("Accept Offer"));
+				offer.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Items Required:"),
+						Component.literal(" Enchanted Hay Bale x2"), Component.literal(" Wheat x64"), Component.literal(""), Component.literal("Rewards:"),
+						Component.literal(" +4,000 Farming XP"), Component.literal(" +12 Copper"))));
+				menu.getSlot(29).set(offer);
+				VisitorPanel.setPrice("Enchanted Hay Bale", 150_000.0);
+				VisitorPanel.setPrice("Wheat", 6.0);
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Jacob"));
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc -> check(VisitorPanel.find((ContainerScreen) mc.gui.screen()) != null, "visitor offer recognised"));
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-visitor"));
+			ctx.setScreen(() -> new HudEditorScreen(null));
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-hud-editor-info"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
+				SkyPilot.get().config().priceTooltip = true;
+				SkyPilot.get().config().hud.enabled = true;
+				Trackers.reset();
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

@@ -18,4 +18,7 @@ public interface ContainerScreenAccessor {
 
 	@Accessor("imageHeight")
 	int skypilot$imageHeight();
+
+	@Accessor("hoveredSlot")
+	net.minecraft.world.inventory.Slot skypilot$hoveredSlot();
 }

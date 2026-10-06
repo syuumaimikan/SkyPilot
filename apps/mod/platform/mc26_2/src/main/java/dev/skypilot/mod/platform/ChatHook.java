@@ -21,10 +21,13 @@ final class ChatHook {
 		SkyPilot sp = SkyPilot.get();
 		if (sp == null) return;
 		if (overlay) {
-			if (sp.config().session.enabled) sp.session().onActionBar(message.getString());
+			String text = message.getString();
+			if (sp.config().session.enabled) sp.session().onActionBar(text);
+			Trackers.actionBar(text);
 			return;
 		}
-		message = ClickTranslate.undecorated(message);
+		message = ChatFeatures.original(message);
+		ChatFeatures.onMessage(message.getString());
 		TranslationMode mode = sp.translationMode();
 		if (!mode.sendsAutomatically() || !sp.config().translation.disclosureAccepted || !sp.context().inSkyBlock()) return;
 		McText.Flattened flat = McText.flatten(message);

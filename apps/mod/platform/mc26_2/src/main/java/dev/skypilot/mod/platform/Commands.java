@@ -121,6 +121,7 @@ final class Commands {
 				.executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), false))
 				.then(literal("ok").executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), true)))));
 		root.then(literal("server").then(argument("url", StringArgumentType.greedyString()).executes(c -> setServer(StringArgumentType.getString(c, "url")))));
+		ToolCommands.register(root);
 		d.register(root);
 	}
 
@@ -160,6 +161,14 @@ final class Commands {
 				{"/skypilot hud edit | on | off", l.t("move / toggle the HUD", "HUDの移動・表示切替")},
 				{"/skypilot session [reset | upload on|off]", l.t("session statistics", "セッション統計")},
 				{"/skypilot settings", l.t("settings screen", "設定画面")},
+				{"/skypilot features [recommended]", l.t("turn features on / off (or the recommended set)", "機能のオン/オフ（おすすめを一括オン）")},
+				{"/skypilot feature <id> on | off", l.t("switch one feature", "機能を1つ切り替え")},
+				{"/skypilot calc <expression>", l.t("calculator with k / m / b", "電卓（k / m / b 対応）")},
+				{"/skypilot remind <30m> <text> | list | clear", l.t("reminders", "リマインダー")},
+				{"/skypilot watch <ITEM> below|above <price> | list | remove <ITEM>", l.t("price watchlist", "価格ウォッチ")},
+				{"/skypilot wp add|show|remove <name> | list | hide", l.t("your own waypoints", "自分のウェイポイント")},
+				{"/skypilot en <日本語>", l.t("Japanese → English into the chat box", "日本語→英語にしてチャット欄へ")},
+				{"/skypilot drops [reset]", l.t("rare drops / slayer this session", "このセッションのレアドロップ・スレイヤー")},
 				{"/skypilot server <url>", l.t("SkyPilot server address", "SkyPilotサーバーのURL")},
 		};
 		for (String[] r : rows) {

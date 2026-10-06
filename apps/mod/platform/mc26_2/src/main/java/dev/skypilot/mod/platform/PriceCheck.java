@@ -2,6 +2,7 @@ package dev.skypilot.mod.platform;
 
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
+import dev.skypilot.mod.core.Features;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.network.ApiClient;
@@ -18,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * In-game price check: a tooltip line on SkyBlock items (from the item's own custom_data, which
@@ -61,22 +64,80 @@ final class PriceCheck {
 		return NbtOps.INSTANCE.convertTo(JsonOps.INSTANCE, tag);
 	}
 
+	private static final Pattern BIN = Pattern.compile("^Buy it now: ([\\d,]+) coins$");
+
 	/** Tooltip hook: append cached price lines; fetch in the background when missing. */
 	static void tooltip(ItemStack stack, List<Component> lines) {
 		SkyPilot sp = SkyPilot.get();
-		if (sp == null || !sp.config().priceTooltip || !sp.context().inSkyBlock()) return;
+		if (sp == null || !sp.context().inSkyBlock()) return;
+		if (Feat.on(Features.TOOLTIP_HIDE_FILLER) && isFiller(stack)) {
+			lines.clear();
+			return;
+		}
 		Item item = item(stack);
 		if (item == null) return;
+		Lang l = sp.lang();
+		if (Feat.on(Features.TOOLTIP_ID)) lines.add(Component.literal("ID: " + item.skyblockId()).withStyle(ChatFormatting.DARK_GRAY));
+		boolean price = sp.config().priceTooltip;
+		boolean npc = Feat.on(Features.TOOLTIP_NPC);
+		boolean craft = Feat.on(Features.TOOLTIP_CRAFT);
+		boolean whole = Feat.on(Features.TOOLTIP_STACK) && stack.getCount() > 1;
+		boolean ah = Feat.on(Features.TOOLTIP_AH_COMPARE);
+		if (!(price || npc || craft || whole || ah)) return;
 		Cached c;
 		synchronized (RESULTS) {
 			c = RESULTS.get(item.key());
 		}
 		if (c == null || System.currentTimeMillis() - c.at() > REFRESH_MS) request(sp, item);
-		if (c != null) {
-			lines.addAll(describe(c.price(), sp.lang()));
-		} else {
+		if (c == null) {
 			lines.add(Component.literal("SkyPilot: …").withStyle(ChatFormatting.DARK_GRAY));
+			return;
 		}
+		Dto.PriceResponse r = c.price();
+		if (price) lines.addAll(describe(r, l));
+		if (whole && r.estimatedValue() != null) {
+			lines.add(Component.literal("  ×" + stack.getCount() + " = " + Text.coins(r.estimatedValue() * stack.getCount())).withStyle(ChatFormatting.GOLD));
+		}
+		if (npc && r.npcSell() != null && r.npcSell() > 0) {
+			lines.add(Component.literal(l.t("  NPC sell ", "  NPC売却 ") + Text.coins(r.npcSell())).withStyle(ChatFormatting.GRAY));
+		}
+		if (craft && r.craftCost() != null && r.craftCost() > 0) {
+			lines.add(Component.literal(l.t("  Craft cost ", "  クラフト費用 ") + Text.coins(r.craftCost())).withStyle(ChatFormatting.GRAY));
+		}
+		if (ah && r.estimatedValue() != null && r.estimatedValue() > 0) {
+			Double bin = binPrice(lines);
+			if (bin != null) lines.add(compare(bin, r.estimatedValue() * stack.getCount(), l));
+		}
+	}
+
+	/** "Buy it now: 1,234,567 coins" in an auction listing's lore. */
+	static Double binPrice(List<Component> lines) {
+		for (Component c : lines) {
+			Matcher m = BIN.matcher(c.getString().strip());
+			if (m.matches()) {
+				try {
+					return Double.parseDouble(m.group(1).replace(",", ""));
+				} catch (NumberFormatException e) {
+					return null;
+				}
+			}
+		}
+		return null;
+	}
+
+	static Component compare(double bin, double value, Lang l) {
+		double pct = (bin - value) / value * 100;
+		if (Math.abs(pct) < 3) return Component.literal(l.t("  BIN ≈ SkyPilot value", "  BIN ≈ 推定価値")).withStyle(ChatFormatting.YELLOW);
+		String text = pct < 0 ? l.t(String.format(java.util.Locale.ROOT, "  BIN %.0f%% below value", -pct), String.format(java.util.Locale.ROOT, "  BINは推定価値より %.0f%% 安い", -pct))
+				: l.t(String.format(java.util.Locale.ROOT, "  BIN %.0f%% above value", pct), String.format(java.util.Locale.ROOT, "  BINは推定価値より %.0f%% 高い", pct));
+		return Component.literal(text).withStyle(pct < 0 ? ChatFormatting.GREEN : ChatFormatting.RED);
+	}
+
+	/** The blank-named glass panes Hypixel uses to fill menus. */
+	static boolean isFiller(ItemStack stack) {
+		if (stack == null || stack.isEmpty()) return false;
+		String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+		return path.endsWith("glass_pane") && stack.getHoverName().getString().isBlank();
 	}
 
 	private static void request(SkyPilot sp, Item item) {

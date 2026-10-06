@@ -72,6 +72,39 @@ pub struct ModPriceResponse {
     pub confidence_label: String,
     pub price_key: Option<String>,
     pub age_seconds: Option<i64>,
+    /// NPC sell price from Hypixel's item list.
+    pub npc_sell: Option<f64>,
+    /// Cost to craft one from Bazaar/NPC-priced ingredients.
+    pub craft_cost: Option<f64>,
+}
+
+/// SkyBlock calendar for the mod's clock and event timers (constants from the curated registry).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModCalendar {
+    pub epoch_ms: i64,
+    pub day_ms: i64,
+    pub days_per_month: u32,
+    pub months: Vec<String>,
+    /// Next occurrence of each recurring and seasonal event, soonest first.
+    pub events: Vec<ModCalendarEvent>,
+    pub now_ms: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModCalendarEvent {
+    pub id: String,
+    pub name: String,
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub active: bool,
+    /// Repeats every this many SkyBlock days (recurring events only).
+    pub every_days: Option<u32>,
+    pub offset_days: Option<u32>,
+    pub duration_days: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

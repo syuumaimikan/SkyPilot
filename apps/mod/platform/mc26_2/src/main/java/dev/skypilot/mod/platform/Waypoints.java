@@ -89,7 +89,7 @@ final class Waypoints {
 	}
 
 	static boolean onTargetIsland() {
-		return target != null && target.island().equals(currentIsland());
+		return target != null && ("*".equals(target.island()) || target.island().equals(currentIsland()));
 	}
 
 	/** {@code LevelRenderEvents.BEFORE_GIZMOS}: collect this frame's gizmos. */

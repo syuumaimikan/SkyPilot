@@ -4,7 +4,10 @@ import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.network.Dto;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
 
@@ -72,5 +75,23 @@ final class Ui {
 	static void suggest(String command) {
 		Minecraft mc = Minecraft.getInstance();
 		mc.execute(() -> mc.gui.setScreen(new ChatScreen(command, false)));
+	}
+
+	/** A tooltip whose line breaks ("\n") start new lines (styles kept); long lines wrap at 260 px. */
+	static void tooltip(GuiGraphicsExtractor g, Component text, int mouseX, int mouseY) {
+		Font font = Minecraft.getInstance().font;
+		java.util.List<net.minecraft.network.chat.MutableComponent> lines = new java.util.ArrayList<>();
+		lines.add(Component.empty());
+		text.visit((style, part) -> {
+			String[] pieces = part.split("\n", -1);
+			for (int i = 0; i < pieces.length; i++) {
+				if (i > 0) lines.add(Component.empty());
+				if (!pieces[i].isEmpty()) lines.get(lines.size() - 1).append(Component.literal(pieces[i]).setStyle(style));
+			}
+			return java.util.Optional.empty();
+		}, net.minecraft.network.chat.Style.EMPTY);
+		java.util.List<net.minecraft.util.FormattedCharSequence> out = new java.util.ArrayList<>();
+		for (Component line : lines) out.addAll(font.split(line, 260));
+		g.setTooltipForNextFrame(font, out, mouseX, mouseY);
 	}
 }

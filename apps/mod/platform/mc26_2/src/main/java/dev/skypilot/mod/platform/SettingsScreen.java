@@ -1,5 +1,6 @@
 package dev.skypilot.mod.platform;
 
+import dev.skypilot.mod.core.Features;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.SkyPilotConfig;
 import dev.skypilot.mod.network.ApiClient;
@@ -28,8 +29,8 @@ import java.util.function.Consumer;
  */
 final class SettingsScreen extends Screen {
 	enum Page {
-		GENERAL("General", "一般"), HUD("HUD", "HUD"), TRANSLATION("Translate", "翻訳"), MARKET("Market", "マーケット"), INVENTORY("Inventory", "インベントリ"),
-		SESSION("Session", "記録・ガイド");
+		GENERAL("General", "一般"), FEATURES("Features", "機能"), HUD("HUD", "HUD"), TRANSLATION("Translate", "翻訳"), MARKET("Market", "マーケット"),
+		INVENTORY("Items", "アイテム"), SESSION("Guides", "記録・ガイド");
 
 		final String en;
 		final String ja;
@@ -121,26 +122,210 @@ final class SettingsScreen extends Screen {
 			return;
 		}
 		Page[] pages = Page.values();
-		int tabW = pw / pages.length;
+		// tab widths follow their labels, so short labels leave room for long ones
+		int[] want = new int[pages.length];
+		int sum = 0;
+		for (int i = 0; i < pages.length; i++) {
+			want[i] = font.width(l.t(pages[i].en, pages[i].ja)) + 10;
+			sum += want[i];
+		}
+		int tx = x;
 		for (int i = 0; i < pages.length; i++) {
 			Page p = pages[i];
+			int tw = i == pages.length - 1 ? x + pw - tx : Math.max(20, want[i] * pw / sum);
 			Button tab = Button.builder(Component.literal(l.t(p.en, p.ja)), b -> {
 				page = p;
 				lastPage = p;
 				rebuildWidgets();
-			}).bounds(x + i * tabW, 22, tabW - 2, 20).build();
+			}).bounds(tx, 22, tw - 2, 20).build();
 			tab.active = p != page;
 			addRenderableWidget(tab);
+			tx += tw;
 		}
 		switch (page) {
 			case GENERAL -> general(sp, c, l, x);
+			case FEATURES -> features(sp, c, l, x);
 			case HUD -> hud(c, l, x);
 			case TRANSLATION -> translation(sp, c, l, x);
 			case MARKET -> market(c, l, x);
 			case INVENTORY -> inventory(c, l, x);
 			case SESSION -> session(c, l, x);
 		}
+		if (page == Page.FEATURES) {
+			addRenderableWidget(Button.builder(Component.literal(featureCategory == null ? l.t("All off", "すべてオフ") : l.t("Category off", "カテゴリをオフ")), b -> {
+				Features.disableAll(c, featureCategory);
+				sp.saveConfig();
+				featureMessage = featureCategory == null ? l.t("Every feature is off.", "すべての機能をオフにしました。") : l.t(featureCategory.en + " features are off.", featureCategory.ja + "の機能をオフにしました。");
+			}).bounds(x, height - 26, 90, 20).build());
+			addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x + 94, height - 26, pw - 94, 20).build());
+			return;
+		}
 		addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x, height - 26, pw, 20).build());
+	}
+
+	// ---------------------------------------------------------------- features page
+
+	private String featureQuery = "";
+	/** Null shows every category. */
+	private Features.Category featureCategory;
+	private double featureScroll;
+	private String featureMessage;
+	private int listX;
+	private int listY;
+	private int listW;
+	private int listH;
+	private static final int FEATURE_ROW = 22;
+	private static final int HEADER_ROW = 13;
+
+	/** A category header (feature null) or a feature. */
+	private record Row(Features.Category category, Features.Feature feature) {
+		int height() {
+			return feature == null ? HEADER_ROW : FEATURE_ROW;
+		}
+	}
+
+	private void features(SkyPilot sp, SkyPilotConfig c, Lang l, int x) {
+		int y = CONTENT_Y;
+		EditBox search = new EditBox(font, x, y, pw - 152, 20, Component.literal(l.t("Search features", "機能を検索")));
+		search.setMaxLength(40);
+		search.setValue(featureQuery);
+		search.setHint(Component.literal(l.t("Search features…", "機能を検索…")));
+		search.setResponder(v -> {
+			featureQuery = v;
+			featureScroll = 0;
+		});
+		addRenderableWidget(search);
+		Features.Category[] cats = Features.Category.values();
+		addRenderableWidget(Button.builder(Component.literal(featureCategory == null ? l.t("All", "すべて") : l.t(featureCategory.en, featureCategory.ja)), b -> {
+			int i = featureCategory == null ? 0 : featureCategory.ordinal() + 1;
+			featureCategory = i >= cats.length ? null : cats[i];
+			featureScroll = 0;
+			rebuildWidgets();
+		}).bounds(x + pw - 148, y, 72, 20).build());
+		addRenderableWidget(Button.builder(Component.literal(l.t("Recommended", "おすすめON")), b -> {
+			int n = Features.applyRecommended(c);
+			sp.saveConfig();
+			featureMessage = l.t(n + " recommended features turned on.", "おすすめ機能を " + n + " 個オンにしました。");
+		}).bounds(x + pw - 74, y, 74, 20).build());
+		listX = x;
+		listY = y + 24;
+		listW = pw;
+		listH = Math.max(40, height - 34 - 12 - listY);
+	}
+
+	private List<Row> featureRows() {
+		List<Row> rows = new ArrayList<>();
+		for (Features.Category cat : Features.Category.values()) {
+			if (featureCategory != null && cat != featureCategory) continue;
+			List<Features.Feature> fs = Features.in(cat).stream().filter(f -> Features.matches(f, featureQuery)).toList();
+			if (fs.isEmpty()) continue;
+			rows.add(new Row(cat, null));
+			for (Features.Feature f : fs) rows.add(new Row(cat, f));
+		}
+		return rows;
+	}
+
+	private void drawFeatures(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+		SkyPilot sp = SkyPilot.get();
+		SkyPilotConfig c = sp.config();
+		Lang l = sp.lang();
+		List<Row> rows = featureRows();
+		int total = rows.stream().mapToInt(Row::height).sum();
+		featureScroll = Math.max(0, Math.min(featureScroll, Math.max(0, total - listH)));
+		g.fill(listX, listY, listX + listW, listY + listH, 0x80000000);
+		g.enableScissor(listX, listY, listX + listW, listY + listH);
+		int y = listY - (int) featureScroll;
+		Features.Feature hovered = null;
+		for (Row r : rows) {
+			int h = r.height();
+			if (y + h >= listY && y <= listY + listH) {
+				if (r.feature() == null) {
+					g.text(font, l.t(r.category().en, r.category().ja), listX + 4, y + 3, 0xFFB07CFF, false);
+				} else {
+					Features.Feature f = r.feature();
+					boolean on = c.on(f);
+					boolean over = mouseX >= listX && mouseX < listX + listW && mouseY >= Math.max(y, listY) && mouseY < Math.min(y + h, listY + listH);
+					if (over) {
+						g.fill(listX + 1, y, listX + listW - 1, y + h, 0x22FFFFFF);
+						hovered = f;
+					}
+					// the switch
+					int sx = listX + 4;
+					int sy = y + 5;
+					g.fill(sx, sy, sx + 22, sy + 11, on ? 0xFF3FAF5A : 0xFF555566);
+					g.fill(on ? sx + 12 : sx + 1, sy + 1, on ? sx + 21 : sx + 10, sy + 10, 0xFFEEEEEE);
+					String name = f.name(l) + (f.network() ? " ☁" : "") + (f.consent() ? " ✉" : "");
+					g.text(font, font.plainSubstrByWidth(name, listW - 34), listX + 30, y + 2, on ? 0xFFFFFFFF : 0xFFBBBBBB, false);
+					g.text(font, font.plainSubstrByWidth(f.description(l), listW - 34), listX + 30, y + 12, 0xFF888888, false);
+				}
+			}
+			y += h;
+		}
+		g.disableScissor();
+		String status = featureMessage != null ? featureMessage
+				: l.t(Features.countOn(c) + " of " + Features.all().size() + " on · ☁ uses your SkyPilot server · ✉ sends chat text (consent)",
+						Features.countOn(c) + " / " + Features.all().size() + " 個オン · ☁ SkyPilotサーバーを使用 · ✉ チャット本文を送信（同意が必要）");
+		g.text(font, font.plainSubstrByWidth(status, listW), listX, listY + listH + 3, featureMessage != null ? 0xFF55FF55 : 0xFF888888, false);
+		if (hovered != null) {
+			String tip = hovered.name(l) + "\n" + hovered.description(l)
+					+ (hovered.network() ? "\n" + l.t("☁ Uses your SkyPilot server (never Hypixel).", "☁ SkyPilotサーバーを使います（Hypixelには送りません）。") : "")
+					+ (hovered.consent() ? "\n" + l.t("✉ Sends chat text; asks for consent first.", "✉ チャット本文を送信します（最初に同意を確認）。") : "")
+					+ "\n" + l.t("Click to turn on / off", "クリックでオン/オフ") + "  (" + hovered.id() + ")";
+			Ui.tooltip(g, Component.literal(tip), mouseX, mouseY);
+		}
+	}
+
+	private Features.Feature featureAt(double mx, double my) {
+		if (mx < listX || mx >= listX + listW || my < listY || my >= listY + listH) return null;
+		int y = listY - (int) featureScroll;
+		for (Row r : featureRows()) {
+			if (my >= y && my < y + r.height()) return r.feature();
+			y += r.height();
+		}
+		return null;
+	}
+
+	private void toggleFeature(Features.Feature f) {
+		SkyPilot sp = SkyPilot.get();
+		SkyPilotConfig c = sp.config();
+		boolean on = !c.on(f);
+		featureMessage = null;
+		if (on && f.consent() && !c.translation.disclosureAccepted) {
+			afterAgree = () -> Features.set(c, f, true);
+			showDisclosure = true;
+			rebuildWidgets();
+			return;
+		}
+		Features.set(c, f, on);
+		sp.saveConfig();
+	}
+
+	@Override
+	public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+		if (page == Page.FEATURES && !showDisclosure && event.button() == 0) {
+			Features.Feature f = featureAt(event.x(), event.y());
+			if (f != null) {
+				toggleFeature(f);
+				return true;
+			}
+		}
+		return super.mouseClicked(event, doubleClick);
+	}
+
+	@Override
+	public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+		if (page == Page.FEATURES && mx >= listX && mx < listX + listW && my >= listY && my < listY + listH) {
+			featureScroll = Math.max(0, featureScroll - scrollY * FEATURE_ROW * 2);
+			return true;
+		}
+		return super.mouseScrolled(mx, my, scrollX, scrollY);
+	}
+
+	/** For tests: filter the features page like a player would. */
+	void filterFeatures(String query, Features.Category category) {
+		featureQuery = query;
+		featureCategory = category;
+		featureScroll = 0;
 	}
 
 	// ---------------------------------------------------------------- pages
@@ -588,6 +773,7 @@ final class SettingsScreen extends Screen {
 			g.textWithWordWrap(font, text, width / 2 - pw / 2, 50, pw, 0xFFDDDDDD);
 			return;
 		}
+		if (page == Page.FEATURES) drawFeatures(g, mouseX, mouseY);
 		for (Label lb : labels) {
 			if (lb.center()) g.centeredText(font, lb.text(), lb.x(), lb.y(), lb.color());
 			else if (lb.wrap() > 0) g.textWithWordWrap(font, Component.literal(lb.text()), lb.x(), lb.y(), lb.wrap(), lb.color());

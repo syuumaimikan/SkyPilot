@@ -62,9 +62,18 @@ final class ItemDetailScreen extends Screen {
 	private int contentH;
 
 	ItemDetailScreen(Screen parent, String id) {
+		this(parent, id, Tab.RECIPES);
+	}
+
+	ItemDetailScreen(Screen parent, String id, Tab tab) {
 		super(Component.literal("SkyPilot"));
 		this.parent = parent;
 		this.id = id;
+		this.tab = tab;
+	}
+
+	Tab tab() {
+		return tab;
 	}
 
 	@Override
@@ -185,7 +194,7 @@ final class ItemDetailScreen extends Screen {
 		}
 		for (Hit h : hits) {
 			if (h.tip() != null && h.contains(mouseX, mouseY) && mouseY >= contentY && mouseY < contentY + contentH) {
-				g.setTooltipForNextFrame(h.tip().get(), mouseX, mouseY);
+				Ui.tooltip(g, h.tip().get(), mouseX, mouseY);
 				break;
 			}
 		}

@@ -40,6 +40,7 @@ final class ClickTranslate {
 	/** Last decorated message → the server's original, for the auto translator that runs right after. */
 	private static Component lastDecorated;
 	private static Component lastOriginal;
+	private static Entry lastEntry;
 
 	private static final class Entry {
 		final McText.Flattened flat;
@@ -48,6 +49,8 @@ final class ClickTranslate {
 		Component translated;
 		/** The component currently in the chat history for this line. */
 		Component shown;
+		/** Shown in front of the line (the chat timestamp), kept when switching to the translation. */
+		Component prefix;
 		boolean pending;
 
 		Entry(McText.Flattened flat) {
@@ -72,7 +75,22 @@ final class ClickTranslate {
 		entry.shown = decorated;
 		lastDecorated = decorated;
 		lastOriginal = message;
+		lastEntry = entry;
 		return decorated;
+	}
+
+	/**
+	 * Another feature wrapped the decorated line (e.g. a timestamp in front): remember what is
+	 * really in the chat, so switching to the translation replaces that line in place.
+	 */
+	static void retarget(Component decorated, Component shown, Component prefix) {
+		if (decorated != lastDecorated) return;
+		Entry e = lastEntry;
+		if (e == null || e.withButton != decorated) return;
+		e.withButton = shown;
+		e.shown = shown;
+		e.prefix = prefix;
+		lastDecorated = shown;
 	}
 
 	/** The server's message without our button (so other features never see "[訳]"). */
@@ -84,6 +102,7 @@ final class ClickTranslate {
 		ENTRIES.clear();
 		lastDecorated = null;
 		lastOriginal = null;
+		lastEntry = null;
 	}
 
 	static MutableComponent button(int id, boolean translated, String originalPlain, Lang l) {
@@ -138,7 +157,9 @@ final class ClickTranslate {
 				return;
 			}
 			StyledLine line = StyledLine.translated(parts[0], parts[1], result, "");
-			e.translated = Component.empty().append(McText.rebuild(line, e.flat.styles())).append(button(id, true, plain, l));
+			MutableComponent translated = Component.empty();
+			if (e.prefix != null) translated.append(e.prefix);
+			e.translated = translated.append(McText.rebuild(line, e.flat.styles())).append(button(id, true, plain, l));
 			show(e, e.translated);
 		}));
 		return 1;

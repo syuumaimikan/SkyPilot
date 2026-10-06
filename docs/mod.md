@@ -76,6 +76,42 @@ Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestC
   per user on the SkyPilot server (`/api/me/settings`); the key is never written to the config
   or shown again.
 
+## Feature switches
+
+Every optional feature has its own switch (`core/Features.java`, stored in `features` in the
+config; older features keep their own fields). Settings → **Features** lists them by category
+with search, "Recommended" (turns on the `recommended` set, never anything that sends chat text)
+and "All off"; `/skypilot feature <id> on|off` does the same from chat. Hypixel publishes no list
+of allowed mods, so every feature added with the registry is **off by default**. ☁ marks
+features that use the SkyPilot server (never Hypixel), ✉ those that send chat text (consent).
+
+| Category | Features |
+|---|---|
+| Chat | click to translate ✉, timestamps, stack repeated messages (x2), click to copy, mention highlight + ping, coordinates → [Waypoint], hide lobby joins / warp lines / profile ID / kill combo / ability spam / GEXP, write in Japanese (`/skypilot en`, JA→EN into the chat box) ✉ |
+| Tooltips | value ☁, NPC sell price ☁, craft cost ☁, stack value ☁, SkyBlock ID, BIN vs value on auction listings ☁, hide filler glass panes |
+| Inventory | item list ☁, chest value ☁, inventory value ☁, rarity background, slot numbers (book level, pet level, minion tier, stars, skill/collection levels), search highlight, R / U lookup keys ☁ |
+| HUD | SkyPilot HUD ☁, area advice ☁, session, coordinates, FPS + ping, clock + SkyBlock date ☁, event timers ☁, health/mana bars, skill progress (XP/h, time to next level), full inventory warning, low-health border |
+| Mining | commissions (tab list), powder + powder/h (tab list), ability ready title |
+| Farming | blocks per second, Garden visitor cost ☁, Jacob's contest toast ☁ |
+| Combat | slayer tracker, boss spawned title, rare drop title, drop tracker |
+| Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |
+| Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), session tracking, session upload ☁ |
+
+Implementation notes:
+
+- Chat: `ALLOW_GAME` hides the chosen groups from this client's chat only;
+  `ChatFeatures.modify` (`MODIFY_GAME`) applies stacking, copy, mention, the waypoint button,
+  then the [訳] button, then the timestamp, and tells click-to-translate about the wrapped line
+  so translation still replaces it in place. Message texts follow SkyHanni's current filters.
+- Slots: `SlotRenderMixin` wraps `AbstractContainerScreen.extractSlot` (draw only) for the rarity
+  colour, numbers and search dimming.
+- Info HUD: a second box (`InfoHud`, `infoHud` in the config) below the SkyPilot HUD by
+  default; both boxes are moved and resized in the HUD editor.
+- Tab list widgets ("Commissions:", "Powders:") are read in the order the tab list draws them
+  (`PlayerTabOverlayAccessor`).
+- SkyBlock time and the Dark Auction / Jacob's contest schedule come from `/api/mod/calendar`
+  (curated `calendar.toml`), recomputed locally every second.
+
 ## Adding a Minecraft version
 
 Create `platform/mcXX_Y` with its own Loom configuration and copy the platform classes,

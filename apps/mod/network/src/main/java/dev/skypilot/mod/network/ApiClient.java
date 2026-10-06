@@ -221,6 +221,11 @@ public final class ApiClient {
 		return request("POST", "/api/me/settings/translation/test", "{}", true).thenApply(r -> parse(r, Dto.TranslationTest.class));
 	}
 
+	/** SkyBlock calendar for the clock and event timers (public data, cached 10 minutes). */
+	public CompletableFuture<Dto.Calendar> calendar() {
+		return getPublic("/api/mod/calendar", Dto.Calendar.class, 600_000);
+	}
+
 	/** Progression guides with waypoints; marks steps done when this client is linked. */
 	public CompletableFuture<Dto.Guides> guides(String lang) {
 		String path = "/api/mod/guides?lang=" + enc(lang);

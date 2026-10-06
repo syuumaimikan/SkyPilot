@@ -1,5 +1,6 @@
 package dev.skypilot.mod.platform;
 
+import dev.skypilot.mod.platform.mixin.PlayerTabOverlayAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -41,11 +42,12 @@ final class Sidebar {
 		return out;
 	}
 
+	/** Tab list cells in the order the tab list draws them (column by column, top to bottom). */
 	static List<String> tabLines(Minecraft mc) {
 		ClientPacketListener conn = mc.getConnection();
 		if (conn == null) return List.of();
 		List<String> out = new ArrayList<>();
-		for (PlayerInfo info : conn.getListedOnlinePlayers()) {
+		for (PlayerInfo info : ((PlayerTabOverlayAccessor) mc.gui.hud.getTabList()).skypilot$playerInfos()) {
 			Component c = info.getTabListDisplayName();
 			if (c != null) out.add(c.getString());
 			if (out.size() > 80) break;

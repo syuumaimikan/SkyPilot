@@ -7,6 +7,30 @@ day_ms = 1200000
 days_per_month = 31
 months = ["Early Spring", "Spring", "Late Spring", "Early Summer", "Summer", "Late Summer", "Early Autumn", "Autumn", "Late Autumn", "Early Winter", "Winter", "Late Winter"]
 
+# Events that repeat every few SkyBlock days. A day d (counted from the epoch) hosts the event
+# when d % every_days == offset_days.
+[[recurring]]
+id = "dark_auction"
+name = "Dark Auction"
+every_days = 3
+offset_days = 0
+duration_days = 0
+# "occurs every 3 SkyBlock days at midnight, usually occurring at the 55-minute mark of every
+# hour" - the epoch itself is at :55, so offset 0.
+source = "https://hypixelskyblock.minecraft.wiki/w/Dark_Auction"
+checked = "2026-10-06"
+
+[[recurring]]
+id = "jacobs_contest"
+name = "Jacob's Farming Contest"
+every_days = 3
+offset_days = 1
+duration_days = 1
+# "lasts for 1 day in SkyBlock Time, or 20 minutes ... The interval ... is 3 days in SkyBlock
+# Time, or 1 hour"; it runs from xx:15 to xx:35, one SkyBlock day after the Dark Auction slot.
+source = "https://hypixelskyblock.minecraft.wiki/w/Jacob%27s_Farming_Contest"
+checked = "2026-10-06"
+
 [[events]]
 id = "hoppity"
 name = "Hoppity's Hunt"

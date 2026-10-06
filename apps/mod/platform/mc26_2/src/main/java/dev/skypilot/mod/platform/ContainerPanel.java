@@ -78,7 +78,7 @@ final class ContainerPanel {
 		if (hovered != null) {
 			String tip = hovered.name() + "\n" + Ui.flipLine(hovered) + "\n" + Ui.flipDetail(hovered, l) + (hovered.command() != null ? "\n" + hovered.command() : "")
 					+ "\n" + l.t("SkyPilot menu: /skypilot menu", "詳細: /skypilot menu");
-			g.setTooltipForNextFrame(Component.literal(tip), mouseX, mouseY);
+			Ui.tooltip(g, Component.literal(tip), mouseX, mouseY);
 		}
 	}
 }

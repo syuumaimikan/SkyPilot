@@ -123,6 +123,14 @@ async function main() {
   ok("mod chest values", values.json?.values?.length === 2 && values.json.total > 0 && values.json.values[1].value === null);
   const guides = await req("GET", "/api/mod/guides?lang=ja", undefined, bearer);
   ok("mod guides with waypoints", guides.json?.guides?.length >= 3 && guides.json.guides.every((g) => g.steps.some((s) => s.waypoint)));
+  const cal = await req("GET", "/api/mod/calendar");
+  const da = cal.json?.events?.find((e) => e.id === "dark_auction");
+  ok(
+    "mod calendar (Dark Auction every 3 SkyBlock days at :55)",
+    cal.json?.dayMs === 1200000 && cal.json.months.length === 12 && da?.everyDays === 3 && new Date(da.startMs).getUTCMinutes() === 55 && da.startMs > Date.now() - 1000,
+    JSON.stringify(da),
+  );
+  ok("price has NPC sell price", typeof modPrice.json?.npcSell === "number", JSON.stringify(modPrice.json));
   const gear = await req("GET", "/api/mod/gear?lang=ja", undefined, bearer);
   ok("mod gear", gear.status === 200 && Array.isArray(gear.json?.sections));
   // Per-user translation provider: keys are stored encrypted and only "…last4" comes back.

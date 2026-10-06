@@ -2,6 +2,7 @@ package dev.skypilot.mod.platform;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.skypilot.mod.core.Features;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.network.ApiClient;
@@ -11,6 +12,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
@@ -72,10 +74,12 @@ final class ChestValue {
 		return t.contains("chest") || t.contains("backpack") || t.contains("vault") || t.contains("bag") && !t.contains("menu");
 	}
 
+	/** The window's own slots; for the player's inventory screen, the player's slots. */
 	private static List<Slot> containerSlots(AbstractContainerScreen<?> screen) {
+		boolean player = screen instanceof InventoryScreen;
 		List<Slot> out = new ArrayList<>();
 		for (Slot s : screen.getMenu().slots) {
-			if (!(s.container instanceof Inventory)) out.add(s);
+			if (s.container instanceof Inventory == player) out.add(s);
 		}
 		return out;
 	}
@@ -153,7 +157,9 @@ final class ChestValue {
 	}
 
 	boolean layout() {
-		if (!SkyPilot.get().config().inventory.chestValue || !isStorage(screen.getTitle().getString()) || !(screen instanceof ContainerScreenAccessor box)) return false;
+		boolean enabled = screen instanceof InventoryScreen ? Feat.on(Features.INV_PLAYER_VALUE)
+				: SkyPilot.get().config().inventory.chestValue && isStorage(screen.getTitle().getString());
+		if (!enabled || !(screen instanceof ContainerScreenAccessor box)) return false;
 		int left = box.skypilot$leftPos();
 		w = Math.min(190, left - 8);
 		if (w < 100) return false;
@@ -210,7 +216,7 @@ final class ChestValue {
 			String tip = hovered.name + (hovered.count > 1 ? " ×" + hovered.count : "") + "\n"
 					+ (hovered.value == null ? l.t("No market price", "市場価格なし") : l.t("Value ", "価値 ") + Text.coins(hovered.value) + (hovered.unknown ? l.t(" (some unpriced)", "（一部価格不明）") : ""))
 					+ "\n" + l.t("Click to outline its slots", "クリックでスロットを縁取り");
-			g.setTooltipForNextFrame(Component.literal(tip), mouseX, mouseY);
+			Ui.tooltip(g, Component.literal(tip), mouseX, mouseY);
 		}
 	}
 
