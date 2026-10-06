@@ -34,6 +34,7 @@ combat automation. Every in-game action is performed by the player.
 | Ctrl+C item ID, to-do, stopwatch, lookup, chat search | the hovered item, the player's input, the chat lines already received | clipboard, chat lines, HUD lines | **off** |
 | Dungeon puzzle list, boss splits | the tab list's "Puzzles:" widget, [BOSS] chat lines, the sidebar | puzzle names with their general rules (wiki), split times; rooms are never read and no answer is computed | **off** |
 | Guide lines to actions, Rift guide | the plan (server), the curated place list | a marker and straight line to a fixed public place; a warp is only put into the chat box | **off** |
+| More chat filters, garden / tab widgets, mayor, fire sales, sack value, reward chest profit | chat lines, tab list widgets, items in the open window, Hypixel public resources via the SkyPilot server | hidden lines in this client's chat, HUD lines, toasts, value panels; opening chests and buying stay the player's clicks | **off** |
 | Write in Japanese (`/skypilot en`) | the text the player typed | JA→EN translation put into the chat box; the player sends it | **off** (consent) |
 | Translation provider (settings) | - | sends the chosen provider and, if entered, the player's own DeepL/Anthropic key to the SkyPilot server only (stored encrypted, shown back as `…last4`) | server's provider |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |

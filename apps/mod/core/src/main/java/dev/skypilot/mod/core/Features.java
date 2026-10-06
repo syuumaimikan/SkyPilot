@@ -95,6 +95,25 @@ public final class Features {
 	public static final Feature CHAT_SEARCH = f("chat.search", Category.CHAT, "Chat search", "チャット検索",
 			"/skypilot find <text> lists matching lines of the last 500 chat lines (kept in memory only).", "/skypilot find <文字> で直近500行から検索（メモリ内のみ）。", "r");
 
+	public static final Feature CHAT_HIDE_WELCOME = f("chat.hide_welcome", Category.CHAT, "Hide welcome line", "ようこそ表示を隠す",
+			"Hides \"Welcome to Hypixel SkyBlock!\".", "「Welcome to Hypixel SkyBlock!」を隠します。", "r");
+	public static final Feature CHAT_HIDE_USELESS_DROPS = f("chat.hide_useless_drops", Category.CHAT, "Hide cheap rare drops", "安いレアドロップ表示を隠す",
+			"Hides RARE DROP lines for Enchanted Ender Pearl, Enchanted End Stone and Crystal Fragment.", "Enchanted Ender Pearl等の安いRARE DROP表示を隠します。", "r");
+	public static final Feature CHAT_HIDE_NOTICES = f("chat.hide_notices", Category.CHAT, "Hide minor notices", "細かい通知を隠す",
+			"Hides 0-coin interest, power orb replaced, Mining Speed Boost used/expired and tip summaries.", "0コインの利息、パワーオーブ置換、Mining Speed Boostの使用/終了、チップ集計を隠します。", "r");
+	public static final Feature CHAT_HIDE_WARNINGS = f("chat.hide_warnings", Category.CHAT, "Hide repeated warnings", "繰り返し警告を隠す",
+			"Hides \"Whoa! Slow down there!\", \"You can't use this while in combat!\" and similar repeated warnings.", "「Whoa! Slow down there!」などの繰り返し警告を隠します。", "");
+	public static final Feature CHAT_HIDE_SKYMALL = f("chat.hide_skymall", Category.CHAT, "Hide Sky Mall / Lottery lines", "Sky Mall/Lottery表示を隠す",
+			"Hides the daily \"Your Sky Mall / Lottery buff changed!\" lines.", "毎日の「Sky Mall / Lottery buff changed!」を隠します。", "r");
+	public static final Feature CHAT_HIDE_FIRE_SALE = f("chat.hide_fire_sale", Category.CHAT, "Hide fire sale banners", "ファイアセール告知を隠す",
+			"Hides the FIRE SALE announcement lines (the fire sale toast can still tell you).", "ファイアセールの告知行を隠します（通知機能は別）。", "");
+	public static final Feature CHAT_HIDE_ACHIEVEMENTS = f("chat.hide_achievements", Category.CHAT, "Hide achievement lines", "実績解除表示を隠す",
+			"Hides \">> Achievement Unlocked: … <<\".", "「Achievement Unlocked」を隠します。", "");
+	public static final Feature CHAT_HIDE_PARKOUR = f("chat.hide_parkour", Category.CHAT, "Hide parkour lines", "パルクール表示を隠す",
+			"Hides \"Started parkour\" / \"Cancelled parkour!\".", "「Started parkour」「Cancelled parkour!」を隠します。", "");
+	public static final Feature CHAT_HIDE_TELEPORT_PADS = f("chat.hide_teleport_pads", Category.CHAT, "Hide teleport pad lines", "テレポートパッド表示を隠す",
+			"Hides \"Warped from the … to the …\".", "「Warped from the …」を隠します。", "r");
+
 	// ---------------------------------------------------------------- tooltips
 	public static final Feature TOOLTIP_PRICE = f("tooltip.price", Category.TOOLTIP, "Item value", "アイテムの価値",
 			"SkyPilot's estimated value, Bazaar or lowest BIN / median and confidence.", "推定価値・バザー価格または最安BIN/中央値と信頼度を表示します。", "n");
@@ -137,6 +156,9 @@ public final class Features {
 	public static final Feature INV_COPY_ID = f("inventory.copy_id", Category.INVENTORY, "Ctrl+C copies item ID", "Ctrl+CでIDをコピー",
 			"Hover an item and press Ctrl+C to copy its SkyBlock ID.", "アイテムにカーソルを合わせて Ctrl+C でSkyBlock IDをコピー。", "r");
 
+	public static final Feature INV_SACK_VALUE = f("inventory.sack_value", Category.INVENTORY, "Sack value", "サックの価値",
+			"In a sack window, the value of everything stored (\"Stored:\" lines × Bazaar prices), highest first.", "サックの画面で、保管中アイテムの価値（Stored:×バザー価格）を高い順に表示。", "nr");
+
 	// ---------------------------------------------------------------- HUD
 	public static final Feature HUD_MAIN = f("hud.main", Category.HUD, "SkyPilot HUD", "SkyPilot HUD",
 			"Goal step, next action and progress box.", "目標ステップ・次の行動・進捗のボックス。", "n");
@@ -174,6 +196,21 @@ public final class Features {
 	public static final Feature HUD_PROFILE = f("hud.profile_info", Category.HUD, "Profile info", "プロフィール情報",
 			"Tab list lines: profile, SkyBlock level, bank, interest, fairy souls, skill average, soulflow.", "タブリストの プロフィール・SBレベル・銀行・利息・フェアリーソウル・スキル平均・ソウルフロー。", "");
 
+	public static final Feature HUD_MAYOR = f("hud.mayor", Category.HUD, "Mayor and minister", "市長と大臣",
+			"Current mayor, minister and their perks (Hypixel election data).", "現在の市長・大臣とパーク（Hypixelの選挙データ）。", "nr");
+	public static final Feature HUD_EFFECTS = f("hud.effects", Category.HUD, "Active effects", "有効な効果",
+			"The tab list's \"Active Effects\" widget.", "タブリストの「Active Effects」欄。", "");
+	public static final Feature HUD_TIMERS = f("hud.timers", Category.HUD, "Timers widget", "タイマー欄",
+			"The tab list's \"Timers:\" widget.", "タブリストの「Timers:」欄。", "r");
+	public static final Feature HUD_DAILY = f("hud.daily_quests", Category.HUD, "Daily quests", "デイリークエスト",
+			"The tab list's \"Daily Quests:\" widget.", "タブリストの「Daily Quests:」欄。", "");
+	public static final Feature HUD_ESSENCE = f("hud.essence", Category.HUD, "Essence", "エッセンス",
+			"The tab list's \"Essence\" widget.", "タブリストの「Essence」欄。", "");
+	public static final Feature HUD_COLLECTION = f("hud.collection", Category.HUD, "Collection", "コレクション",
+			"The tab list's \"Collection:\" widget.", "タブリストの「Collection:」欄。", "");
+	public static final Feature HUD_SKILLS_TAB = f("hud.skills_tab", Category.HUD, "Skills widget", "スキル欄",
+			"The tab list's \"Skills\" widget (skill average and progress).", "タブリストの「Skills」欄（スキル平均と進捗）。", "");
+
 	// ---------------------------------------------------------------- mining
 	public static final Feature MINING_COMMISSIONS = f("mining.commissions", Category.MINING, "Commissions", "コミッション",
 			"Your commissions and their progress from the tab list.", "タブリストのコミッションと進捗を表示。", "r");
@@ -204,6 +241,15 @@ public final class Features {
 	public static final Feature FARMING_CONTEST_TAB = f("farming.contest_tab", Category.FARMING, "Jacob's contest info", "ジェイコブコンテスト情報",
 			"The tab list's \"Jacob's Contest:\" widget (crops, your rank).", "タブリストの「Jacob's Contest:」欄（作物・順位）。", "r");
 
+	public static final Feature FARMING_PEST_ALERT = f("farming.pest_alert", Category.FARMING, "Pest alert", "害虫の通知",
+			"Title and sound when pests appear, with the plot (\"GROSS!\" / \"YUCK!\" lines).", "害虫が出たらプロットを添えてタイトルと音（GROSS!/YUCK!の行）。", "r");
+	public static final Feature FARMING_VISITOR_ALERT = f("farming.visitor_alert", Category.FARMING, "Visitor arrival alert", "訪問者到着の通知",
+			"Toast when the tab list's visitor count goes up, with the new names.", "タブリストの訪問者数が増えたら名前を添えて通知。", "r");
+	public static final Feature FARMING_TRAPS = f("farming.pest_traps", Category.FARMING, "Pest traps", "害虫トラップ",
+			"Pest trap count, full traps and traps without bait (tab list); toast when a trap fills up.", "トラップ数・満杯・エサなし（タブリスト）。満杯になったら通知。", "r");
+	public static final Feature FARMING_MILESTONES = f("farming.crop_milestones", Category.FARMING, "Crop milestones", "作物マイルストーン",
+			"The tab list's \"Crop Milestones:\" widget.", "タブリストの「Crop Milestones:」欄。", "");
+
 	// ---------------------------------------------------------------- fishing
 	public static final Feature FISHING_SEA_CREATURE = f("fishing.sea_creature_alert", Category.FISHING, "Rare sea creature alert", "レア海の生物の通知",
 			"Title and sound when a Legendary or Mythic sea creature appears (names from SkyHanni-REPO).", "レジェンダリー/ミシックの海の生物が出たらタイトルと音（SkyHanni-REPOのデータ）。", "nr");
@@ -217,6 +263,10 @@ public final class Features {
 			"The tab list's \"Trophy Fish:\" widget.", "タブリストの「Trophy Fish:」欄。", "");
 
 	// ---------------------------------------------------------------- combat
+	public static final Feature COMBAT_SLAYER_TAB = f("combat.slayer_tab", Category.COMBAT, "Slayer widget", "スレイヤー欄",
+			"The tab list's \"Slayer:\" widget.", "タブリストの「Slayer:」欄。", "");
+	public static final Feature COMBAT_BESTIARY = f("combat.bestiary", Category.COMBAT, "Bestiary widget", "モンスター図鑑欄",
+			"The tab list's \"Bestiary:\" widget.", "タブリストの「Bestiary:」欄。", "");
 	public static final Feature COMBAT_SLAYER_TRACKER = f("combat.slayer_tracker", Category.COMBAT, "Slayer tracker", "スレイヤートラッカー",
 			"Bosses killed this session, average quest time and bosses per hour.", "このセッションのボス討伐数・平均時間・1時間あたり。", "r");
 	public static final Feature COMBAT_SLAYER_ALERT = f("combat.slayer_alert", Category.COMBAT, "Boss spawned alert", "ボス出現通知",
@@ -236,6 +286,12 @@ public final class Features {
 
 	public static final Feature DUNGEONS_PUZZLES = f("dungeons.puzzles", Category.DUNGEONS, "Puzzle list with rules", "パズル一覧とルール",
 			"The tab list's \"Puzzles:\" widget with each puzzle's rules from the wiki (no solver: the room is never read).", "タブリストの「Puzzles:」欄に各パズルのルール（Wiki）を添えて表示。部屋は読み取りません（ソルバーではありません）。", "nr");
+	public static final Feature DUNGEONS_CHEST_PROFIT = f("dungeons.chest_profit", Category.DUNGEONS, "Reward chest profit", "報酬チェストの収支",
+			"In dungeon (Wood … Bedrock) and Kuudra (Paid / Free) reward chests: contents value, opening cost and profit.", "ダンジョン/クードラの報酬チェストで、中身の価値・開封費用・収支を表示。", "nr");
+	public static final Feature DUNGEONS_HIDE_SOLO = f("dungeons.hide_solo_class", Category.DUNGEONS, "Hide solo class line", "ソロクラス表示を隠す",
+			"Hides \"Your Mage stats are doubled because you are the only player using this class!\".", "「…stats are doubled because you are the only player…」を隠します。", "r");
+	public static final Feature DUNGEONS_HIDE_FAIRY = f("dungeons.hide_fairy", Category.DUNGEONS, "Hide fairy revive line", "フェアリーの復活石表示を隠す",
+			"Hides \"… the Fairy: You killed me! Take this Revive Stone …\".", "「… the Fairy: You killed me! …」を隠します。", "r");
 	public static final Feature DUNGEONS_SPLITS = f("dungeons.boss_splits", Category.DUNGEONS, "Boss phase splits", "ボスのフェーズ別タイム",
 			"Time of each boss / phase from its first [BOSS] line (e.g. Maxor → Storm → Goldor → Necron).", "[BOSS]の最初の発言から各ボス・フェーズの時刻を表示（例: Maxor → Storm → Goldor → Necron）。", "r");
 
@@ -262,6 +318,8 @@ public final class Features {
 			"Plays a sound with flip and price alerts.", "フリップ・価格通知で音を鳴らします。", "");
 	public static final Feature MARKET_WATCHLIST = f("market.watchlist", Category.MARKET, "Price watchlist", "価格ウォッチ",
 			"/skypilot watch <item> below|above <price>: alert when the price crosses it.", "/skypilot watch で指定価格を下回る/上回ると通知。", "nr");
+	public static final Feature MARKET_FIRE_SALE = f("market.fire_sale_alert", Category.MARKET, "Fire sale alert", "ファイアセール通知",
+			"Toast when a fire sale is running (Hypixel firesales data), once per sale.", "ファイアセール開催中に通知（Hypixelのデータ・1回ずつ）。", "nr");
 	public static final Feature MARKET_DARK_AUCTION = f("market.dark_auction_alert", Category.MARKET, "Dark Auction alert", "ダークオークション通知",
 			"Toast one minute before the Dark Auction.", "ダークオークション開始1分前に通知。", "n");
 

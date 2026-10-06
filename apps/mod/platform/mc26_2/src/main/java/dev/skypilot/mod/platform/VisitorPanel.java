@@ -4,8 +4,6 @@ import dev.skypilot.mod.core.Features;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.Text;
 import dev.skypilot.mod.core.VisitorOffer;
-import dev.skypilot.mod.network.ApiClient;
-import dev.skypilot.mod.network.Dto;
 import dev.skypilot.mod.platform.mixin.ContainerScreenAccessor;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,9 +16,6 @@ import net.minecraft.world.item.component.ItemLore;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Garden visitor menus: what the requested items cost on the Bazaar (looked up by name in the
@@ -28,13 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * only; accepting or refusing stays the player's click.
  */
 final class VisitorPanel {
-	private record Price(Double value, long at) {
-	}
-
-	/** Unit value by item name (null = not found); shared by all windows for 10 minutes. */
-	private static final Map<String, Price> PRICES = new ConcurrentHashMap<>();
-	private static final Map<String, Long> PENDING = new ConcurrentHashMap<>();
-
 	private final AbstractContainerScreen<?> screen;
 	private VisitorOffer offer;
 	private String offerKey = "";
@@ -84,7 +72,7 @@ final class VisitorPanel {
 		double total = 0;
 		boolean complete = true;
 		for (VisitorOffer.Need n : offer.needs()) {
-			Price p = price(n.name());
+			NamePrices.Price p = NamePrices.get(n.name());
 			String cost;
 			if (p == null) {
 				cost = "…";
@@ -124,32 +112,8 @@ final class VisitorPanel {
 		}
 	}
 
-	/** Cached unit value of an item name; starts a lookup when unknown. */
-	private static Price price(String name) {
-		String key = name.toLowerCase(Locale.ROOT);
-		Price p = PRICES.get(key);
-		long now = System.currentTimeMillis();
-		if (p != null && now - p.at() < 600_000) return p;
-		ApiClient api = SkyPilot.get().api();
-		if (api != null && PENDING.putIfAbsent(key, now) == null) {
-			api.items(name, 0, 8).whenComplete((page, err) -> {
-				PENDING.remove(key);
-				if (page == null) return;
-				Double value = null;
-				for (Dto.ItemEntry e : page.items()) {
-					if (e.name() != null && e.name().equalsIgnoreCase(name)) {
-						value = e.value();
-						break;
-					}
-				}
-				PRICES.put(key, new Price(value, System.currentTimeMillis()));
-			});
-		}
-		return p;
-	}
-
 	/** For tests. */
 	static void setPrice(String name, Double value) {
-		PRICES.put(name.toLowerCase(Locale.ROOT), new Price(value, System.currentTimeMillis()));
+		NamePrices.set(name, value);
 	}
 }

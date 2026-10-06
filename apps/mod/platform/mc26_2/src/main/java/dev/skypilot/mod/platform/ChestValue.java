@@ -56,6 +56,8 @@ final class ChestValue {
 	private long changedAt;
 	private List<Group> groups = List.of();
 	private Double total;
+	/** Opening cost of a dungeon / Kuudra reward chest window (dungeons.chest_profit). */
+	private Double chestCost;
 	private String error;
 	private String highlighted;
 	private double scroll;
@@ -177,8 +179,14 @@ final class ChestValue {
 		g.text(font, l.t("SkyPilot · value", "SkyPilot · 価値"), x0 + 5, y0 + 5, Ui.PURPLE, false);
 		String totalText = total == null ? (error != null ? error : l.t("Calculating…", "計算中…")) : l.t("Total ", "合計 ") + Text.coins(total) + l.t(" (" + groups.size() + " kinds)", "（" + groups.size() + "種類）");
 		g.text(font, font.plainSubstrByWidth(totalText, w - 10), x0 + 5, y0 + 17, total == null ? (error != null ? Ui.RED : Ui.GRAY) : Ui.GOLD, false);
-		int listY = y0 + 30;
-		int listH = h - 30 - 12;
+		chestCost = rewardChestCost();
+		if (chestCost != null && total != null) {
+			double profit = total - chestCost;
+			String line = l.t("Cost ", "費用 ") + Text.coins(chestCost) + l.t(" · profit ", " · 収支 ") + (profit >= 0 ? "+" : "") + Text.coins(profit);
+			g.text(font, font.plainSubstrByWidth(line, w - 10), x0 + 5, y0 + 28, profit >= 0 ? Ui.GREEN : Ui.RED, false);
+		}
+		int listY = y0 + header();
+		int listH = h - header() - 12;
 		g.enableScissor(x0 + 1, listY, x0 + w - 1, listY + listH);
 		int y = listY - (int) scroll;
 		Group hovered = null;
@@ -234,13 +242,33 @@ final class ChestValue {
 		}
 	}
 
+	/** List top: one more line when a reward chest's cost / profit is shown. */
+	private int header() {
+		return chestCost != null && total != null ? 41 : 30;
+	}
+
+	/** The cost lore line ("1,000,000 Coins" / "FREE") in a reward chest window, if any. */
+	private Double rewardChestCost() {
+		if (!Feat.on(Features.DUNGEONS_CHEST_PROFIT) || !dev.skypilot.mod.core.LoreValues.isRewardChest(screen.getTitle().getString())) return null;
+		for (Slot s : screen.getMenu().slots) {
+			if (s.container instanceof Inventory) continue;
+			var lore = s.getItem().get(net.minecraft.core.component.DataComponents.LORE);
+			if (lore == null) continue;
+			List<String> lines = new ArrayList<>();
+			for (Component c : lore.lines()) lines.add(c.getString());
+			var cost = dev.skypilot.mod.core.LoreValues.chestCost(lines);
+			if (cost.isPresent()) return cost.get();
+		}
+		return null;
+	}
+
 	boolean contains(double mx, double my) {
 		return mx >= x0 && mx < x0 + w && my >= y0 && my < y0 + h;
 	}
 
 	boolean click(double mx, double my) {
 		if (!contains(mx, my)) return false;
-		int listY = y0 + 30;
+		int listY = y0 + header();
 		int i = (int) Math.floor((my - listY + scroll) / ROW_H);
 		if (my >= listY && i >= 0 && i < groups.size()) {
 			String key = groups.get(i).key;
@@ -251,7 +279,7 @@ final class ChestValue {
 
 	boolean scroll(double mx, double my, double dy) {
 		if (!contains(mx, my)) return false;
-		int max = Math.max(0, groups.size() * ROW_H - (h - 42));
+		int max = Math.max(0, groups.size() * ROW_H - (h - header() - 12));
 		scroll = Math.max(0, Math.min(max, scroll - dy * ROW_H * 2));
 		return true;
 	}

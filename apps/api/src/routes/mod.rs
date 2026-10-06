@@ -116,6 +116,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/builds", get(modfit::builds))
         .route("/mod/money", get(modfit::money))
         .route("/mod/puzzles", get(modfit::puzzles))
+        .route("/mod/skyblock", get(modfit::skyblock_now))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
     let origin: HeaderValue = state.config.public_web_url.trim_end_matches('/').parse().unwrap_or(HeaderValue::from_static("http://localhost:3000"));

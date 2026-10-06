@@ -274,6 +274,64 @@ pub async fn money(State(state): State<Arc<AppState>>, jar: CookieJar, headers: 
     Ok(Json(ModMoney { methods, message: None }))
 }
 
+/// Mayor, minister and fire sales (public Hypixel resources; fire sales cached 5 minutes).
+pub async fn skyblock_now(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModSkyblockNow>> {
+    use std::sync::Mutex;
+    static FIRE_SALES: std::sync::OnceLock<Mutex<(i64, serde_json::Value)>> = std::sync::OnceLock::new();
+    let now = AppState::now_ms();
+    let cache = FIRE_SALES.get_or_init(|| Mutex::new((0, serde_json::Value::Null)));
+    let cached = {
+        let c = cache.lock().expect("fire sale cache");
+        (now - c.0 < 300_000).then(|| c.1.clone())
+    };
+    let sales_json = match cached {
+        Some(v) => v,
+        None => match state.hypixel.firesales().await {
+            Ok(v) => {
+                *cache.lock().expect("fire sale cache") = (now, v.clone());
+                v
+            }
+            // keep serving the last answer (or none) when Hypixel is unavailable or rate limits
+            Err(e) => {
+                tracing::warn!(error = %e, "fire sales not refreshed");
+                cache.lock().expect("fire sale cache").1.clone()
+            }
+        },
+    };
+    let registry = state.registry();
+    let mayor_of = |m: &skypilot_data::hypixel::Mayor| ModMayor {
+        name: m.name.clone(),
+        perks: m.perks.iter().map(|p| ModPerk { name: p.name.clone(), description: p.description.clone() }).collect(),
+    };
+    let election = registry.election.as_ref();
+    let fire_sales = sales_json
+        .get("sales")
+        .and_then(|s| s.as_array())
+        .map(|list| {
+            list.iter()
+                .filter_map(|s| {
+                    let id = s.get("item_id")?.as_str()?.to_string();
+                    let end = s.get("end")?.as_i64()?;
+                    (end > now).then(|| ModFireSale {
+                        name: registry.display_name(&id),
+                        item_id: id,
+                        start_ms: s.get("start").and_then(|v| v.as_i64()).unwrap_or(0),
+                        end_ms: end,
+                        amount: s.get("amount").and_then(|v| v.as_u64()),
+                        price: s.get("price").and_then(|v| v.as_u64()),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(Json(ModSkyblockNow {
+        mayor: election.and_then(|e| e.mayor.as_ref()).map(mayor_of),
+        minister: election.and_then(|e| e.minister.as_ref()).map(mayor_of),
+        year: election.and_then(|e| e.year),
+        fire_sales,
+    }))
+}
+
 /// Dungeon puzzle rules (public, curated from the wiki).
 pub async fn puzzles(State(state): State<Arc<AppState>>, Query(q): Query<GuidesQuery>) -> ApiResult<Json<Vec<ModPuzzle>>> {
     let registry = state.registry();

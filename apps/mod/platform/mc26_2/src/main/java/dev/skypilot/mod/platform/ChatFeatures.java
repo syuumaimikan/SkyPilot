@@ -76,6 +76,17 @@ final class ChatFeatures {
 			case SEPARATOR -> Features.CHAT_HIDE_SEPARATORS;
 			case MINING_CHEST -> Features.MINING_HIDE_CHESTS;
 			case DUNGEON -> Features.DUNGEONS_FILTER;
+			case WELCOME -> Features.CHAT_HIDE_WELCOME;
+			case USELESS_DROP -> Features.CHAT_HIDE_USELESS_DROPS;
+			case NOTICE -> Features.CHAT_HIDE_NOTICES;
+			case WARNING -> Features.CHAT_HIDE_WARNINGS;
+			case SKYMALL -> Features.CHAT_HIDE_SKYMALL;
+			case FIRE_SALE -> Features.CHAT_HIDE_FIRE_SALE;
+			case ACHIEVEMENT -> Features.CHAT_HIDE_ACHIEVEMENTS;
+			case PARKOUR -> Features.CHAT_HIDE_PARKOUR;
+			case TELEPORT_PAD -> Features.CHAT_HIDE_TELEPORT_PADS;
+			case SOLO_CLASS -> Features.DUNGEONS_HIDE_SOLO;
+			case FAIRY -> Features.DUNGEONS_HIDE_FAIRY;
 		};
 		return !Feat.on(f);
 	}
@@ -180,12 +191,20 @@ final class ChatFeatures {
 		Lang l = SkyPilot.get().lang();
 		ChatRules.drop(plain).ifPresent(d -> {
 			Trackers.drop(d.item());
-			if (Feat.on(Features.COMBAT_RARE_DROP)) {
+			// no title for the cheap drops the player chose to hide
+			boolean cheap = ChatRules.hideGroup(plain).orElse(null) == ChatRules.Hide.USELESS_DROP && Feat.on(Features.CHAT_HIDE_USELESS_DROPS);
+			if (Feat.on(Features.COMBAT_RARE_DROP) && !cheap) {
 				Feat.title(d.kind(), 0xFFFFAA00, d.item());
 				Feat.ping(1.2f);
 			}
 		});
 		ChatRules.slayer(plain).ifPresent(Trackers::slayer);
+		ChatRules.pest(plain).ifPresent(where -> {
+			if (Feat.on(Features.FARMING_PEST_ALERT)) {
+				Feat.title(l.t("Pests!", "害虫が出現！"), 0xFF55FF55, where);
+				Feat.ping(0.9f);
+			}
+		});
 		ChatRules.abilityReady(plain).ifPresent(name -> {
 			if (Feat.on(Features.MINING_ABILITY)) {
 				Feat.title(name, 0xFF55FF55, l.t("is ready", "が使えます"));

@@ -132,6 +132,8 @@ async function main() {
   );
   ok("price has NPC sell price", typeof modPrice.json?.npcSell === "number", JSON.stringify(modPrice.json));
   ok("bazaar price has the tax rate", modPrice.json?.bazaarTaxRate === 0.0125);
+  const sb = await req("GET", "/api/mod/skyblock");
+  ok("mayor and fire sales (Hypixel resources)", sb.status === 200 && Array.isArray(sb.json?.fireSales) && (sb.json.mayor === null || typeof sb.json.mayor.name === "string"), JSON.stringify(sb.json)?.slice(0, 200));
   const puzzles = await req("GET", "/api/mod/puzzles?lang=ja");
   ok("dungeon puzzle rules (wiki)", puzzles.json?.length >= 10 && puzzles.json.some((p) => p.name === "Three Weirdos" && p.canFail));
   const sea = await req("GET", "/api/mod/sea-creatures");

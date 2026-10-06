@@ -172,7 +172,10 @@ final class Activity {
 			}
 			dungeon = d;
 		}
-		if (tabWanted()) tab = Sidebar.tabLines(mc);
+		if (tabWanted()) {
+			tab = Sidebar.tabLines(mc);
+			garden(sp.lang());
+		}
 		// Motes (sidebar "Motes: 137,242", Rift only)
 		motes = null;
 		if (Feat.on(Features.RIFT_TIMER)) {
@@ -215,6 +218,36 @@ final class Activity {
 		});
 	}
 
+	private static java.util.Set<String> visitors;
+	private static String fullTraps;
+
+	/** Garden tab widgets: new visitors and traps that filled up. */
+	static void garden(Lang l) {
+		List<String> names = dev.skypilot.mod.core.TabSections.sectionStartingWith(tab, "Visitors:");
+		java.util.Set<String> now = new java.util.LinkedHashSet<>();
+		for (String n : names) if (!n.startsWith("Visitors:")) now.add(n);
+		if (!names.isEmpty()) {
+			if (visitors != null && Feat.on(Features.FARMING_VISITOR_ALERT)) {
+				List<String> arrived = new java.util.ArrayList<>();
+				for (String n : now) if (!visitors.contains(n)) arrived.add(n);
+				if (!arrived.isEmpty()) {
+					Feat.toast(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EMERALD), l.t("Visitor arrived", "訪問者が到着"), 0xFF55FF55, String.join(", ", arrived));
+					Feat.ping(1.5f);
+				}
+			}
+			visitors = now;
+		}
+		String full = dev.skypilot.mod.core.TabSections.line(tab, "Full Traps: ");
+		if (full != null) {
+			String traps = full.substring("Full Traps: ".length()).strip();
+			if (fullTraps != null && !traps.equals(fullTraps) && !traps.equals("None") && Feat.on(Features.FARMING_TRAPS)) {
+				Feat.toast(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBWEB), l.t("Pest trap full", "害虫トラップが満杯"), 0xFFFFAA00, traps);
+				Feat.ping(1.1f);
+			}
+			fullTraps = traps;
+		}
+	}
+
 	static void setSeaCreatures(List<Dto.SeaCreature> list) {
 		Map<String, Dto.SeaCreature> m = new LinkedHashMap<>();
 		for (Dto.SeaCreature c : list) m.put(c.message(), c);
@@ -224,7 +257,10 @@ final class Activity {
 
 	private static boolean tabWanted() {
 		return Feat.on(Features.HUD_PET) || Feat.on(Features.HUD_PROFILE) || Feat.on(Features.MINING_FORGES) || Feat.on(Features.MINING_CRYSTALS)
-				|| Feat.on(Features.FARMING_GARDEN) || Feat.on(Features.FARMING_CONTEST_TAB) || Feat.on(Features.FISHING_TROPHY_TAB) || Feat.on(Features.DUNGEONS_PUZZLES);
+				|| Feat.on(Features.FARMING_GARDEN) || Feat.on(Features.FARMING_CONTEST_TAB) || Feat.on(Features.FISHING_TROPHY_TAB) || Feat.on(Features.DUNGEONS_PUZZLES)
+				|| Feat.on(Features.HUD_EFFECTS) || Feat.on(Features.HUD_TIMERS) || Feat.on(Features.HUD_DAILY) || Feat.on(Features.HUD_ESSENCE)
+				|| Feat.on(Features.HUD_COLLECTION) || Feat.on(Features.HUD_SKILLS_TAB) || Feat.on(Features.COMBAT_SLAYER_TAB) || Feat.on(Features.COMBAT_BESTIARY)
+				|| Feat.on(Features.FARMING_VISITOR_ALERT) || Feat.on(Features.FARMING_TRAPS) || Feat.on(Features.FARMING_MILESTONES);
 	}
 
 	/** Horizontal blocks per second over the last second; NaN without samples. */
@@ -290,6 +326,8 @@ final class Activity {
 		BOSS_SPLITS.clear();
 		riftSeconds = null;
 		castAt = 0;
+		visitors = null;
+		fullTraps = null;
 		tab = List.of();
 	}
 }

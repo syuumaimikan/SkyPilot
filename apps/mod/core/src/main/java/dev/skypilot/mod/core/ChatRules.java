@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
 public final class ChatRules {
 	/** Groups of lines the player can choose to hide. */
 	public enum Hide {
-		LOBBY, WARPING, PROFILE, COMBO, ABILITY, GEXP, SACKS, SEPARATOR, MINING_CHEST, DUNGEON
+		LOBBY, WARPING, PROFILE, COMBO, ABILITY, GEXP, SACKS, SEPARATOR, MINING_CHEST, DUNGEON, WELCOME, USELESS_DROP, NOTICE, WARNING, SKYMALL, FIRE_SALE,
+		ACHIEVEMENT, PARKOUR, TELEPORT_PAD, SOLO_CLASS, FAIRY
 	}
 
 	public record Trophy(String fish, String tier) {
@@ -78,6 +79,36 @@ public final class ChatRules {
 			Pattern.compile("^.* exploded, hitting you for .* damage\\.$"),
 			Pattern.compile("^Your .* hit .* (?:enemy|enemies) for .* damage\\.$"),
 			Pattern.compile("^.* is ready to use! Press DROP to activate it!$"));
+	private static final List<Pattern> USELESS_DROP = List.of(
+			Pattern.compile("^RARE DROP! (?:Enchanted Ender Pearl|Enchanted End Stone|Crystal Fragment)(?: \\(.*\\))?$"));
+	private static final List<Pattern> NOTICE = List.of(
+			Pattern.compile("^Your previous Plasmaflux Power Orb was removed!$"),
+			Pattern.compile("^You used your Mining Speed Boost Pickaxe Ability!$|^Your Mining Speed Boost has expired!$"),
+			Pattern.compile("^(?:You have just received|Since you've been away you earned) 0 coins as interest in your (?:personal|co-op) bank account!$"),
+			Pattern.compile("^You tipped \\d+ players? in \\d+(?: different)? games?!$"));
+	private static final List<Pattern> WARNING = List.of(
+			Pattern.compile("^You are sending commands too fast! Please slow down\\.$|^You can't use this while in combat!$|^You can not modify your equipped armor set!$"),
+			Pattern.compile("^Please wait a few seconds between refreshing!$|^Whoa! Slow down there!$|^Wait a moment before confirming!$"),
+			Pattern.compile("^This item is not salvageable!$|^Place a Dungeon weapon or armor piece above the anvil to salvage it!$"),
+			Pattern.compile("^You cannot open the SkyBlock menu while in combat!$"),
+			Pattern.compile("^Your radio is weak\\. Find another enjoyer to boost it\\.$|^Your radio signal is strong!$|^Your radio lost signal\\. There's too many enjoyers on this channel\\.$"));
+	private static final List<Pattern> SKYMALL = List.of(
+			Pattern.compile("^New day! Your (?:Sky Mall|Lottery) buff changed!$"),
+			Pattern.compile("^You can disable this messaging by toggling (?:Sky Mall in your /hotm|Lottery in your /hotf)!$"));
+	private static final List<Pattern> FIRE_SALE = List.of(
+			Pattern.compile("^♨ Fire Sales for .* are starting soon!$"),
+			Pattern.compile("^. FIRE SALE .$"),
+			Pattern.compile("^♨ Selling multiple items for a limited time!$"));
+	private static final List<Pattern> ACHIEVEMENT = List.of(Pattern.compile("^.?>> +Achievement Unlocked: .* +<<.?$"));
+	private static final List<Pattern> PARKOUR = List.of(Pattern.compile("^Started parkour .*$"), Pattern.compile("^Cancelled parkour!.*$"));
+	private static final List<Pattern> TELEPORT_PAD = List.of(Pattern.compile("^Warped from the .*$"), Pattern.compile("^This Teleport Pad does not have a destination set!$"));
+	private static final List<Pattern> SOLO_CLASS = List.of(
+			Pattern.compile("^Your (?:Healer|Mage|Berserk|Archer|Tank) stats are doubled because you are the only player using this class!$"));
+	private static final List<Pattern> FAIRY = List.of(
+			Pattern.compile("^[\\w']+ the Fairy: You killed me! Take this Revive Stone so that my death is not in vain!$"));
+	/** "GROSS! A … Pest has appeared in Plot - S 4!" / "YUCK! 4 … Pest have spawned in The Barn!" (SkyHanni PestSpawn). */
+	private static final Pattern PEST = Pattern.compile("^(?:GROSS|YUCK)! .*Pests? (?:has appeared|have spawned) in (.+)!$");
+
 	private static final Pattern TROPHY = Pattern.compile("^TROPHY FISH! You caught an? (.+) (BRONZE|SILVER|GOLD|DIAMOND)!$");
 	private static final Pattern POWDER = Pattern.compile("^(Mithril|Gemstone|Glacite) Powder x([\\d,]+)$");
 
@@ -102,6 +133,29 @@ public final class ChatRules {
 		if (any(MINING_CHEST, s)) return Optional.of(Hide.MINING_CHEST);
 		// lines with "name: text" are player chat and are never treated as dungeon noise
 		if (!s.contains(": ") && any(DUNGEON, s)) return Optional.of(Hide.DUNGEON);
+		if (s.equals("Welcome to Hypixel SkyBlock!")) return Optional.of(Hide.WELCOME);
+		if (any(USELESS_DROP, s)) return Optional.of(Hide.USELESS_DROP);
+		if (any(NOTICE, s)) return Optional.of(Hide.NOTICE);
+		if (any(WARNING, s)) return Optional.of(Hide.WARNING);
+		if (any(SKYMALL, s)) return Optional.of(Hide.SKYMALL);
+		if (any(FIRE_SALE, s)) return Optional.of(Hide.FIRE_SALE);
+		if (any(ACHIEVEMENT, s)) return Optional.of(Hide.ACHIEVEMENT);
+		if (any(PARKOUR, s)) return Optional.of(Hide.PARKOUR);
+		if (any(TELEPORT_PAD, s)) return Optional.of(Hide.TELEPORT_PAD);
+		if (any(SOLO_CLASS, s)) return Optional.of(Hide.SOLO_CLASS);
+		if (any(FAIRY, s)) return Optional.of(Hide.FAIRY);
+		return Optional.empty();
+	}
+
+	/** Where pests appeared ("Plot - S 4", "The Barn", "Plots 12, 9 and 3"). */
+	public static Optional<String> pest(String plain) {
+		Matcher m = PEST.matcher(plain.strip());
+		if (m.matches()) return Optional.of(m.group(1).strip());
+		String s = plain.strip();
+		int i = s.indexOf(" Pest spawned in ");
+		if ((s.startsWith("GROSS! While you were offline,") || s.startsWith("YUCK! While you were offline,")) && i > 0 && s.endsWith("!")) {
+			return Optional.of(s.substring(i + " Pest spawned in ".length(), s.length() - 1));
+		}
 		return Optional.empty();
 	}
 

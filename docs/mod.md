@@ -106,7 +106,12 @@ features that use the SkyPilot server (never Hypixel), ✉ those that send chat 
 | Fishing | rare sea creature alert ☁ (SkyHanni-REPO names), fishing tracker (sea creatures by name, treasure, trophy tiers, per hour) ☁, bobber timer, trophy fish alert, trophy fish widget |
 | Combat | slayer tracker, boss spawned title, rare drop title, drop tracker |
 | Dungeons | chat filter (healing, damage taken, orbs, tethers, cooldowns; never player chat), run timer (floor, time, boss room split, cleared % from the sidebar), boss room title |
-| Dungeons (helpers) | puzzle list with each puzzle's rules ☁ (wiki text; never a solver), boss / phase splits from [BOSS] lines |
+| Dungeons (helpers) | puzzle list with each puzzle's rules ☁ (wiki text; never a solver), boss / phase splits from [BOSS] lines, reward chest profit (Wood … Bedrock, Paid / Free: contents value − "… Coins" / "FREE" cost) ☁, hide the solo-class and fairy revive lines |
+| More chat filters | welcome line, cheap RARE DROPs (Enchanted Ender Pearl / End Stone, Crystal Fragment), minor notices (0-coin interest, power orb, Mining Speed Boost used/expired, tips), repeated warnings, Sky Mall / Lottery, fire sale banners, achievements, parkour, teleport pads |
+| Garden | pest alert ("GROSS!" / "YUCK!" lines, with the plot), visitor arrival toast, pest traps (count, full, no bait; toast when one fills), crop milestones |
+| Tab widgets | active effects, timers, daily quests, essence, collection, skills, slayer, bestiary |
+| World | mayor and minister with perks ☁ (Hypixel election), fire sale toasts ☁ (Hypixel firesales, cached 5 min) |
+| Sacks | value of everything stored in a sack window ("Stored:" × Bazaar value by name) ☁ |
 | Rift | Rift time (action bar) and Motes (sidebar), low Rift time titles, Rift guide on entry ☁ |
 | Guides | next action on the info HUD ☁, automatic guide line to where the next action is done ☁ |
 | Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |

@@ -796,6 +796,91 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				Activity.tab = List.of();
 			});
 
+			// ---------------------------------------------------------------- third batch: filters, garden, mayor, chests, sacks
+			ctx.runOnClient(mc -> {
+				var c = SkyPilot.get().config();
+				for (var f : List.of(dev.skypilot.mod.core.Features.CHAT_HIDE_WELCOME, dev.skypilot.mod.core.Features.CHAT_HIDE_USELESS_DROPS,
+						dev.skypilot.mod.core.Features.CHAT_HIDE_WARNINGS, dev.skypilot.mod.core.Features.CHAT_HIDE_SKYMALL, dev.skypilot.mod.core.Features.FARMING_PEST_ALERT,
+						dev.skypilot.mod.core.Features.FARMING_TRAPS, dev.skypilot.mod.core.Features.FARMING_VISITOR_ALERT, dev.skypilot.mod.core.Features.HUD_MAYOR,
+						dev.skypilot.mod.core.Features.HUD_TIMERS, dev.skypilot.mod.core.Features.DUNGEONS_CHEST_PROFIT, dev.skypilot.mod.core.Features.INV_SACK_VALUE,
+						dev.skypilot.mod.core.Features.COMBAT_RARE_DROP, dev.skypilot.mod.core.Features.INV_CHEST_VALUE)) {
+					dev.skypilot.mod.core.Features.set(c, f, true);
+				}
+				Timers.skyblock = new Dto.SkyblockNow(new Dto.Mayor("Diana", List.of(new Dto.Perk("Mythological Ritual", ""), new Dto.Perk("Pet XP Buff", ""))),
+						new Dto.Mayor("Paul", List.of(new Dto.Perk("EZPZ", ""))), 518, List.of());
+			});
+			world.getServer().runOnServer(server -> {
+				var pl = server.getPlayerList();
+				for (String line : List.of("Welcome to Hypixel SkyBlock!", "RARE DROP! Enchanted Ender Pearl (+120% ✯ Magic Find)", "Whoa! Slow down there!",
+						"New day! Your Sky Mall buff changed!", "GROSS! A  Pest has appeared in Plot - S 4!")) {
+					pl.broadcastSystemMessage(Component.literal(line), false);
+				}
+			});
+			ctx.waitTicks(5);
+			ctx.runOnClient(mc -> {
+				check(shown(mc, "Welcome to Hypixel SkyBlock") == null && shown(mc, "Enchanted Ender Pearl") == null && shown(mc, "Whoa! Slow down") == null
+						&& shown(mc, "Sky Mall buff changed") == null, "minor lines hidden");
+				check(shown(mc, "Pest has appeared") != null, "the pest line stays (only the title is added)");
+				// garden tab widgets: a visitor arrives, a trap fills up
+				Activity.tab = List.of("Visitors: (1)", " Jacob", "", "Pest Traps: 2/3", "Full Traps: None", "No Bait: #3", "", "Timers:", " Cookie Buff: 3d 4h");
+				Activity.garden(SkyPilot.get().lang());
+				Activity.tab = List.of("Visitors: (2)", " Jacob", " Emissary Carlton", "", "Pest Traps: 2/3", "Full Traps: #1", "No Bait: #3", "", "Timers:", " Cookie Buff: 3d 4h");
+				Activity.garden(SkyPilot.get().lang());
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, System.currentTimeMillis());
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Mayor Diana")), "mayor line");
+				check(rows.stream().anyMatch(r -> r.text().equals("Full Traps: #1")), "trap lines");
+				check(rows.stream().anyMatch(r -> r.text().contains("Cookie Buff: 3d 4h")), "timers widget");
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-features-3"));
+			// a Bedrock reward chest: contents value, cost and profit
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.sixRows(6, mc.player.getInventory());
+				menu.getSlot(10).set(skyblockItem(Items.IRON_SWORD, "HYPERION", 1));
+				ItemStack open = new ItemStack(Items.CHEST);
+				open.set(DataComponents.CUSTOM_NAME, Component.literal("Open Reward Chest"));
+				open.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Cost"), Component.literal("4,000,000 Coins"))));
+				menu.getSlot(31).set(open);
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Bedrock Chest"));
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				var screen = (ContainerScreen) mc.gui.screen();
+				ChestValue cv = ScreenOverlays.chestOf(screen);
+				List<net.minecraft.world.inventory.Slot> slots = ChestValue.slotsOf(screen).stream().filter(sl -> PriceCheck.item(sl.getItem()) != null).toList();
+				cv.apply(slots, new Dto.Values(List.of(new Dto.Value("HYPERION", "Hyperion", 4.7e8, 0.8)), 4.7e8));
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-reward-chest"));
+			// a sack: stored amounts × prices
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.sixRows(7, mc.player.getInventory());
+				ItemStack wheat = new ItemStack(Items.HAY_BLOCK);
+				wheat.set(DataComponents.CUSTOM_NAME, Component.literal("Enchanted Hay Bale"));
+				wheat.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Stored: 1,234/60.5k"))));
+				ItemStack seeds = new ItemStack(Items.WHEAT_SEEDS);
+				seeds.set(DataComponents.CUSTOM_NAME, Component.literal("Seeds"));
+				seeds.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Stored: 52,100/60.5k"))));
+				menu.getSlot(10).set(wheat);
+				menu.getSlot(11).set(seeds);
+				NamePrices.set("Enchanted Hay Bale", 150_000.0);
+				NamePrices.set("Seeds", 3.0);
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Enchanted Agronomy Sack"));
+			});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-sack-value"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
+				SkyPilot.get().config().priceTooltip = true;
+				SkyPilot.get().config().hud.enabled = true;
+				SkyPilot.get().config().inventory.chestValue = true;
+				Activity.tab = List.of();
+				Timers.skyblock = null;
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

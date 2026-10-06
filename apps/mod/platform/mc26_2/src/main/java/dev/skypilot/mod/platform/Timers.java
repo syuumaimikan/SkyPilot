@@ -45,6 +45,11 @@ final class Timers {
 	private Timers() {
 	}
 
+	static Dto.SkyblockNow skyblock;
+	private static long skyblockAt;
+	private static long skyblockTriedAt;
+	private static final Set<String> SALES_SEEN = new HashSet<>();
+
 	static SkyBlockTime time() {
 		Dto.Calendar c = calendar;
 		return c == null ? null : new SkyBlockTime(c.epochMs(), c.dayMs(), c.daysPerMonth(), c.months());
@@ -110,6 +115,25 @@ final class Timers {
 			}
 		}
 		checkWatchlist(sp, now);
+		// mayor / minister / fire sales
+		boolean wantSb = Feat.on(Features.HUD_MAYOR) || Feat.on(Features.MARKET_FIRE_SALE);
+		if (wantSb && api != null && now - skyblockAt > 300_000 && now - skyblockTriedAt > 60_000) {
+			skyblockTriedAt = now;
+			api.skyblockNow().whenComplete((s, err) -> mc.execute(() -> {
+				if (s != null) {
+					skyblock = s;
+					skyblockAt = System.currentTimeMillis();
+				}
+			}));
+		}
+		if (Feat.on(Features.MARKET_FIRE_SALE) && skyblock != null) {
+			for (Dto.FireSale f : skyblock.fireSales()) {
+				if (f.startMs() <= now && now < f.endMs() && SALES_SEEN.add(f.itemId() + "@" + f.startMs())) {
+					String line = (f.price() != null ? f.price() + l.t(" gems", " ジェム") : "") + l.t(" · ends in ", " · 終了まで ") + InfoHud.eta(f.endMs() - now);
+					Feat.toast(new ItemStack(Items.EMERALD), l.t("Fire sale: ", "ファイアセール: ") + f.name(), 0xFFFF5555, line);
+				}
+			}
+		}
 	}
 
 	static void remind(long inMs, String text) {

@@ -392,6 +392,48 @@ pub struct ModMoney {
     pub message: Option<String>,
 }
 
+// ---------------------------------------------------------------- mayor & fire sales
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModPerk {
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModMayor {
+    pub name: String,
+    pub perks: Vec<ModPerk>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModFireSale {
+    pub item_id: String,
+    pub name: String,
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub amount: Option<u64>,
+    /// Price in gems.
+    pub price: Option<u64>,
+}
+
+/// The current mayor / minister (Hypixel election resource) and fire sales (Hypixel firesales).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModSkyblockNow {
+    pub mayor: Option<ModMayor>,
+    pub minister: Option<ModMayor>,
+    pub year: Option<u32>,
+    pub fire_sales: Vec<ModFireSale>,
+}
+
 // ---------------------------------------------------------------- dungeon puzzles
 
 /// What a dungeon puzzle asks for (curated from the wiki; general rules, not a solver).

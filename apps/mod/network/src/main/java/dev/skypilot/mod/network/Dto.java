@@ -121,6 +121,19 @@ public final class Dto {
 	public record Money(List<MoneyMethod> methods, String message) {
 	}
 
+	public record Perk(String name, String description) {
+	}
+
+	public record Mayor(String name, List<Perk> perks) {
+	}
+
+	public record FireSale(String itemId, String name, long startMs, long endMs, Long amount, Long price) {
+	}
+
+	/** Current mayor / minister and fire sales (Hypixel resources, via the SkyPilot server). */
+	public record SkyblockNow(Mayor mayor, Mayor minister, Integer year, List<FireSale> fireSales) {
+	}
+
 	/** A dungeon puzzle's general rules (wiki), never a solution. */
 	public record Puzzle(String name, String floors, String rule, boolean canFail, String source) {
 	}

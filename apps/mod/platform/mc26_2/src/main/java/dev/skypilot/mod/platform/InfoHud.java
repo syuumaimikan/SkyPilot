@@ -220,6 +220,29 @@ final class InfoHud {
 			if (a.place() != null) out.add(HudRow.text("  → " + a.place().waypoint().name() + " (" + Guides.island(a.place().waypoint().island()) + ")"
 					+ (a.place().warp() != null ? "  " + a.place().warp() : ""), HudRow.MUTED));
 		}
+		if (Feat.on(Features.HUD_MAYOR) && Timers.skyblock != null) {
+			var sb = Timers.skyblock;
+			if (sb.mayor() != null) {
+				out.add(HudRow.text(l.t("Mayor ", "市長 ") + sb.mayor().name() + (sb.minister() != null ? l.t("  · minister ", "  · 大臣 ") + sb.minister().name() : ""), 0xFFFFAA00));
+				for (var p : sb.mayor().perks()) out.add(HudRow.text("  " + Text.strip(p.name()), HudRow.MUTED));
+				if (sb.minister() != null) for (var p : sb.minister().perks()) out.add(HudRow.text("  " + Text.strip(p.name()) + l.t(" (minister)", "（大臣）"), HudRow.MUTED));
+			}
+		}
+		if (Feat.on(Features.HUD_EFFECTS)) section(out, null, TabSections.sectionStartingWith(tab, "Active Effects:"), 0xFF55FFFF);
+		if (Feat.on(Features.HUD_TIMERS)) section(out, l.t("Timers", "タイマー"), TabSections.section(tab, "Timers:"), 0xFFFFFF55);
+		if (Feat.on(Features.HUD_DAILY)) section(out, l.t("Daily quests", "デイリークエスト"), TabSections.section(tab, "Daily Quests:"), 0xFF55FF55);
+		if (Feat.on(Features.HUD_ESSENCE)) section(out, null, TabSections.sectionStartingWith(tab, "Essence:"), 0xFFFF55FF);
+		if (Feat.on(Features.HUD_COLLECTION)) section(out, l.t("Collection", "コレクション"), TabSections.section(tab, "Collection:"), 0xFFFFAA00);
+		if (Feat.on(Features.HUD_SKILLS_TAB)) section(out, null, TabSections.sectionStartingWith(tab, "Skills:"), 0xFF55FFFF);
+		if (Feat.on(Features.COMBAT_SLAYER_TAB)) section(out, l.t("Slayer", "スレイヤー"), TabSections.section(tab, "Slayer:"), 0xFFFF5555);
+		if (Feat.on(Features.COMBAT_BESTIARY)) section(out, l.t("Bestiary", "モンスター図鑑"), TabSections.section(tab, "Bestiary:"), 0xFFFF5555);
+		if (Feat.on(Features.FARMING_MILESTONES)) section(out, l.t("Crop milestones", "作物マイルストーン"), TabSections.section(tab, "Crop Milestones:"), 0xFF55FF55);
+		if (Feat.on(Features.FARMING_TRAPS)) {
+			for (String prefix : List.of("Pest Traps: ", "Full Traps: ", "No Bait: ")) {
+				String line = TabSections.line(tab, prefix);
+				if (line != null) out.add(HudRow.text(line, line.startsWith("Full Traps") && !line.endsWith("None") ? HudRow.WARN : 0xFF55FF55));
+			}
+		}
 		if (Feat.on(Features.TOOLS_STOPWATCH) && (Activity.stopwatchRunning || Activity.stopwatchElapsed > 0)) {
 			long ms = Activity.stopwatchMs();
 			out.add(HudRow.text(String.format(Locale.ROOT, "⏱ %d:%02d.%d", ms / 60_000, (ms / 1000) % 60, (ms / 100) % 10) + (Activity.LAPS.isEmpty() ? "" : l.t("  laps ", "  ラップ ") + Activity.LAPS.size()),

@@ -225,4 +225,29 @@ class FeaturesTest {
 		assertEquals("Dwarven Mines", c.area());
 		assertTrue(Features.all().size() >= 95, "features: " + Features.all().size());
 	}
+
+	@Test
+	void thirdBatchRules() {
+		assertTrue(Features.all().size() >= 120, "features: " + Features.all().size());
+		assertEquals(ChatRules.Hide.WELCOME, ChatRules.hideGroup("Welcome to Hypixel SkyBlock!").orElseThrow());
+		assertEquals(ChatRules.Hide.USELESS_DROP, ChatRules.hideGroup("RARE DROP! Enchanted Ender Pearl (+120% ✯ Magic Find)").orElseThrow());
+		assertEquals(ChatRules.Hide.NOTICE, ChatRules.hideGroup("You have just received 0 coins as interest in your co-op bank account!").orElseThrow());
+		assertTrue(ChatRules.hideGroup("You have just received 1,234 coins as interest in your co-op bank account!").isEmpty(), "real interest stays");
+		assertEquals(ChatRules.Hide.WARNING, ChatRules.hideGroup("Whoa! Slow down there!").orElseThrow());
+		assertEquals(ChatRules.Hide.SKYMALL, ChatRules.hideGroup("New day! Your Sky Mall buff changed!").orElseThrow());
+		assertEquals(ChatRules.Hide.FIRE_SALE, ChatRules.hideGroup("♨ Fire Sales for Glacite Guardian Skins are starting soon!").orElseThrow());
+		assertEquals(ChatRules.Hide.ACHIEVEMENT, ChatRules.hideGroup("a>>   Achievement Unlocked: Big Spender   <<a").orElseThrow());
+		assertEquals(ChatRules.Hide.TELEPORT_PAD, ChatRules.hideGroup("Warped from the Spawn to the Mountain!").orElseThrow());
+		assertEquals(ChatRules.Hide.SOLO_CLASS, ChatRules.hideGroup("Your Mage stats are doubled because you are the only player using this class!").orElseThrow());
+		assertEquals(ChatRules.Hide.FAIRY, ChatRules.hideGroup("Fairy the Fairy: You killed me! Take this Revive Stone so that my death is not in vain!").orElseThrow());
+
+		assertEquals("Plot - S 4", ChatRules.pest("GROSS! A  Pest has appeared in Plot - S 4!").orElseThrow());
+		assertEquals("The Barn", ChatRules.pest("YUCK! 4  Pest have spawned in The Barn!").orElseThrow());
+		assertEquals("Plots 12, 9, 5, 11 and 3", ChatRules.pest("GROSS! While you were offline,  Pest spawned in Plots 12, 9, 5, 11 and 3!").orElseThrow());
+
+		assertEquals(28_183, LoreValues.stored(List.of("§7Stored: §e28,183§7/60.5k")).getAsDouble());
+		assertTrue(LoreValues.isRewardChest("Bedrock Chest") && LoreValues.isRewardChest("Paid Chest") && LoreValues.isRewardChest("Free") && !LoreValues.isRewardChest("Large Chest"));
+		assertEquals(1_000_000, LoreValues.chestCost(List.of("§7Contents", "§6Kraken Shard §8x1", "", "§7Cost", "§61,000,000 Coins")).orElseThrow());
+		assertEquals(0, LoreValues.chestCost(List.of("§7Cost", "§aFREE")).orElseThrow());
+	}
 }

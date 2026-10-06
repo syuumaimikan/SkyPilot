@@ -22,7 +22,7 @@ import java.util.WeakHashMap;
  * to a chest can't drop the item on the cursor.
  */
 final class ScreenOverlays {
-	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, AuctionHighlight auction, String flipKind) {
+	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, AuctionHighlight auction, SackValue sack, String flipKind) {
 	}
 
 	private static final Map<Screen, Panels> PANELS = new WeakHashMap<>();
@@ -34,7 +34,7 @@ final class ScreenOverlays {
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			if (!(screen instanceof AbstractContainerScreen<?> container) || !(screen instanceof ContainerScreenAccessor)) return;
 			Panels p = new Panels(new ItemBrowser(screen), new ChestValue(container), new VisitorPanel(container), new AuctionHighlight(container),
-					ContainerPanel.kindOf(screen.getTitle().getString()));
+					new SackValue(container), ContainerPanel.kindOf(screen.getTitle().getString()));
 			PANELS.put(screen, p);
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
 				ContainerScreenAccessor box = (ContainerScreenAccessor) s;
@@ -46,6 +46,8 @@ final class ScreenOverlays {
 					p.chest().render(g, font, mouseX, mouseY);
 				} else if (p.visitor().layout()) {
 					p.visitor().render(g, font);
+				} else if (p.sack().layout()) {
+					p.sack().render(g, font);
 				}
 				p.auction().render(g);
 				ItemIcons.flush();
