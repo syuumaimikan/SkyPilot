@@ -87,19 +87,21 @@ features that use the SkyPilot server (never Hypixel), ✉ those that send chat 
 
 | Category | Features |
 |---|---|
-| Chat | click to translate ✉, timestamps, stack repeated messages (x2), click to copy, mention highlight + ping, coordinates → [Waypoint], hide lobby joins / warp lines / profile ID / kill combo / ability spam / GEXP, write in Japanese (`/skypilot en`, JA→EN into the chat box) ✉ |
-| Tooltips | value ☁, NPC sell price ☁, craft cost ☁, stack value ☁, SkyBlock ID, BIN vs value on auction listings ☁, hide filler glass panes |
-| Inventory | item list ☁, chest value ☁, inventory value ☁, rarity background, slot numbers (book level, pet level, minion tier, stars, skill/collection levels), search highlight, R / U lookup keys ☁ |
-| HUD | SkyPilot HUD ☁, area advice ☁, session, coordinates, FPS + ping, clock + SkyBlock date ☁, event timers ☁, health/mana bars, skill progress (XP/h, time to next level), full inventory warning, low-health border |
-| Mining | commissions (tab list), powder + powder/h (tab list), ability ready title |
-| Farming | blocks per second, Garden visitor cost ☁, Jacob's contest toast ☁ |
+| Chat | click to translate ✉, timestamps, stack repeated messages (x2), click to copy, mention highlight + ping, keyword alerts (`keyword add`), coordinates → [Waypoint], chat search (`find`), hide lobby joins / warp lines / profile ID / kill combo / ability spam / GEXP / [Sacks] / separator lines, write in Japanese (`/skypilot en`, JA→EN into the chat box) ✉ |
+| Tooltips | value ☁, NPC sell price ☁, craft cost ☁, stack value ☁, Bazaar flip margin after tax ☁, SkyBlock ID, BIN vs value on auction listings ☁, hide filler glass panes |
+| Inventory | item list ☁, chest value ☁, inventory value ☁, rarity background, slot numbers (book level, pet level, minion tier, stars, skill/collection levels), search highlight, R / U lookup keys ☁, auction deal outlines ☁, valuable item outlines (`highlight <price>`) ☁, Ctrl+C copies the item ID |
+| HUD | SkyPilot HUD ☁, area advice ☁, session, coordinates, speed, compass bar, FPS + ping, clock + SkyBlock date ☁, event timers ☁, play time, purse changes, health/mana bars, skill progress (XP/h, time to next level), active pet (tab), profile info (tab), full inventory warning, low-health border |
+| Mining | commissions, powder + powder/h, forges, crystals (tab list), ability ready title, hide treasure chest spam, treasure chest tracker (chests/h, powder) |
+| Farming | blocks per second, Garden visitor cost ☁, Garden info (level, copper, sowdust, composter, pests), Jacob's contest widget, Jacob's contest toast ☁ |
+| Fishing | rare sea creature alert ☁ (SkyHanni-REPO names), fishing tracker (sea creatures by name, treasure, trophy tiers, per hour) ☁, bobber timer, trophy fish alert, trophy fish widget |
 | Combat | slayer tracker, boss spawned title, rare drop title, drop tracker |
+| Dungeons | chat filter (healing, damage taken, orbs, tethers, cooldowns; never player chat), run timer (floor, time, boss room split, cleared % from the sidebar), boss room title |
 | Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |
-| Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), session tracking, session upload ☁ |
+| Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), to-do list (`todo`), stopwatch (`timer start/lap/stop`), item lookup (`lookup <name>`) ☁, session tracking, session upload ☁ |
 
 Implementation notes:
 
-- Chat: `ALLOW_GAME` hides the chosen groups from this client's chat only;
+- Chat: `ALLOW_GAME` sees every server line first (trackers count hidden lines too) and hides the chosen groups from this client's chat only;
   `ChatFeatures.modify` (`MODIFY_GAME`) applies stacking, copy, mention, the waypoint button,
   then the [訳] button, then the timestamp, and tells click-to-translate about the wrapped line
   so translation still replaces it in place. Message texts follow SkyHanni's current filters.

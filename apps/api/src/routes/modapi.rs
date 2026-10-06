@@ -71,6 +71,21 @@ pub async fn price(State(state): State<Arc<AppState>>, Json(req): Json<ModPriceR
         age_seconds: Some(if bz.is_some() { bzf.age_seconds } else { ah.age_seconds }),
         npc_sell: registry.npc_price(&market_id),
         craft_cost: skypilot_pricing::craft::CraftCalculator::new(&registry, state.market.as_ref()).craft_cost(&market_id).map(|(c, n, _)| c / n),
+        bazaar_tax_rate: bz.as_ref().map(|_| registry.curated.market.bazaar.tax_rate),
+    }))
+}
+
+/// Sea creatures and the chat lines announcing them (public data, SkyHanni-REPO).
+pub async fn sea_creatures(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModSeaCreatures>> {
+    let registry = state.registry();
+    Ok(Json(ModSeaCreatures {
+        creatures: registry
+            .sea_creatures
+            .all
+            .iter()
+            .map(|c| ModSeaCreature { name: c.name.clone(), area: c.area.clone(), message: c.message.clone(), rarity: c.rarity.clone(), fishing_xp: c.fishing_xp })
+            .collect(),
+        attribution: "Sea creature data: SkyHanni-REPO (MIT) - github.com/hannibal002/SkyHanni-REPO".into(),
     }))
 }
 

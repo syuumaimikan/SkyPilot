@@ -20,7 +20,8 @@ import java.util.Map;
 public final class Features {
 	public enum Category {
 		CHAT("Chat", "チャット"), TOOLTIP("Tooltips", "説明欄"), INVENTORY("Inventory", "インベントリ"), HUD("HUD", "HUD"), MINING("Mining", "採掘"),
-		FARMING("Farming", "農業"), COMBAT("Combat", "戦闘"), MARKET("Market", "マーケット"), TOOLS("Tools", "ツール");
+		FARMING("Farming", "農業"), FISHING("Fishing", "釣り"), COMBAT("Combat", "戦闘"), DUNGEONS("Dungeons", "ダンジョン"), MARKET("Market", "マーケット"),
+		TOOLS("Tools", "ツール");
 
 		public final String en;
 		public final String ja;
@@ -85,6 +86,15 @@ public final class Features {
 			"/skypilot en <日本語> translates your text into English and puts it into the chat box; you send it yourself.",
 			"/skypilot en <日本語> で英語に翻訳してチャット欄に入れます。送信は自分で行います。", "nc");
 
+	public static final Feature CHAT_HIDE_SACKS = f("chat.hide_sacks", Category.CHAT, "Hide sack messages", "サック通知を隠す",
+			"Hides the \"[Sacks] +123 items.\" summaries.", "「[Sacks] +123 items.」の集計メッセージを隠します。", "r");
+	public static final Feature CHAT_HIDE_SEPARATORS = f("chat.hide_separators", Category.CHAT, "Hide separator lines", "区切り線を隠す",
+			"Hides lines made only of ▬▬▬ / ----- / ===== .", "▬▬▬ や ----- だけの区切り線を隠します。", "");
+	public static final Feature CHAT_KEYWORDS = f("chat.keywords", Category.CHAT, "Keyword alerts", "キーワード通知",
+			"Lines containing your keywords (/skypilot keyword add <word>) are marked and ping.", "登録した語（/skypilot keyword add <語>）を含む行に印を付けて音で知らせます。", "");
+	public static final Feature CHAT_SEARCH = f("chat.search", Category.CHAT, "Chat search", "チャット検索",
+			"/skypilot find <text> lists matching lines of the last 500 chat lines (kept in memory only).", "/skypilot find <文字> で直近500行から検索（メモリ内のみ）。", "r");
+
 	// ---------------------------------------------------------------- tooltips
 	public static final Feature TOOLTIP_PRICE = f("tooltip.price", Category.TOOLTIP, "Item value", "アイテムの価値",
 			"SkyPilot's estimated value, Bazaar or lowest BIN / median and confidence.", "推定価値・バザー価格または最安BIN/中央値と信頼度を表示します。", "n");
@@ -101,6 +111,9 @@ public final class Features {
 	public static final Feature TOOLTIP_HIDE_FILLER = f("tooltip.hide_filler", Category.TOOLTIP, "Hide filler tooltips", "飾りガラスの説明を隠す",
 			"No tooltip for the blank glass panes that fill menus.", "メニューを埋める名前のないガラス板の説明欄を出しません。", "r");
 
+	public static final Feature TOOLTIP_BAZAAR_MARGIN = f("tooltip.bazaar_margin", Category.TOOLTIP, "Bazaar flip margin", "バザーの差益",
+			"For Bazaar products: buy-order → sell-offer margin per item after the Bazaar tax.", "バザー商品で、買い注文→売り注文の1個あたりの差益（税引後）。", "nr");
+
 	// ---------------------------------------------------------------- inventory
 	public static final Feature INV_ITEM_BROWSER = f("inventory.item_browser", Category.INVENTORY, "Item list (JEI style)", "アイテム一覧（JEI風）",
 			"Every SkyBlock item right of inventory windows: search, value, recipes, drops and uses.", "インベントリ右側に全アイテム。検索・価値・レシピ・ドロップ・用途。", "n");
@@ -116,6 +129,13 @@ public final class Features {
 			"While the item list search has text, items in the open window that do not match are dimmed.", "アイテム一覧で検索中、開いている画面の一致しないアイテムを暗くします。", "r");
 	public static final Feature INV_RECIPE_KEYS = f("inventory.recipe_keys", Category.INVENTORY, "R / U lookup keys", "R / U キーで調べる",
 			"Hover an item and press R (recipe) or U (uses) to open its page.", "アイテムにカーソルを合わせて R（レシピ）/ U（用途）でページを開きます。", "nr");
+
+	public static final Feature INV_AH_HIGHLIGHT = f("inventory.ah_highlight", Category.INVENTORY, "Auction deal outlines", "オークションのお得枠",
+			"In the auction browser: green outline when Buy it now is 10%+ below SkyPilot's value, red when 50%+ above.", "オークション一覧で、BINが推定価値より10%以上安いと緑、50%以上高いと赤で縁取り。", "nr");
+	public static final Feature INV_VALUABLE = f("inventory.valuable_highlight", Category.INVENTORY, "Valuable item outlines", "高価なアイテムの縁取り",
+			"With the chest value list, outlines items worth 1M+ (/skypilot highlight <price> to change).", "チェストの価値一覧と一緒に、1M以上のアイテムを縁取り（/skypilot highlight <価格> で変更）。", "nr");
+	public static final Feature INV_COPY_ID = f("inventory.copy_id", Category.INVENTORY, "Ctrl+C copies item ID", "Ctrl+CでIDをコピー",
+			"Hover an item and press Ctrl+C to copy its SkyBlock ID.", "アイテムにカーソルを合わせて Ctrl+C でSkyBlock IDをコピー。", "r");
 
 	// ---------------------------------------------------------------- HUD
 	public static final Feature HUD_MAIN = f("hud.main", Category.HUD, "SkyPilot HUD", "SkyPilot HUD",
@@ -141,6 +161,19 @@ public final class Features {
 	public static final Feature HUD_LOW_HEALTH = f("hud.low_health", Category.HUD, "Low health border", "低体力の赤枠",
 			"Red screen border below 25% health.", "体力25%未満で画面の縁を赤くします。", "");
 
+	public static final Feature HUD_SPEED = f("hud.speed", Category.HUD, "Speed", "移動速度",
+			"Your horizontal speed in blocks per second.", "水平方向の移動速度（ブロック/秒）。", "");
+	public static final Feature HUD_COMPASS = f("hud.compass", Category.HUD, "Compass bar", "コンパスバー",
+			"A compass strip at the top of the screen.", "画面上部に方角のバーを表示。", "");
+	public static final Feature HUD_PLAYTIME = f("hud.playtime", Category.HUD, "Play time", "プレイ時間",
+			"How long you have been on the server this session.", "このセッションでサーバーにいる時間。", "r");
+	public static final Feature HUD_PURSE = f("hud.purse_change", Category.HUD, "Purse changes", "パースの増減",
+			"Shows +/- coins for a few seconds when your purse (sidebar) changes.", "サイドバーのパースが変わると増減を数秒表示。", "r");
+	public static final Feature HUD_PET = f("hud.pet", Category.HUD, "Active pet", "使用中のペット",
+			"The tab list's \"Pet:\" widget (pet, level, XP).", "タブリストの「Pet:」欄（ペット・Lv・XP）。", "r");
+	public static final Feature HUD_PROFILE = f("hud.profile_info", Category.HUD, "Profile info", "プロフィール情報",
+			"Tab list lines: profile, SkyBlock level, bank, interest, fairy souls, skill average, soulflow.", "タブリストの プロフィール・SBレベル・銀行・利息・フェアリーソウル・スキル平均・ソウルフロー。", "");
+
 	// ---------------------------------------------------------------- mining
 	public static final Feature MINING_COMMISSIONS = f("mining.commissions", Category.MINING, "Commissions", "コミッション",
 			"Your commissions and their progress from the tab list.", "タブリストのコミッションと進捗を表示。", "r");
@@ -149,6 +182,15 @@ public final class Features {
 	public static final Feature MINING_ABILITY = f("mining.ability_alert", Category.MINING, "Ability ready alert", "アビリティ準備完了通知",
 			"Title and sound when \"… is now available!\" (e.g. Mining Speed Boost).", "「… is now available!」（Mining Speed Boost等）でタイトルと音。", "r");
 
+	public static final Feature MINING_FORGES = f("mining.forges", Category.MINING, "Forge timers", "フォージのタイマー",
+			"The tab list's \"Forges:\" widget (what is forging, time left).", "タブリストの「Forges:」欄（鍛造中のアイテムと残り時間）。", "r");
+	public static final Feature MINING_CRYSTALS = f("mining.crystals", Category.MINING, "Crystals", "クリスタル",
+			"The tab list's \"Crystals:\" widget (Crystal Hollows).", "タブリストの「Crystals:」欄（クリスタルホロウズ）。", "r");
+	public static final Feature MINING_HIDE_CHESTS = f("mining.hide_chest_spam", Category.MINING, "Hide treasure chest spam", "宝箱メッセージを隠す",
+			"Hides \"You uncovered a treasure chest!\", lock-pick and \"Breaking Power\" lines.", "「You uncovered a treasure chest!」やBreaking Power不足の行を隠します。", "r");
+	public static final Feature MINING_CHEST_TRACKER = f("mining.chest_tracker", Category.MINING, "Treasure chest tracker", "宝箱トラッカー",
+			"Treasure chests opened and powder from them this session.", "このセッションで開けた宝箱の数と得たパウダー。", "r");
+
 	// ---------------------------------------------------------------- farming
 	public static final Feature FARMING_BPS = f("farming.bps", Category.FARMING, "Blocks per second", "BPS（毎秒破壊数）",
 			"How many crops you break per second while farming.", "農業中に1秒あたり何ブロック壊しているか。", "r");
@@ -156,6 +198,23 @@ public final class Features {
 			"In a Garden visitor's menu, the Bazaar cost of the requested items.", "ガーデン訪問者の画面で、要求アイテムのバザー費用を表示。", "nr");
 	public static final Feature FARMING_CONTEST = f("farming.contest_alert", Category.FARMING, "Jacob's contest alert", "ジェイコブコンテスト通知",
 			"Toast one minute before a Jacob's Farming Contest starts.", "ジェイコブの農業コンテスト開始1分前に通知。", "n");
+
+	public static final Feature FARMING_GARDEN = f("farming.garden_info", Category.FARMING, "Garden info", "ガーデン情報",
+			"Tab list: Garden level, copper, sowdust, composter and pests.", "タブリストのガーデンLv・コッパー・ソウダスト・コンポスター・害虫。", "r");
+	public static final Feature FARMING_CONTEST_TAB = f("farming.contest_tab", Category.FARMING, "Jacob's contest info", "ジェイコブコンテスト情報",
+			"The tab list's \"Jacob's Contest:\" widget (crops, your rank).", "タブリストの「Jacob's Contest:」欄（作物・順位）。", "r");
+
+	// ---------------------------------------------------------------- fishing
+	public static final Feature FISHING_SEA_CREATURE = f("fishing.sea_creature_alert", Category.FISHING, "Rare sea creature alert", "レア海の生物の通知",
+			"Title and sound when a Legendary or Mythic sea creature appears (names from SkyHanni-REPO).", "レジェンダリー/ミシックの海の生物が出たらタイトルと音（SkyHanni-REPOのデータ）。", "nr");
+	public static final Feature FISHING_TRACKER = f("fishing.tracker", Category.FISHING, "Fishing tracker", "釣りトラッカー",
+			"Sea creatures (by name) and treasure catches this session, per hour.", "このセッションの海の生物（名前別）とお宝の数・1時間あたり。", "nr");
+	public static final Feature FISHING_BOBBER = f("fishing.bobber_timer", Category.FISHING, "Bobber timer", "ウキのタイマー",
+			"Seconds since you cast your fishing rod.", "釣り竿を投げてからの秒数。", "");
+	public static final Feature FISHING_TROPHY_ALERT = f("fishing.trophy_alert", Category.FISHING, "Trophy fish alert", "トロフィーフィッシュ通知",
+			"Title for GOLD and DIAMOND trophy fish; all trophy fish are counted by the tracker.", "GOLD/DIAMONDのトロフィーフィッシュでタイトル表示（全種類をトラッカーで集計）。", "r");
+	public static final Feature FISHING_TROPHY_TAB = f("fishing.trophy_tab", Category.FISHING, "Trophy fish info", "トロフィーフィッシュ情報",
+			"The tab list's \"Trophy Fish:\" widget.", "タブリストの「Trophy Fish:」欄。", "");
 
 	// ---------------------------------------------------------------- combat
 	public static final Feature COMBAT_SLAYER_TRACKER = f("combat.slayer_tracker", Category.COMBAT, "Slayer tracker", "スレイヤートラッカー",
@@ -166,6 +225,14 @@ public final class Features {
 			"Title and sound for RARE / VERY RARE / CRAZY RARE / PET DROP messages.", "RARE DROP! などのメッセージでタイトルと音。", "r");
 	public static final Feature COMBAT_DROP_TRACKER = f("combat.drop_tracker", Category.COMBAT, "Drop tracker", "ドロップトラッカー",
 			"Counts the rare drops of this session.", "このセッションのレアドロップを集計します。", "");
+
+	// ---------------------------------------------------------------- dungeons
+	public static final Feature DUNGEONS_FILTER = f("dungeons.chat_filter", Category.DUNGEONS, "Dungeon chat filter", "ダンジョンのチャット整理",
+			"Hides healing, damage-taken, orb, tether and cooldown spam (never player chat).", "回復・被ダメージ・オーブ・クールダウン等のスパムを隠します（プレイヤーの発言は対象外）。", "r");
+	public static final Feature DUNGEONS_TIMER = f("dungeons.timer", Category.DUNGEONS, "Run timer", "ランタイマー",
+			"Floor, time elapsed and cleared % from the sidebar, plus when the boss room started.", "サイドバーの階層・経過時間・攻略率と、ボス部屋に入った時刻。", "r");
+	public static final Feature DUNGEONS_BOSS = f("dungeons.boss_alert", Category.DUNGEONS, "Boss room alert", "ボス部屋の通知",
+			"Title when the first [BOSS] line of the run appears.", "そのランで最初の[BOSS]の発言でタイトル表示。", "");
 
 	// ---------------------------------------------------------------- market
 	public static final Feature MARKET_SIDE_PANEL = f("market.side_panel", Category.MARKET, "AH / Bazaar flip panel", "AH・バザーのフリップ欄",
@@ -186,6 +253,12 @@ public final class Features {
 			"/skypilot remind 30m <text>: toast and sound when the time is up.", "/skypilot remind 30m <内容> で時間になったら通知。", "r");
 	public static final Feature TOOLS_WAYPOINTS = f("tools.custom_waypoints", Category.TOOLS, "Your waypoints", "自分のウェイポイント",
 			"/skypilot wp add <name> saves where you stand; wp show <name> draws a marker and a line to it.", "/skypilot wp add <名前> で現在地を保存、wp show で目印と線を表示。", "r");
+	public static final Feature TOOLS_TODO = f("tools.todo", Category.TOOLS, "To-do list", "やることリスト",
+			"/skypilot todo add <text> | done <n> | list | clear; open items show on the info HUD.", "/skypilot todo add <内容> など。未完了の項目を情報HUDに表示。", "r");
+	public static final Feature TOOLS_STOPWATCH = f("tools.stopwatch", Category.TOOLS, "Stopwatch", "ストップウォッチ",
+			"/skypilot timer start | lap | stop | reset, shown on the info HUD.", "/skypilot timer start / lap / stop / reset。情報HUDに表示。", "r");
+	public static final Feature TOOLS_LOOKUP = f("tools.lookup", Category.TOOLS, "Item lookup", "アイテム検索",
+			"/skypilot lookup <name> opens the item's page (value, recipes, drops).", "/skypilot lookup <名前> でアイテムのページ（価値・レシピ・ドロップ）を開く。", "nr");
 	public static final Feature TOOLS_SESSION = f("tools.session_tracking", Category.TOOLS, "Session tracking", "セッション記録",
 			"Coins and XP gained this session (kept on this computer).", "このセッションのコインとXPを記録（このPCのみ）。", "");
 	public static final Feature TOOLS_SESSION_UPLOAD = f("tools.session_upload", Category.TOOLS, "Upload sessions", "セッション送信",

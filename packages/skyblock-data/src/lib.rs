@@ -11,6 +11,7 @@ pub mod farms;
 pub mod hypixel;
 pub mod icons;
 pub mod locations;
+pub mod sea_creatures;
 pub mod neu;
 #[cfg(feature = "sync")]
 pub mod sync;
@@ -86,6 +87,7 @@ pub struct Registry {
     pub farms: Vec<FarmDesignDef>,
     /// Named places per island (SkyHanni-REPO) for guide waypoints.
     pub locations: locations::Locations,
+    pub sea_creatures: sea_creatures::SeaCreatures,
     pub meta: RegistryMeta,
     name_index: Vec<(String, String)>,
 }
@@ -164,7 +166,8 @@ impl Registry {
         };
         tracing::info!(items = items.len(), neu_files = neu.file_count, recipes = neu.recipes.len(), "registry loaded");
         let locations = locations::Locations::load(&paths.skyhanni_dir.join("island_graphs"));
-        Ok(Registry { items, skills, collections, election, neu, curated, farms, locations, meta, name_index })
+        let sea_creatures = sea_creatures::SeaCreatures::load(&paths.skyhanni_dir.join("SeaCreatures.json"));
+        Ok(Registry { items, skills, collections, election, neu, curated, farms, locations, sea_creatures, meta, name_index })
     }
 
     pub fn item(&self, id: &str) -> Option<&ItemDef> {

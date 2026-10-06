@@ -27,7 +27,6 @@ final class ChatHook {
 			return;
 		}
 		message = ChatFeatures.original(message);
-		ChatFeatures.onMessage(message.getString());
 		TranslationMode mode = sp.translationMode();
 		if (!mode.sendsAutomatically() || !sp.config().translation.disclosureAccepted || !sp.context().inSkyBlock()) return;
 		McText.Flattened flat = McText.flatten(message);

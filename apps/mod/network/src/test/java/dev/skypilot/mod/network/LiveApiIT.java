@@ -126,6 +126,8 @@ class LiveApiIT {
 			assertEquals(1_200_000L, cal.dayMs());
 			assertTrue(cal.events().stream().anyMatch(e -> "jacobs_contest".equals(e.id()) && Integer.valueOf(3).equals(e.everyDays())));
 			assertNotNull(api.price("ENCHANTED_DIAMOND", null).join().npcSell(), "NPC sell price from the item list");
+			assertEquals(0.0125, api.price("ENCHANTED_DIAMOND", null).join().bazaarTaxRate());
+			assertTrue(api.seaCreatures().join().creatures().size() >= 80);
 
 			// Per-user translation provider: the key goes in, only "…last4" comes back.
 			Dto.UserSettings before = api.userSettings().join();

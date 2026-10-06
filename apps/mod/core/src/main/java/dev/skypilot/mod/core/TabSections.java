@@ -19,9 +19,29 @@ public final class TabSections {
 
 	/** Entries below {@code header} (exact match after stripping), until a blank line or the next header. */
 	public static List<String> section(List<String> tabLines, String header) {
+		return section(tabLines, header, false);
+	}
+
+	/** Like {@link #section(List, String)}; the header line is kept too when it carries data ("Jacob's Contest: 12m left"). */
+	public static List<String> sectionStartingWith(List<String> tabLines, String headerPrefix) {
+		return section(tabLines, headerPrefix, true);
+	}
+
+	/** First line starting with {@code prefix} ("Bank: "), stripped, or null. */
+	public static String line(List<String> tabLines, String prefix) {
+		for (String raw : tabLines) {
+			String s = Text.strip(raw).strip();
+			if (s.startsWith(prefix)) return s;
+		}
+		return null;
+	}
+
+	private static List<String> section(List<String> tabLines, String header, boolean prefix) {
 		List<String> out = new ArrayList<>();
 		for (int i = 0; i < tabLines.size(); i++) {
-			if (!Text.strip(tabLines.get(i)).strip().equals(header)) continue;
+			String head = Text.strip(tabLines.get(i)).strip();
+			if (prefix ? !head.startsWith(header) : !head.equals(header)) continue;
+			if (prefix && !head.equals(header) && head.length() > header.length()) out.add(head);
 			for (int j = i + 1; j < tabLines.size(); j++) {
 				String raw = Text.strip(tabLines.get(j));
 				// a blank cell ends the widget, so does the next widget's header ("Powders:")

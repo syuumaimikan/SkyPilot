@@ -83,7 +83,8 @@ final class PriceCheck {
 		boolean craft = Feat.on(Features.TOOLTIP_CRAFT);
 		boolean whole = Feat.on(Features.TOOLTIP_STACK) && stack.getCount() > 1;
 		boolean ah = Feat.on(Features.TOOLTIP_AH_COMPARE);
-		if (!(price || npc || craft || whole || ah)) return;
+		boolean margin = Feat.on(Features.TOOLTIP_BAZAAR_MARGIN);
+		if (!(price || npc || craft || whole || ah || margin)) return;
 		Cached c;
 		synchronized (RESULTS) {
 			c = RESULTS.get(item.key());
@@ -103,6 +104,9 @@ final class PriceCheck {
 		}
 		if (craft && r.craftCost() != null && r.craftCost() > 0) {
 			lines.add(Component.literal(l.t("  Craft cost ", "  クラフト費用 ") + Text.coins(r.craftCost())).withStyle(ChatFormatting.GRAY));
+		}
+		if (margin && r.bazaarBuy() != null && r.bazaarSell() != null && r.bazaarSell() > 0) {
+			lines.add(bazaarMargin(r.bazaarSell(), r.bazaarBuy(), r.bazaarTaxRate() == null ? 0 : r.bazaarTaxRate(), l));
 		}
 		if (ah && r.estimatedValue() != null && r.estimatedValue() > 0) {
 			Double bin = binPrice(lines);
@@ -131,6 +135,20 @@ final class PriceCheck {
 		String text = pct < 0 ? l.t(String.format(java.util.Locale.ROOT, "  BIN %.0f%% below value", -pct), String.format(java.util.Locale.ROOT, "  BINは推定価値より %.0f%% 安い", -pct))
 				: l.t(String.format(java.util.Locale.ROOT, "  BIN %.0f%% above value", pct), String.format(java.util.Locale.ROOT, "  BINは推定価値より %.0f%% 高い", pct));
 		return Component.literal(text).withStyle(pct < 0 ? ChatFormatting.GREEN : ChatFormatting.RED);
+	}
+
+	/**
+	 * Buy order at the top buy price (the instant-sell price), sell offer at the lowest sell
+	 * price (the instant-buy price), minus the Bazaar tax on the sale.
+	 */
+	static Component bazaarMargin(double buyOrder, double sellOffer, double taxRate, Lang l) {
+		double profit = sellOffer * (1 - taxRate) - buyOrder;
+		double pct = profit / buyOrder * 100;
+		// cheap products have margins of a few coins: keep a decimal there
+		String amount = Math.abs(profit) < 100 ? String.format(java.util.Locale.ROOT, "%.1f", profit) : Text.coins(profit);
+		String text = l.t("  Flip margin ", "  差益 ") + (profit >= 0 ? "+" : "") + amount + String.format(java.util.Locale.ROOT, " (%.1f%%)", pct)
+				+ l.t(" after tax", "（税引後）");
+		return Component.literal(text).withStyle(profit > 0 ? ChatFormatting.GREEN : ChatFormatting.RED);
 	}
 
 	/** The blank-named glass panes Hypixel uses to fill menus. */

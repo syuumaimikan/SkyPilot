@@ -39,10 +39,31 @@ final class ChatFeatures {
 	private ChatFeatures() {
 	}
 
-	/** {@code ClientReceiveMessageEvents.ALLOW_GAME}: false hides the line from this client's chat. */
+	/** Recent server lines for /skypilot find (memory only, cleared on disconnect). */
+	record Logged(long at, String text, boolean hidden) {
+	}
+
+	static final java.util.Deque<Logged> LOG = new java.util.ArrayDeque<>();
+	private static final int LOG_SIZE = 500;
+
+	/**
+	 * {@code ClientReceiveMessageEvents.ALLOW_GAME}: every server line passes here first, so the
+	 * trackers also see lines a filter hides; false hides the line from this client's chat.
+	 */
 	static boolean allow(Component message, boolean overlay) {
-		if (overlay) return true;
-		Optional<ChatRules.Hide> group = ChatRules.hideGroup(message.getString());
+		if (overlay || SkyPilot.get() == null) return true;
+		String plain = message.getString();
+		onMessage(plain);
+		boolean show = shown(plain);
+		if (Feat.on(Features.CHAT_SEARCH)) {
+			LOG.addLast(new Logged(System.currentTimeMillis(), plain, !show));
+			while (LOG.size() > LOG_SIZE) LOG.pollFirst();
+		}
+		return show;
+	}
+
+	private static boolean shown(String plain) {
+		Optional<ChatRules.Hide> group = ChatRules.hideGroup(plain);
 		if (group.isEmpty()) return true;
 		Features.Feature f = switch (group.get()) {
 			case LOBBY -> Features.CHAT_HIDE_LOBBY;
@@ -51,6 +72,10 @@ final class ChatFeatures {
 			case COMBO -> Features.CHAT_HIDE_COMBO;
 			case ABILITY -> Features.CHAT_HIDE_ABILITY;
 			case GEXP -> Features.CHAT_HIDE_GEXP;
+			case SACKS -> Features.CHAT_HIDE_SACKS;
+			case SEPARATOR -> Features.CHAT_HIDE_SEPARATORS;
+			case MINING_CHEST -> Features.MINING_HIDE_CHESTS;
+			case DUNGEON -> Features.DUNGEONS_FILTER;
 		};
 		return !Feat.on(f);
 	}
@@ -85,6 +110,12 @@ final class ChatFeatures {
 		if (Feat.on(Features.CHAT_MENTION) && ChatRules.mentions(plain, me)) {
 			suffix.append(Component.literal(" ◀").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
 			Feat.ping(2.0f);
+		}
+		if (Feat.on(Features.CHAT_KEYWORDS) && !sp.config().keywords.isEmpty()) {
+			ChatRules.keyword(plain, sp.config().keywords).ifPresent(k -> {
+				suffix.append(Component.literal(" ★ " + k).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
+				Feat.ping(1.8f);
+			});
 		}
 		if (Feat.on(Features.CHAT_COORDS)) {
 			ChatRules.coords(plain).ifPresent(xyz -> {
@@ -143,8 +174,9 @@ final class ChatFeatures {
 		}
 	}
 
-	/** {@code GAME}: server lines (original text) for alerts and trackers. */
+	/** Server lines (original text) for alerts and trackers; called from {@link #allow}. */
 	static void onMessage(String plain) {
+		Activity.chat(plain);
 		Lang l = SkyPilot.get().lang();
 		ChatRules.drop(plain).ifPresent(d -> {
 			Trackers.drop(d.item());
@@ -163,6 +195,7 @@ final class ChatFeatures {
 	}
 
 	static void clear() {
+		LOG.clear();
 		lastKey = null;
 		lastShown = null;
 		lastOriginal = null;

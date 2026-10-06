@@ -192,3 +192,12 @@ fn guide_waypoints_resolve_to_skyhanni_locations() {
         }
     }
 }
+
+#[test]
+fn sea_creatures_from_skyhanni_repo() {
+    let r = registry();
+    assert!(r.sea_creatures.all.len() >= 80, "{}", r.sea_creatures.all.len());
+    let squid = r.sea_creatures.by_message("Pitch darkness reveals a Night Squid.").expect("Night Squid");
+    assert_eq!(squid.rarity, "COMMON");
+    assert!(r.sea_creatures.all.iter().any(|c| c.rarity == "MYTHIC"));
+}

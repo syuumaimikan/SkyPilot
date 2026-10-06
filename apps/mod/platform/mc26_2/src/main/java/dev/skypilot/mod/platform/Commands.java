@@ -169,6 +169,12 @@ final class Commands {
 				{"/skypilot wp add|show|remove <name> | list | hide", l.t("your own waypoints", "自分のウェイポイント")},
 				{"/skypilot en <日本語>", l.t("Japanese → English into the chat box", "日本語→英語にしてチャット欄へ")},
 				{"/skypilot drops [reset]", l.t("rare drops / slayer this session", "このセッションのレアドロップ・スレイヤー")},
+				{"/skypilot keyword add|remove <word> | list", l.t("chat keyword alerts", "チャットのキーワード通知")},
+				{"/skypilot find <text>", l.t("search the last 500 chat lines", "直近500行のチャットを検索")},
+				{"/skypilot todo add <text> | done <n> | list | clear", l.t("to-do list", "やることリスト")},
+				{"/skypilot timer start|lap|stop|reset", l.t("stopwatch", "ストップウォッチ")},
+				{"/skypilot lookup <name>", l.t("open an item's page", "アイテムのページを開く")},
+				{"/skypilot highlight <price>", l.t("outline items worth this much", "この価格以上を縁取り")},
 				{"/skypilot server <url>", l.t("SkyPilot server address", "SkyPilotサーバーのURL")},
 		};
 		for (String[] r : rows) {

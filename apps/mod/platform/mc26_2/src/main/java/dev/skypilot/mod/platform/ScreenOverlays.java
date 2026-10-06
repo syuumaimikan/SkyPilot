@@ -22,7 +22,7 @@ import java.util.WeakHashMap;
  * to a chest can't drop the item on the cursor.
  */
 final class ScreenOverlays {
-	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, String flipKind) {
+	private record Panels(ItemBrowser browser, ChestValue chest, VisitorPanel visitor, AuctionHighlight auction, String flipKind) {
 	}
 
 	private static final Map<Screen, Panels> PANELS = new WeakHashMap<>();
@@ -33,7 +33,8 @@ final class ScreenOverlays {
 	static void register() {
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			if (!(screen instanceof AbstractContainerScreen<?> container) || !(screen instanceof ContainerScreenAccessor)) return;
-			Panels p = new Panels(new ItemBrowser(screen), new ChestValue(container), new VisitorPanel(container), ContainerPanel.kindOf(screen.getTitle().getString()));
+			Panels p = new Panels(new ItemBrowser(screen), new ChestValue(container), new VisitorPanel(container), new AuctionHighlight(container),
+					ContainerPanel.kindOf(screen.getTitle().getString()));
 			PANELS.put(screen, p);
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
 				ContainerScreenAccessor box = (ContainerScreenAccessor) s;
@@ -46,6 +47,7 @@ final class ScreenOverlays {
 				} else if (p.visitor().layout()) {
 					p.visitor().render(g, font);
 				}
+				p.auction().render(g);
 				ItemIcons.flush();
 			});
 			ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
@@ -58,7 +60,8 @@ final class ScreenOverlays {
 				boolean used = p.browser().scroll(mx, my, sy) || (p.flipKind() == null && p.chest().layout() && p.chest().scroll(mx, my, sy));
 				return !used;
 			});
-			ScreenKeyboardEvents.allowKeyPress(screen).register((s, event) -> !p.browser().key(event) && !lookupKey(container, event.key()));
+			ScreenKeyboardEvents.allowKeyPress(screen).register((s, event) -> !p.browser().key(event) && !lookupKey(container, event.key())
+					&& !(event.key() == InputConstants.KEY_C && event.hasControlDown() && copyId(container)));
 			ScreenKeyboardEvents.allowCharType(screen).register((s, event) -> !p.browser().charTyped(event));
 		});
 	}
@@ -77,6 +80,24 @@ final class ScreenOverlays {
 		Minecraft mc = Minecraft.getInstance();
 		mc.execute(() -> mc.gui.setScreen(new ItemDetailScreen(screen, item.skyblockId(), tab)));
 		return true;
+	}
+
+	/** Ctrl+C over a SkyBlock item copies its id (inventory.copy_id). */
+	static boolean copyId(AbstractContainerScreen<?> screen) {
+		if (!Feat.on(Features.INV_COPY_ID)) return false;
+		Slot hovered = ((ContainerScreenAccessor) screen).skypilot$hoveredSlot();
+		PriceCheck.Item item = hovered == null ? null : PriceCheck.item(hovered.getItem());
+		if (item == null) return false;
+		Minecraft mc = Minecraft.getInstance();
+		mc.keyboardHandler.setClipboard(item.skyblockId());
+		McText.info(SkyPilot.get().lang().t("Copied ", "コピーしました: ") + item.skyblockId());
+		return true;
+	}
+
+	/** For tests. */
+	static AuctionHighlight auctionOf(Screen screen) {
+		Panels p = PANELS.get(screen);
+		return p == null ? null : p.auction();
 	}
 
 	/** For tests. */

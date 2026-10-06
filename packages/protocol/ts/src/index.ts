@@ -108,6 +108,8 @@ export type { ModPlanStep } from "./generated/ModPlanStep";
 export type { ModPriceRequest } from "./generated/ModPriceRequest";
 export type { ModPriceResponse } from "./generated/ModPriceResponse";
 export type { ModRecipe } from "./generated/ModRecipe";
+export type { ModSeaCreature } from "./generated/ModSeaCreature";
+export type { ModSeaCreatures } from "./generated/ModSeaCreatures";
 export type { ModStack } from "./generated/ModStack";
 export type { ModTextResponse } from "./generated/ModTextResponse";
 export type { ModValue } from "./generated/ModValue";

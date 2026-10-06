@@ -61,10 +61,12 @@ public final class SkyPilotClient implements ClientModInitializer {
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
 			while (openMenu.consumeClick()) mc.gui.setScreen(new MenuScreen(null, null));
 			FarmBuilder.tick(mc);
+			Activity.tick(mc);
 			if (++ticks % 20 == 0) {
 				SkyPilot.get().tickSecond(mc);
 				FlipAlerts.tickSecond(mc);
 				Trackers.tickSecond(mc);
+				Activity.tickSecond(mc);
 				Timers.tickSecond(mc);
 			}
 		});
@@ -73,6 +75,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 			SkyPilot.get().endSession();
 			ClickTranslate.clear();
 			ChatFeatures.clear();
+			Activity.disconnected();
 		});
 		ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> SkyPilot.get().shutdown());
 

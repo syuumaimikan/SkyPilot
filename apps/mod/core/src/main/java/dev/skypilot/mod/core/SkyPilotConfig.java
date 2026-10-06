@@ -26,6 +26,24 @@ public final class SkyPilotConfig {
 	public java.util.List<Watch> watchlist = new java.util.ArrayList<>();
 	/** The player's own waypoints (tools.custom_waypoints). */
 	public java.util.List<SavedWaypoint> waypoints = new java.util.ArrayList<>();
+	/** Words that mark a chat line (chat.keywords). */
+	public java.util.List<String> keywords = new java.util.ArrayList<>();
+	/** The player's to-do list (tools.todo). */
+	public java.util.List<Todo> todos = new java.util.ArrayList<>();
+	/** Items worth at least this much are outlined (inventory.valuable_highlight). */
+	public double valuableThreshold = 1_000_000;
+
+	public static final class Todo {
+		public String text;
+		public boolean done;
+
+		public Todo() {
+		}
+
+		public Todo(String text) {
+			this.text = text;
+		}
+	}
 
 	public boolean on(Features.Feature f) {
 		return Features.isOn(this, f);
@@ -155,6 +173,13 @@ public final class SkyPilotConfig {
 		waypoints.removeIf(w -> w == null || w.name == null || w.name.isBlank() || w.name.length() > 32 || w.island == null
 				|| !Double.isFinite(w.x) || !Double.isFinite(w.y) || !Double.isFinite(w.z));
 		while (waypoints.size() > MAX_WAYPOINTS) waypoints.remove(waypoints.size() - 1);
+		if (keywords == null) keywords = new java.util.ArrayList<>();
+		keywords.removeIf(k -> k == null || k.isBlank() || k.length() > 32);
+		while (keywords.size() > 20) keywords.remove(keywords.size() - 1);
+		if (todos == null) todos = new java.util.ArrayList<>();
+		todos.removeIf(t -> t == null || t.text == null || t.text.isBlank() || t.text.length() > 80);
+		while (todos.size() > 30) todos.remove(todos.size() - 1);
+		if (!(valuableThreshold > 0) || Double.isInfinite(valuableThreshold)) valuableThreshold = 1_000_000;
 		if (translation.mode == null) translation.mode = TranslationModeSetting.OFF;
 		hud.scale = clamp(hud.scale, 0.5, 2.5);
 		hud.opacity = clamp(hud.opacity, 0.0, 1.0);

@@ -174,4 +174,40 @@ class FeaturesTest {
 		assertEquals(12, o.copper().getAsDouble());
 		assertNull(VisitorOffer.parse(List.of("Just lore")));
 	}
+
+	@Test
+	void secondBatchRules() {
+		assertTrue(Features.all().size() >= 85, "features: " + Features.all().size());
+		assertEquals(ChatRules.Hide.SACKS, ChatRules.hideGroup("[Sacks] +123 items. (Last 30s.)").orElseThrow());
+		assertEquals(ChatRules.Hide.SEPARATOR, ChatRules.hideGroup("▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬").orElseThrow());
+		assertTrue(ChatRules.hideGroup("-----").isEmpty(), "short dashes are not separators");
+		assertEquals(ChatRules.Hide.MINING_CHEST, ChatRules.hideGroup("You uncovered a treasure chest!").orElseThrow());
+		assertEquals(ChatRules.Hide.MINING_CHEST, ChatRules.hideGroup("You need a tool with a Breaking Power of 6 to mine Ruby Gemstone Block! Speak to Fragilis by the entrance to the Crystal Hollows to learn more!").orElseThrow());
+		assertEquals(ChatRules.Hide.DUNGEON, ChatRules.hideGroup("The Lost Adventurer hit you for 1,200 damage!").orElseThrow());
+		assertEquals(ChatRules.Hide.DUNGEON, ChatRules.hideGroup("Ragnarok is ready to use! Press DROP to activate it!").orElseThrow());
+		assertTrue(ChatRules.hideGroup("Party > [MVP+] Steve: The boss hit you for 5 damage!").isEmpty(), "player chat is never dungeon noise");
+
+		assertEquals("GOOD CATCH", ChatRules.treasureCatch("GOOD CATCH! You found a Fish Bait.").orElseThrow());
+		assertEquals(new ChatRules.Trophy("Lavahorse", "GOLD"), ChatRules.trophy(" TROPHY FISH! You caught a Lavahorse GOLD!").orElseThrow());
+		assertEquals("Soul Fish", ChatRules.trophy("TROPHY FISH! You caught a Soul Fish BRONZE!").orElseThrow().fish());
+		assertEquals("Maxor", ChatRules.boss("[BOSS] Maxor: WELL WELL WELL").orElseThrow());
+		assertTrue(ChatRules.chestOpened("You have successfully picked the lock on this chest!"));
+		assertEquals(new ChatRules.Powder("Gemstone", 537), ChatRules.chestPowder("    Gemstone Powder x537").orElseThrow());
+		assertEquals("carry", ChatRules.keyword("Party > Alex: need a carry for f7", List.of("lf", "carry")).orElseThrow());
+		assertTrue(ChatRules.keyword("Alex: carrying", List.of("carry")).isEmpty());
+
+		List<String> tab = List.of("Profile: Mango ♲", "SB Level: [250] 12/100 XP", "Bank: 12M / 4M", "Jacob's Contest: 12m left", " ○ Wheat", " ☘ Cactus", "", "Forges:",
+				" 1) Refined Diamond: 3h 20m", " 2) Ready!", "Pet:", " [Lvl 100] Ender Dragon", " 2,345,678/25,353,230 XP");
+		assertEquals("Bank: 12M / 4M", TabSections.line(tab, "Bank: "));
+		assertNull(TabSections.line(tab, "Interest: "));
+		assertEquals(List.of("Jacob's Contest: 12m left", "○ Wheat", "☘ Cactus"), TabSections.sectionStartingWith(tab, "Jacob's Contest:"));
+		assertEquals(List.of("1) Refined Diamond: 3h 20m", "2) Ready!"), TabSections.section(tab, "Forges:"));
+		assertEquals("[Lvl 100] Ender Dragon", TabSections.section(tab, "Pet:").get(0));
+
+		DungeonInfo d = DungeonInfo.parse(List.of("§711/15/24 §8m4F", "§7⏣ §cThe Catacombs §7(F7)", "Time Elapsed: §a05m 12s", "Cleared: §c45% §8(123)"));
+		assertEquals("F7", d.floor());
+		assertEquals(312, d.elapsedSeconds());
+		assertEquals(45, d.clearedPercent());
+		assertNull(DungeonInfo.parse(List.of("Purse: 1,000")));
+	}
 }

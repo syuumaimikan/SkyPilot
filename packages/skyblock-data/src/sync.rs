@@ -150,6 +150,19 @@ pub async fn sync_skyhanni(paths: &DataPaths) -> anyhow::Result<()> {
             Err(e) => tracing::warn!(island, error = %e, "SkyHanni island graph not updated"),
         }
     }
+    // sea creatures: the chat line announcing each one, its rarity and XP
+    match c.get(format!("{SKYHANNI_RAW}/constants/SeaCreatures.json")).send().await {
+        Ok(resp) if resp.status().is_success() => match resp.bytes().await.map(|b| serde_json::from_slice::<serde_json::Value>(&b)) {
+            Ok(Ok(v)) if !crate::sea_creatures::SeaCreatures::parse(&v).all.is_empty() => {
+                let tmp = paths.skyhanni_dir.join("SeaCreatures.json.tmp");
+                tokio::fs::write(&tmp, serde_json::to_vec(&v)?).await?;
+                tokio::fs::rename(&tmp, paths.skyhanni_dir.join("SeaCreatures.json")).await?;
+            }
+            _ => tracing::warn!("SkyHanni SeaCreatures.json unreadable; keeping the previous file"),
+        },
+        Ok(resp) => tracing::warn!(status = %resp.status(), "SkyHanni SeaCreatures.json not updated"),
+        Err(e) => tracing::warn!(error = %e, "SkyHanni SeaCreatures.json not updated"),
+    }
     if let Ok(resp) = c.get(format!("{SKYHANNI_RAW}/LICENSE")).send().await {
         if let Ok(text) = resp.text().await {
             let _ = tokio::fs::write(paths.skyhanni_dir.join("LICENSE"), text).await;
@@ -164,7 +177,7 @@ pub async fn sync_skyhanni(paths: &DataPaths) -> anyhow::Result<()> {
 
 /// True when the SkyHanni location data has never been downloaded.
 pub fn needs_skyhanni(paths: &DataPaths) -> bool {
-    !paths.skyhanni_dir.join("island_graphs/HUB.json").exists()
+    !paths.skyhanni_dir.join("island_graphs/HUB.json").exists() || !paths.skyhanni_dir.join("SeaCreatures.json").exists()
 }
 
 /// True when the cache is missing or older than `max_age`.

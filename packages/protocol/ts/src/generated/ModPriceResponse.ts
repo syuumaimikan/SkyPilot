@@ -8,4 +8,8 @@ npcSell: number | null,
 /**
  * Cost to craft one from Bazaar/NPC-priced ingredients.
  */
-craftCost: number | null, };
+craftCost: number | null, 
+/**
+ * Bazaar sales tax (curated, Hypixel SkyBlock Wiki) for Bazaar products.
+ */
+bazaarTaxRate: number | null, };

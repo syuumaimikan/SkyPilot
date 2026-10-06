@@ -621,6 +621,106 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				Trackers.reset();
 			});
 
+			// ---------------------------------------------------------------- second feature batch
+			ctx.runOnClient(mc -> {
+				var c = SkyPilot.get().config();
+				for (var f : List.of(dev.skypilot.mod.core.Features.CHAT_HIDE_SACKS, dev.skypilot.mod.core.Features.CHAT_HIDE_SEPARATORS,
+						dev.skypilot.mod.core.Features.CHAT_KEYWORDS, dev.skypilot.mod.core.Features.CHAT_SEARCH, dev.skypilot.mod.core.Features.MINING_HIDE_CHESTS,
+						dev.skypilot.mod.core.Features.MINING_CHEST_TRACKER, dev.skypilot.mod.core.Features.DUNGEONS_FILTER, dev.skypilot.mod.core.Features.DUNGEONS_TIMER,
+						dev.skypilot.mod.core.Features.DUNGEONS_BOSS, dev.skypilot.mod.core.Features.FISHING_SEA_CREATURE, dev.skypilot.mod.core.Features.FISHING_TRACKER,
+						dev.skypilot.mod.core.Features.FISHING_TROPHY_ALERT, dev.skypilot.mod.core.Features.HUD_PET, dev.skypilot.mod.core.Features.MINING_FORGES,
+						dev.skypilot.mod.core.Features.FARMING_GARDEN, dev.skypilot.mod.core.Features.HUD_PLAYTIME, dev.skypilot.mod.core.Features.HUD_PURSE,
+						dev.skypilot.mod.core.Features.HUD_COMPASS, dev.skypilot.mod.core.Features.TOOLS_TODO, dev.skypilot.mod.core.Features.TOOLS_STOPWATCH,
+						dev.skypilot.mod.core.Features.INV_AH_HIGHLIGHT, dev.skypilot.mod.core.Features.TOOLTIP_BAZAAR_MARGIN)) {
+					dev.skypilot.mod.core.Features.set(c, f, true);
+				}
+				c.keywords.add("carry");
+				Activity.setSeaCreatures(List.of(new Dto.SeaCreature("Sea Emperor", "WATER", "The Sea Emperor arises from the depths.", "LEGENDARY", 2000.0)));
+				Activity.tab = List.of("Pet:", " [Lvl 100] Ender Dragon", " 2,345,678/25,353,230 XP", "", "Forges:", " 1) Refined Diamond: 3h 20m", " 2) Ready!", "",
+						"Garden Level: XV", "Copper: 1,234");
+			});
+			// a dungeon sidebar: floor, time elapsed, cleared %
+			world.getServer().runOnServer(server -> {
+				ServerScoreboard sb = server.getScoreboard();
+				Objective o = sb.getObjective("sp_test");
+				sb.getOrCreatePlayerScore(ScoreHolder.forNameOnly("⏣ The Catacombs (F7)"), o).set(6);
+				sb.getOrCreatePlayerScore(ScoreHolder.forNameOnly("Time Elapsed: 05m 12s"), o).set(5);
+				sb.getOrCreatePlayerScore(ScoreHolder.forNameOnly("Cleared: 45% (123)"), o).set(4);
+				sb.resetSinglePlayerScore(ScoreHolder.forNameOnly("Purse: 1,234,567"), o);
+				sb.getOrCreatePlayerScore(ScoreHolder.forNameOnly("Purse: 1,300,000"), o).set(2);
+			});
+			ctx.waitFor(mc -> Activity.dungeon != null && "F7".equals(Activity.dungeon.floor()), 100);
+			world.getServer().runOnServer(server -> {
+				var pl = server.getPlayerList();
+				for (String line : List.of("[Sacks] +123 items. (Last 30s.)", "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "You uncovered a treasure chest!",
+						"You have successfully picked the lock on this chest!", "    Gemstone Powder x537", "The Lost Adventurer hit you for 1,200 damage!",
+						"GOOD CATCH! You found a Fish Bait.", " TROPHY FISH! You caught a Lavahorse GOLD!", "Party > Alex: need a carry for f7",
+						"[BOSS] Maxor: WELL WELL WELL", "The Sea Emperor arises from the depths.")) {
+					pl.broadcastSystemMessage(Component.literal(line), false);
+				}
+			});
+			ctx.waitTicks(5);
+			ctx.runOnClient(mc -> {
+				check(shown(mc, "[Sacks]") == null, "sack summary hidden");
+				check(shown(mc, "▬▬▬▬") == null, "separator hidden");
+				check(shown(mc, "uncovered a treasure chest") == null && shown(mc, "picked the lock") == null, "treasure chest spam hidden");
+				check(shown(mc, "hit you for 1,200 damage") == null, "dungeon damage line hidden");
+				check(shown(mc, "need a carry").getString().contains("★ carry"), "keyword marked");
+				check(Activity.chests == 1 && Activity.CHEST_POWDER.get("Gemstone") == 537, "hidden chest line still counted");
+				check(Activity.seaCreatureTotal == 1 && Activity.SEA_CREATURES.get("Sea Emperor") == 1, "sea creature recognised");
+				check(Activity.treasureCatches == 1 && Activity.TROPHIES.get("GOLD") == 1, "treasure and trophy counted");
+				check("Maxor".equals(Activity.bossName) && Activity.bossElapsed == 312, "boss room split at 05m 12s");
+				check(Activity.purseDelta == 1_300_000 - 1_234_567, "purse change: " + Activity.purseDelta);
+				check(ChatFeatures.LOG.stream().anyMatch(e -> e.hidden() && e.text().startsWith("[Sacks]")), "chat search keeps hidden lines");
+				mc.player.connection.sendCommand("skypilot todo add Buy a Hyperion");
+				mc.player.connection.sendCommand("skypilot timer start");
+				mc.player.connection.sendCommand("skypilot find carry");
+				// the test world has no Hypixel tab list; the per-second tick reads the real one, so set it just before
+				Activity.tab = List.of("Pet:", " [Lvl 100] Ender Dragon", " 2,345,678/25,353,230 XP", "", "Forges:", " 1) Refined Diamond: 3h 20m", " 2) Ready!", "",
+						"Garden Level: XV", "Copper: 1,234");
+				List<dev.skypilot.mod.hud.HudRow> rows = InfoHud.rows(SkyPilot.get(), mc, System.currentTimeMillis());
+				check(rows.stream().anyMatch(r -> r.text().contains("[Lvl 100] Ender Dragon")), "pet from the tab list");
+				check(rows.stream().anyMatch(r -> r.text().contains("Refined Diamond")), "forges from the tab list");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("F7") && r.text().contains("45%")), "dungeon timer line");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Sea creatures 1")), "fishing tracker line");
+				check(rows.stream().anyMatch(r -> r.text().startsWith("Chests 1")), "chest tracker line");
+				check(PriceCheck.bazaarMargin(100, 120, 0.0125, dev.skypilot.mod.core.Lang.EN).getString().contains("+18.5"), "bazaar margin after tax");
+			});
+			ctx.waitTicks(25);
+			ctx.runOnClient(mc -> check(shown(mc, "Buy a Hyperion") != null && SkyPilot.get().config().todos.size() == 1, "todo added"));
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-features-2"));
+			// auction browser: a listing far below its value gets a green outline
+			ctx.setScreen(() -> {
+				Minecraft mc = Minecraft.getInstance();
+				ChestMenu menu = ChestMenu.sixRows(5, mc.player.getInventory());
+				ItemStack cheap = skyblockItem(Items.IRON_SWORD, "HYPERION", 1);
+				cheap.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Seller: Alex"), Component.literal("Buy it now: 600,000,000 coins"))));
+				ItemStack dear = skyblockItem(Items.DIAMOND, "ENCHANTED_DIAMOND", 1);
+				dear.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Buy it now: 9,000 coins"))));
+				menu.getSlot(11).set(cheap);
+				menu.getSlot(12).set(dear);
+				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Auctions Browser"));
+			});
+			ctx.waitTicks(2);
+			ctx.runOnClient(mc -> {
+				AuctionHighlight a = ScreenOverlays.auctionOf(mc.gui.screen());
+				check(a != null, "auction highlight attached");
+				a.setValues(java.util.Map.of(11, 800_000_000.0, 12, 5_000.0));
+				check(AuctionHighlight.verdict(600e6, 800e6) == -1 && AuctionHighlight.verdict(9_000, 5_000) == 1 && AuctionHighlight.verdict(100, 100) == 0, "deal verdicts");
+			});
+			ctx.waitTicks(2);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-auction-deals"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> {
+				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
+				SkyPilot.get().config().priceTooltip = true;
+				SkyPilot.get().config().hud.enabled = true;
+				SkyPilot.get().config().keywords.clear();
+				SkyPilot.get().config().todos.clear();
+				Activity.reset();
+				Activity.tab = List.of();
+			});
+
 			// SkyBlock item id from the 26.2 custom_data component.
 			ctx.runOnClient(mc -> {
 				ItemStack stack = new ItemStack(Items.GOLDEN_SWORD);

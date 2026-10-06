@@ -76,6 +76,28 @@ pub struct ModPriceResponse {
     pub npc_sell: Option<f64>,
     /// Cost to craft one from Bazaar/NPC-priced ingredients.
     pub craft_cost: Option<f64>,
+    /// Bazaar sales tax (curated, Hypixel SkyBlock Wiki) for Bazaar products.
+    pub bazaar_tax_rate: Option<f64>,
+}
+
+/// A sea creature and the chat line announcing it (SkyHanni-REPO, MIT).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModSeaCreature {
+    pub name: String,
+    pub area: String,
+    pub message: String,
+    pub rarity: String,
+    pub fishing_xp: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct ModSeaCreatures {
+    pub creatures: Vec<ModSeaCreature>,
+    pub attribution: String,
 }
 
 /// SkyBlock calendar for the mod's clock and event timers (constants from the curated registry).

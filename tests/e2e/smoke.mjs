@@ -131,6 +131,12 @@ async function main() {
     JSON.stringify(da),
   );
   ok("price has NPC sell price", typeof modPrice.json?.npcSell === "number", JSON.stringify(modPrice.json));
+  ok("bazaar price has the tax rate", modPrice.json?.bazaarTaxRate === 0.0125);
+  const sea = await req("GET", "/api/mod/sea-creatures");
+  ok(
+    "sea creatures (SkyHanni-REPO)",
+    sea.json?.creatures?.length >= 80 && sea.json.creatures.some((c) => c.rarity === "MYTHIC") && sea.json.attribution.includes("SkyHanni-REPO"),
+  );
   const gear = await req("GET", "/api/mod/gear?lang=ja", undefined, bearer);
   ok("mod gear", gear.status === 200 && Array.isArray(gear.json?.sections));
   // Per-user translation provider: keys are stored encrypted and only "…last4" comes back.

@@ -29,6 +29,9 @@ combat automation. Every in-game action is performed by the player.
 | R / U lookup keys | the hovered item | opens SkyPilot's item page (the window stays open) | **off** |
 | Garden visitor cost | the visitor menu's offer lore | a cost panel; accepting stays the player's click | **off** |
 | Watchlist / reminders / calculator / own waypoints | SkyPilot prices, the player's input | toasts, chat lines, a static marker at a saved spot | **off** |
+| Fishing / dungeon / mining trackers and alerts | chat lines, the sidebar, tab list widgets, the player's own fishing hook | HUD lines, titles and sounds; nothing about other players or hidden entities | **off** |
+| Auction deal / valuable item outlines | listings and items in the open window | coloured outlines; buying stays the player's click | **off** |
+| Ctrl+C item ID, to-do, stopwatch, lookup, chat search | the hovered item, the player's input, the chat lines already received | clipboard, chat lines, HUD lines | **off** |
 | Write in Japanese (`/skypilot en`) | the text the player typed | JA→EN translation put into the chat box; the player sends it | **off** (consent) |
 | Translation provider (settings) | - | sends the chosen provider and, if entered, the player's own DeepL/Anthropic key to the SkyPilot server only (stored encrypted, shown back as `…last4`) | server's provider |
 | Commands `/skypilot …` | - | client-side chat output, settings | - |

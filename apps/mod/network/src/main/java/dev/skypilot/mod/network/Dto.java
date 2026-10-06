@@ -19,7 +19,14 @@ public final class Dto {
 	}
 
 	public record PriceResponse(String skyblockId, String name, Double estimatedValue, Double median, Double lowestBin, Double bazaarBuy, Double bazaarSell,
-			Double salesPerDay, Double confidence, String confidenceLabel, String priceKey, Long ageSeconds, Double npcSell, Double craftCost) {
+			Double salesPerDay, Double confidence, String confidenceLabel, String priceKey, Long ageSeconds, Double npcSell, Double craftCost, Double bazaarTaxRate) {
+	}
+
+	/** A sea creature and the chat line announcing it (SkyHanni-REPO data, via the SkyPilot server). */
+	public record SeaCreature(String name, String area, String message, String rarity, Double fishingXp) {
+	}
+
+	public record SeaCreatures(List<SeaCreature> creatures, String attribution) {
 	}
 
 	/** SkyBlock calendar constants (from the server's curated registry) and the next events. */

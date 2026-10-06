@@ -221,6 +221,11 @@ public final class ApiClient {
 		return request("POST", "/api/me/settings/translation/test", "{}", true).thenApply(r -> parse(r, Dto.TranslationTest.class));
 	}
 
+	/** Sea creatures and their chat lines (public data, cached 1 hour). */
+	public CompletableFuture<Dto.SeaCreatures> seaCreatures() {
+		return getPublic("/api/mod/sea-creatures", Dto.SeaCreatures.class, 3_600_000);
+	}
+
 	/** SkyBlock calendar for the clock and event timers (public data, cached 10 minutes). */
 	public CompletableFuture<Dto.Calendar> calendar() {
 		return getPublic("/api/mod/calendar", Dto.Calendar.class, 600_000);

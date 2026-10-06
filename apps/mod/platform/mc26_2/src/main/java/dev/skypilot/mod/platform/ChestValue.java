@@ -199,6 +199,20 @@ final class ChestValue {
 		}
 		g.disableScissor();
 		g.text(font, font.plainSubstrByWidth(l.t("Click an item to outline it", "クリックで該当スロットを縁取り"), w - 10), x0 + 5, y0 + h - 11, Ui.DARK_GRAY, false);
+		// valuable items (inventory.valuable_highlight): a red frame around every stack worth the threshold
+		if (Feat.on(Features.INV_VALUABLE) && screen instanceof ContainerScreenAccessor vbox) {
+			double threshold = SkyPilot.get().config().valuableThreshold;
+			for (Group gr : groups) {
+				if (gr.value == null || gr.count <= 0) continue;
+				for (Slot s : gr.slots) {
+					double stackValue = gr.value * s.getItem().getCount() / gr.count;
+					if (stackValue < threshold) continue;
+					int sx = vbox.skypilot$leftPos() + s.x - 1;
+					int sy = vbox.skypilot$topPos() + s.y - 1;
+					g.outline(sx, sy, 18, 18, 0xFFFF55FF);
+				}
+			}
+		}
 		// outline the highlighted item's slots in the window
 		if (highlighted != null && screen instanceof ContainerScreenAccessor box) {
 			for (Group gr : groups) {
