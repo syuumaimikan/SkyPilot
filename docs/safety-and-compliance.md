@@ -56,6 +56,27 @@ container GUIs, does not inspect hidden blocks or world data beyond what is rend
 contacts only the configured SkyPilot server. It never handles Microsoft/Minecraft passwords or
 tokens; linking uses the device-authorization flow and a revocable SkyPilot token.
 
+## Launcher
+
+The SkyPilot Launcher ([launcher.md](launcher.md)) only prepares files for the official Minecraft
+Launcher:
+
+- the Fabric version file;
+- the bundled, SHA-256-checked SkyPilot mod;
+- the SHA-512-pinned Fabric API;
+- one profile entry (the original profile file is backed up first).
+
+Microsoft sign-in, tokens and starting the game stay entirely in the official launcher. SkyPilot
+never asks for or stores a Microsoft/Minecraft password, refresh token or session token.
+
+Network access is limited:
+
+- Downloads are https only, from `meta.fabricmc.net` and `cdn.modrinth.com` only.
+- Redirects are off and every download has a size limit.
+- Nothing downloaded is executed by the launcher.
+
+It never deletes files: replaced mods are renamed to `.jar.disabled`.
+
 ## Hypixel API usage
 
 - Player data only on explicit user action; no background polling of players.

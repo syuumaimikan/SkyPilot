@@ -50,3 +50,27 @@ jobs:
           path: |
             apps/mod/platform/mc26_2/build/libs/*.jar
             apps/mod/platform/mc26_2/build/libs/*.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skypilot-launcher-jar
+          path: apps/launcher/build/libs/skypilot-launcher-*-all.jar
+
+  launcher-windows:
+    # The Windows app (with its own Java runtime) - built on pushes to main only.
+    if: github.event_name == 'push'
+    needs: mod
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build the app image
+        working-directory: apps/mod
+        shell: bash
+        run: ./gradlew :launcher:jpackageImage --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skypilot-launcher-windows
+          path: apps/launcher/build/jpackage/

@@ -21,3 +21,6 @@ include 'core', 'network', 'translation', 'session', 'hud'
 // Minecraft-version-specific platform layer. A future Minecraft version gets its own
 // platform/mcXX_Y module that reuses every module above.
 include 'platform:mc26_2'
+// Desktop launcher (sets up a Fabric 26.2 SkyPilot profile for the official Minecraft Launcher).
+include 'launcher'
+project(':launcher').projectDir = file('../launcher')

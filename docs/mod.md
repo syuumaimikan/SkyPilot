@@ -23,6 +23,8 @@ unit-tested without the game, and nested into the mod jar (jar-in-jar).
   wrapper download a JDK 25 automatically (foojay), so any JDK ≥ 17 can start the build.
 - `./gradlew build` → `platform/mc26_2/build/libs/skypilot-<version>.jar` + `.sha256`
   (and a jarsigner signature when `SKYPILOT_SIGN_*` are set).
+- The SkyPilot Launcher (`apps/launcher`, a subproject of this build) bundles the mod jar and
+  sets up a Fabric 26.2 profile for the official Minecraft Launcher; see [launcher.md](launcher.md).
 - `./gradlew :platform:mc26_2:runClient` starts a development client;
   `./gradlew :platform:mc26_2:runClientGameTest` runs the in-game test (`src/gametest`).
 

@@ -13,6 +13,7 @@ Minecraft ユーザー名と目標（日本語・英語の自然文）を入力�
 - [クイックスタート（Docker）](#クイックスタートdocker)
 - [開発環境での起動](#開発環境での起動)
 - [Minecraft MOD](#minecraft-mod)
+- [ランチャー](#ランチャー)
 - [テストとビルド確認](#テストとビルド確認)
 - [リポジトリ構成](#リポジトリ構成)
 - [安全方針（Hypixel ルール）](#安全方針hypixel-ルール)
@@ -100,7 +101,7 @@ cd apps/mod && ./gradlew build
 
 成果物: `apps/mod/platform/mc26_2/build/libs/skypilot-<version>.jar`（共通モジュールを Jar-in-Jar で同梱）と SHA-256 チェックサム `.jar.sha256`。署名鍵（`SKYPILOT_SIGN_KEYSTORE` / `SKYPILOT_SIGN_ALIAS` / `SKYPILOT_SIGN_STOREPASS`）がある場合は `jarsigner` で署名され、`jarsigner -verify -strict` で検証できます。
 
-- 導入: Fabric Loader と Fabric API を入れた 26.2 の `mods` フォルダに jar を置く
+- 導入: [ランチャー](#ランチャー)の「セットアップ／修復」で自動的に用意できます。手動の場合は Fabric Loader と Fabric API を入れた 26.2 の `mods` フォルダに jar を置きます
 - 連携: ゲーム内で `/skypilot link` → 表示された URL（Web の `/link`）でコードを入力して承認。MOD が受け取るのは SkyPilot 専用の失効可能なトークンだけです（Microsoft / Minecraft のパスワードやセッショントークンは扱いません）。Web の「設定」から連携解除できます
 - 接続先の変更: `/skypilot server https://your-skypilot.example`（http は localhost のみ許可）
 
@@ -118,13 +119,44 @@ cd apps/mod && ./gradlew build
 
 MOD の構成はバージョン分離しています: `core` / `network` / `translation` / `session` / `hud`（Minecraft 非依存・単体テスト済み）と `platform/mc26_2`（26.2 固有の Fabric 層）。新しい Minecraft バージョンは `platform/mcXX_Y` を追加するだけで共通部分を再利用できます。詳しくは [docs/mod.md](docs/mod.md)。
 
+## ランチャー
+
+**SkyPilot Launcher**（`apps/launcher`）は、公式 Minecraft ランチャーに **「SkyPilot (SkyBlock)」プロファイル**を用意するデスクトップアプリです。「セットアップ／修復」を押すと次をまとめて行います。
+
+- Fabric Loader 0.19.5（Minecraft 26.2）のバージョンファイルを入れる（Fabric 公式インストーラーと同じ方式）
+- 同梱の SkyPilot MOD を入れる（SHA-256 確認）
+- Fabric API 0.161.0+26.2 を入れる（Modrinth から。SHA-512 とサイズを固定）
+- 専用ゲームフォルダとメモリ設定付きのプロファイルを追加する（他のプロファイルはそのまま、初回にバックアップ）
+
+その後は公式ランチャーでサインインしてプレイを押すだけです。
+
+- **Microsoft / Minecraft のアカウント・パスワード・トークンは一切扱いません**（サインインとゲーム起動は公式ランチャーが行います）
+- ダウンロード先は `meta.fabricmc.net` と `cdn.modrinth.com` だけです（https・サイズ上限・ハッシュ固定）
+- ファイルは削除しません（置き換えた MOD は `.jar.disabled` に変えるだけ）
+- 画面:
+  - ホーム: 状態チェック、セットアップ、公式ランチャー / Web を開く
+  - MOD: 一覧、有効/無効の切り替え、手元の jar の追加
+  - 設定: 言語、メモリ、フォルダ、SkyPilot サーバー
+  - ログ: latest.log、クラッシュレポート
+  - このランチャーについて
+
+```bash
+cd apps/mod
+./gradlew :launcher:run              # ソースから起動
+./gradlew :launcher:jpackageImage    # Java 同梱アプリ → apps/launcher/build/jpackage/SkyPilot Launcher/
+java -jar ../launcher/build/libs/skypilot-launcher-0.1.0-all.jar --status   # 状態だけ確認（Java 25）
+```
+
+詳しくは [docs/launcher.md](docs/launcher.md)。
+
 ## テストとビルド確認
 
 | 対象 | コマンド |
 |---|---|
 | Rust（全クレート、プロパティテスト含む） | `cargo test --workspace` |
 | Web（型チェック・Lint・本番ビルド） | `pnpm typecheck` / `pnpm lint` / `pnpm build` |
-| MOD（単体テスト + jar） | `cd apps/mod && ./gradlew build` |
+| MOD・ランチャー（単体テスト + jar） | `cd apps/mod && ./gradlew build` |
+| ランチャーのアプリ化（Java 同梱） | `cd apps/mod && ./gradlew :launcher:jpackageImage` |
 | MOD（実際の Minecraft 26.2 を起動してワールド内で検証） | `cd apps/mod && ./gradlew :platform:mc26_2:runClientGameTest` |
 | MOD ↔ API 実通信（API 起動中に） | `cd apps/mod && SKYPILOT_E2E_URL=http://localhost:3000 ./gradlew :network:test` |
 | スタック全体の E2E スモークテスト | `node tests/e2e/smoke.mjs http://localhost:3000` |
@@ -141,6 +173,7 @@ apps/
   api/          Rust (Axum/Tokio/SQLx) HTTP + WebSocket API
   web/          Next.js 16 / React 19 / Tailwind CSS v4 / shadcn 風 UI
   mod/          Fabric MOD (core, network, translation, session, hud, platform/mc26_2)
+  launcher/     SkyPilot Launcher（公式ランチャー用の Fabric 26.2 プロファイルを用意。Swing + FlatLaf）
 services/
   market-collector/      AH・終了オークション・バザーの巡回（429 を尊重）
   pricing-engine/        正規化・適正価格・相場操作検出・フリップ・バザー・クラフト・バックテスト・資産評価
@@ -159,7 +192,7 @@ migrations/     PostgreSQL / TimescaleDB マイグレーション
 fixtures/       実データを匿名化したテスト用データ（出典は fixtures/README.md）
 tests/e2e/      スタック全体のスモークテスト
 docker/         Dockerfile と Caddyfile
-docs/           設計・API・データ出典・安全方針・MOD
+docs/           設計・API・データ出典・安全方針・MOD・ランチャー
 ```
 
 ## 安全方針（Hypixel ルール）
@@ -182,6 +215,7 @@ SkyPilot は次の機能を**実装していません**（今後も実装しま�
 - 翻訳プロバイダはユーザーごとに選べます（サーバー既定 / 自分の DeepL キー / 自分の Claude キー / 辞書のみ）。自分のキーは SkyPilot サーバーにだけ送られ、AES-256-GCM で暗号化して保存（`SKYPILOT_SECRET_KEY`、未設定時は `data/cache/secret.key` を自動生成）、画面には末尾 4 文字しか表示しません。自分のキーの失敗は他のユーザーの翻訳（共有サーキットブレーカー）に影響しません
 - 秘密情報は環境変数（本番ではシークレットマネージャー）からのみ読み込み、リポジトリには含めません
 - MOD はコードをダウンロードしたり実行したりしません。リリースは SHA-256 と署名で検証します
+- ランチャーは Microsoft のサインインを扱わず（公式ランチャーに任せます）、ダウンロードは Fabric のメタデータと SHA-512 固定の Fabric API だけです
 
 ## データの出典と「不明」の扱い
 
