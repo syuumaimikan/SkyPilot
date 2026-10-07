@@ -108,14 +108,14 @@ final class SettingsScreen extends Screen {
 		pw = Math.max(160, Math.min(MAX_W, width - 8));
 		int x = width / 2 - pw / 2;
 		if (showDisclosure) {
-			addRenderableWidget(Button.builder(Component.literal(l.t("I agree", "同意する")), b -> {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("I agree", "同意する")), b -> {
 				c.translation.disclosureAccepted = true;
 				afterAgree.run();
 				showDisclosure = false;
 				sp.saveConfig();
 				rebuildWidgets();
 			}).bounds(x, height - 60, pw / 2 - 2, 20).build());
-			addRenderableWidget(Button.builder(Component.literal(l.t("Cancel", "キャンセル")), b -> {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Cancel", "キャンセル")), b -> {
 				showDisclosure = false;
 				rebuildWidgets();
 			}).bounds(x + pw / 2 + 2, height - 60, pw / 2 - 2, 20).build());
@@ -133,7 +133,7 @@ final class SettingsScreen extends Screen {
 		for (int i = 0; i < pages.length; i++) {
 			Page p = pages[i];
 			int tw = i == pages.length - 1 ? x + pw - tx : Math.max(20, want[i] * pw / sum);
-			Button tab = Button.builder(Component.literal(l.t(p.en, p.ja)), b -> {
+			Button tab = ClientButton.create(Component.literal(l.t(p.en, p.ja)), b -> {
 				page = p;
 				lastPage = p;
 				rebuildWidgets();
@@ -152,15 +152,15 @@ final class SettingsScreen extends Screen {
 			case SESSION -> session(c, l, x);
 		}
 		if (page == Page.FEATURES) {
-			addRenderableWidget(Button.builder(Component.literal(featureCategory == null ? l.t("All off", "すべてオフ") : l.t("Category off", "カテゴリをオフ")), b -> {
+			addRenderableWidget(ClientButton.create(Component.literal(featureCategory == null ? l.t("All off", "すべてオフ") : l.t("Category off", "カテゴリをオフ")), b -> {
 				Features.disableAll(c, featureCategory);
 				sp.saveConfig();
 				featureMessage = featureCategory == null ? l.t("Every feature is off.", "すべての機能をオフにしました。") : l.t(featureCategory.en + " features are off.", featureCategory.ja + "の機能をオフにしました。");
 			}).bounds(x, height - 26, 90, 20).build());
-			addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x + 94, height - 26, pw - 94, 20).build());
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x + 94, height - 26, pw - 94, 20).build());
 			return;
 		}
-		addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x, height - 26, pw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(x, height - 26, pw, 20).build());
 	}
 
 	// ---------------------------------------------------------------- features page
@@ -196,13 +196,13 @@ final class SettingsScreen extends Screen {
 		});
 		addRenderableWidget(search);
 		Features.Category[] cats = Features.Category.values();
-		addRenderableWidget(Button.builder(Component.literal(featureCategory == null ? l.t("All", "すべて") : l.t(featureCategory.en, featureCategory.ja)), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(featureCategory == null ? l.t("All", "すべて") : l.t(featureCategory.en, featureCategory.ja)), b -> {
 			int i = featureCategory == null ? 0 : featureCategory.ordinal() + 1;
 			featureCategory = i >= cats.length ? null : cats[i];
 			featureScroll = 0;
 			rebuildWidgets();
 		}).bounds(x + pw - 148, y, 72, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Recommended", "おすすめON")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Recommended", "おすすめON")), b -> {
 			int n = Features.applyRecommended(c);
 			sp.saveConfig();
 			featureMessage = l.t(n + " recommended features turned on.", "おすすめ機能を " + n + " 個オンにしました。");
@@ -344,7 +344,7 @@ final class SettingsScreen extends Screen {
 			case "en" -> "ja";
 			default -> "auto";
 		});
-		addRenderableWidget(Button.builder(Component.literal(l.t("SkyPilot menu (J)…", "SkyPilotメニュー（J）…")), b -> minecraft.gui.setScreen(new MenuScreen(this, null)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("SkyPilot menu (J)…", "SkyPilotメニュー（J）…")), b -> minecraft.gui.setScreen(new MenuScreen(this, null)))
 				.bounds(right, y, colW, 20).build());
 		y += ROW + 10;
 		labels.add(new Label(l.t("SkyPilot server", "SkyPilotサーバー"), x, y - 10, 0xFFAAAAAA, false, 0));
@@ -354,7 +354,7 @@ final class SettingsScreen extends Screen {
 		url.setValue(urlDraft);
 		url.setResponder(v -> urlDraft = v);
 		addRenderableWidget(url);
-		addRenderableWidget(Button.builder(Component.literal(l.t("Apply", "適用")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Apply", "適用")), b -> {
 			String err = sp.setServer(urlDraft);
 			urlError = err != null;
 			urlMessage = err != null ? err
@@ -366,31 +366,32 @@ final class SettingsScreen extends Screen {
 		}).bounds(x + pw - 60, y, 60, 20).build());
 		y += ROW;
 		if (sp.linked()) {
-			addRenderableWidget(Button.builder(Component.literal(l.t("Unlink", "連携を解除")), b -> {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Unlink", "連携を解除")), b -> {
 				sp.unlink();
 				remote = null;
 				loadTried = false;
 				rebuildWidgets();
 			}).bounds(x, y, colW, 20).build());
 		} else {
-			addRenderableWidget(Button.builder(Component.literal(l.t("Link with SkyPilot…", "SkyPilotと連携…")), b -> {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Link with SkyPilot…", "SkyPilotと連携…")), b -> {
 				onClose();
 				minecraft.gui.setScreen(null);
 				Commands.startLink();
 			}).bounds(x, y, colW, 20).build());
 		}
-		addRenderableWidget(Button.builder(Component.literal(l.t("Mods…", "MOD管理…")), b -> minecraft.gui.setScreen(new ModManagerScreen(this)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Mods…", "MOD管理…")), b -> minecraft.gui.setScreen(new ModManagerScreen(this)))
 				.bounds(x, y + ROW, colW, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Performance…", "軽量化…")), b -> minecraft.gui.setScreen(new PerformanceScreen(this)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe…", "ワードローブ…")), b -> minecraft.gui.setScreen(new AppearanceScreen(this))).bounds(right, y + ROW * 2, colW, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Performance…", "軽量化…")), b -> minecraft.gui.setScreen(new PerformanceScreen(this)))
 				.bounds(x, y + ROW * 2, colW, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
 			if (sp.api() != null) sp.api().clearCache();
 			sp.translator().clearCache();
 			urlError = false;
 			urlMessage = l.t("Cached data cleared; it is fetched again when needed.", "キャッシュを消去しました。必要に応じて再取得します。");
 			rebuildWidgets();
 		}).bounds(right, y, colW, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Features…", "機能一覧…")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Features…", "機能一覧…")), b -> {
 			page = Page.FEATURES;
 			lastPage = page;
 			rebuildWidgets();
@@ -415,7 +416,7 @@ final class SettingsScreen extends Screen {
 		toggle(right, y, colW, onOff(l, l.t("Context", "状況表示"), c.hud.showContext), b -> c.hud.showContext = !c.hud.showContext);
 		y += ROW;
 		toggle(x, y, colW, onOff(l, l.t("Session on HUD", "セッション表示"), c.hud.showSession), b -> c.hud.showSession = !c.hud.showSession);
-		addRenderableWidget(Button.builder(Component.literal(l.t("Move / resize HUD…", "HUDの位置・サイズ…")), b -> minecraft.gui.setScreen(new HudEditorScreen(this)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Move / resize HUD…", "HUDの位置・サイズ…")), b -> minecraft.gui.setScreen(new HudEditorScreen(this)))
 				.bounds(right, y, colW, 20).build());
 		y += ROW;
 		stepper(x, y, colW, l.t("Scale ", "サイズ ") + String.format(Locale.ROOT, "%.1f×", c.hud.scale), d -> c.hud.scale = Math.round((c.hud.scale + d * 0.1) * 10) / 10.0);
@@ -451,7 +452,7 @@ final class SettingsScreen extends Screen {
 					: remoteMessage != null ? remoteMessage : l.t("Translation settings are not available.", "翻訳設定を取得できません。");
 			labels.add(new Label(msg, x, y + 4, remoteError ? 0xFFFF5555 : 0xFFAAAAAA, false, pw));
 			if (!loading && sp.linked()) {
-				addRenderableWidget(Button.builder(Component.literal(l.t("Retry", "再試行")), b -> {
+				addRenderableWidget(ClientButton.create(Component.literal(l.t("Retry", "再試行")), b -> {
 					load(sp);
 					rebuildWidgets();
 				}).bounds(x, y + 30, colW, 20).build());
@@ -459,14 +460,14 @@ final class SettingsScreen extends Screen {
 			return;
 		}
 		String provider = shownProvider();
-		Button cycle = Button.builder(Component.literal(l.t("Provider: ", "プロバイダ: ") + providerName(l, provider) + (pendingProvider != null ? l.t(" (needs a key)", "（キー未設定）") : "")),
+		Button cycle = ClientButton.create(Component.literal(l.t("Provider: ", "プロバイダ: ") + providerName(l, provider) + (pendingProvider != null ? l.t(" (needs a key)", "（キー未設定）") : "")),
 				b -> {
 					cycleProvider(sp, l);
 					rebuildWidgets();
 				}).bounds(x, y, colW, 20).build();
 		cycle.active = !busy;
 		addRenderableWidget(cycle);
-		Button testBtn = Button.builder(Component.literal(busy ? l.t("Working…", "処理中…") : l.t("Test translation", "接続テスト")), b -> {
+		Button testBtn = ClientButton.create(Component.literal(busy ? l.t("Working…", "処理中…") : l.t("Test translation", "接続テスト")), b -> {
 			test = null;
 			remoteMessage = null;
 			call(sp.api() == null ? null : sp.api().testTranslation(), t -> test = t);
@@ -488,13 +489,13 @@ final class SettingsScreen extends Screen {
 					: l.t("paste your " + providerName(l, provider) + " API key (Ctrl+V)", providerName(l, provider) + " のAPIキーを貼り付け（Ctrl+V）")));
 			addRenderableWidget(key);
 			if (pendingProvider != null) setInitialFocus(key);
-			Button save = Button.builder(Component.literal(l.t("Save", "保存")), b -> {
+			Button save = ClientButton.create(Component.literal(l.t("Save", "保存")), b -> {
 				saveKey(sp, l, provider);
 				rebuildWidgets();
 			}).bounds(x + pw - 124, y, 60, 20).build();
 			save.active = !busy;
 			addRenderableWidget(save);
-			Button remove = Button.builder(Component.literal(l.t("Remove", "削除")), b -> {
+			Button remove = ClientButton.create(Component.literal(l.t("Remove", "削除")), b -> {
 				// Removing the key of the provider in use falls back to the server's provider.
 				String next = provider.equals(remote.provider()) ? "server" : remote.provider();
 				put(sp, l, next, provider.equals("deepl") ? "" : null, provider.equals("claude") ? "" : null, l.t("Key removed.", "キーを削除しました。"));
@@ -539,12 +540,12 @@ final class SettingsScreen extends Screen {
 		toggle(x, y, colW, onOff(l, l.t("Alert sound", "通知音"), c.market.alertSound), b -> c.market.alertSound = !c.market.alertSound);
 		toggle(right, y, colW, onOff(l, l.t("AH/BZ panel", "AH・バザー横パネル"), c.market.containerPanel), b -> c.market.containerPanel = !c.market.containerPanel);
 		y += ROW;
-		addRenderableWidget(Button.builder(Component.literal(l.t("AH flips…", "AHフリップ…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.AH)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("AH flips…", "AHフリップ…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.AH)))
 				.bounds(x, y, colW, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Bazaar flips…", "バザーフリップ…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.BAZAAR)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Bazaar flips…", "バザーフリップ…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.BAZAAR)))
 				.bounds(right, y, colW, 20).build());
 		y += ROW;
-		addRenderableWidget(Button.builder(Component.literal(l.t("Recent alerts…", "最近の通知…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.ALERTS)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Recent alerts…", "最近の通知…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.ALERTS)))
 				.bounds(x, y, colW, 20).build());
 		toggle(right, y, colW, Component.literal(l.t("Bazaar Flipper: ", "Bazaar Flipper: ") + (c.market.bazaarFlipper == 0 ? l.t("none", "なし") : "Lv" + c.market.bazaarFlipper)),
 				b -> c.market.bazaarFlipper = (c.market.bazaarFlipper + 1) % 3);
@@ -580,22 +581,22 @@ final class SettingsScreen extends Screen {
 		toggle(x, y, colW, onOff(l, l.t("Session tracking", "セッション記録"), c.session.enabled), b -> c.session.enabled = !c.session.enabled);
 		toggle(right, y, colW, onOff(l, l.t("Upload sessions", "セッション送信"), c.session.upload), b -> c.session.upload = !c.session.upload);
 		y += ROW;
-		Button stopGuide = Button.builder(Component.literal(l.t("Stop guide", "ガイドを終了")), b -> {
+		Button stopGuide = ClientButton.create(Component.literal(l.t("Stop guide", "ガイドを終了")), b -> {
 			Waypoints.clear();
 			rebuildWidgets();
 		}).bounds(x, y, colW, 20).build();
 		stopGuide.active = Waypoints.guide() != null || Waypoints.target() != null;
 		addRenderableWidget(stopGuide);
-		Button stopFarm = Button.builder(Component.literal(l.t("Stop farm guide", "農場ガイドを終了")), b -> {
+		Button stopFarm = ClientButton.create(Component.literal(l.t("Stop farm guide", "農場ガイドを終了")), b -> {
 			FarmBuilder.stop();
 			rebuildWidgets();
 		}).bounds(right, y, colW, 20).build();
 		stopFarm.active = FarmBuilder.active();
 		addRenderableWidget(stopFarm);
 		y += ROW;
-		addRenderableWidget(Button.builder(Component.literal(l.t("Guides…", "進め方ガイド…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.PROGRESS)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Guides…", "進め方ガイド…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.PROGRESS)))
 				.bounds(x, y, colW, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Recommended gear…", "推奨装備…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.GEAR)))
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Recommended gear…", "推奨装備…")), b -> minecraft.gui.setScreen(new MenuScreen(this, MenuScreen.Tab.GEAR)))
 				.bounds(right, y, colW, 20).build());
 		y += ROW + 4;
 		Dto.Guide g = Waypoints.guide();
@@ -615,7 +616,7 @@ final class SettingsScreen extends Screen {
 	// ---------------------------------------------------------------- widgets
 
 	private void toggle(int x, int y, int w, Component label, Consumer<Button> action) {
-		addRenderableWidget(Button.builder(label, b -> {
+		addRenderableWidget(ClientButton.create(label, b -> {
 			action.accept(b);
 			SkyPilot.get().saveConfig();
 			rebuildWidgets();
@@ -782,6 +783,7 @@ final class SettingsScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		if (SkyPilot.get().config().appearance.richMenus) ClientStyle.backdrop(g,width,height);
 		super.extractRenderState(g, mouseX, mouseY, delta);
 		SkyPilot sp = SkyPilot.get();
 		Lang l = sp.lang();

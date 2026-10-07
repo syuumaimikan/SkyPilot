@@ -21,9 +21,9 @@ final class Ui {
 	static final int RED = 0xFFFF5555;
 	static final int AQUA = 0xFF55FFFF;
 	static final int YELLOW = 0xFFFFFF55;
-	static final int PURPLE = 0xFFB07CFF;
-	static final int PANEL = 0xE0101018;
-	static final int PANEL_BORDER = 0xFF4A3B8C;
+	static final int PURPLE = 0xFFA38BFA;
+	static final int PANEL = 0xF0111827;
+	static final int PANEL_BORDER = 0xFF354460;
 
 	private Ui() {
 	}

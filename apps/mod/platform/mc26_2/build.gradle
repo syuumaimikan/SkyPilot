@@ -12,6 +12,8 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Ship the runtime API as a nested Fabric mod: users only need the SkyPilot jar.
+	include "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// The version-independent modules are nested inside the mod jar (jar-in-jar).
 	sharedModules.each {

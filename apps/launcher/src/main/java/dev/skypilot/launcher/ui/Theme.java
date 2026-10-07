@@ -20,21 +20,21 @@ final class Theme {
 	static void apply(boolean darkTheme) {
 		dark = darkTheme;
 		if (dark) {
-			BG = new Color(0x101016);
-			SURFACE = new Color(0x181822);
-			SURFACE_2 = new Color(0x22222F);
-			BORDER = new Color(0x2B2B3C);
-			SIDEBAR = new Color(0x0B0B10);
+			BG = new Color(0x090D16);
+			SURFACE = new Color(0x111827);
+			SURFACE_2 = new Color(0x1B2538);
+			BORDER = new Color(0x29354D);
+			SIDEBAR = new Color(0x080B12);
 			TEXT = new Color(0xEDEDF5);
 			MUTED = new Color(0xA0A0B8);
 			FAINT = new Color(0x6C6C84);
-			ACCENT = new Color(0x8B7BFF);
-			ACCENT_2 = new Color(0x4FC3F7);
+			ACCENT = new Color(0xA38BFA);
+			ACCENT_2 = new Color(0x55D6D2);
 			OK = new Color(0x4ADE80);
 			WARN = new Color(0xFBBF24);
 			BAD = new Color(0xF87171);
-			HERO_A = new Color(0x2A1E6B);
-			HERO_B = new Color(0x0E3A5C);
+			HERO_A = new Color(0x191C3C);
+			HERO_B = new Color(0x0D353B);
 		} else {
 			BG = new Color(0xF4F4F9);
 			SURFACE = new Color(0xFFFFFF);
@@ -55,8 +55,8 @@ final class Theme {
 		FlatLaf.setGlobalExtraDefaults(Map.of("@accentColor", hex(ACCENT), "@background", hex(BG), "@foreground", hex(TEXT)));
 		if (dark) FlatDarkLaf.setup();
 		else FlatLightLaf.setup();
-		UIManager.put("Button.arc", 12);
-		UIManager.put("Component.arc", 10);
+		UIManager.put("Button.arc", 18);
+		UIManager.put("Component.arc", 14);
 		UIManager.put("TextComponent.arc", 10);
 		UIManager.put("CheckBox.arc", 6);
 		UIManager.put("ProgressBar.arc", 999);

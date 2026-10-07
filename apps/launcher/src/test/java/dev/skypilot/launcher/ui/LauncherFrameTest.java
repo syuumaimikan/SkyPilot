@@ -68,7 +68,7 @@ class LauncherFrameTest {
 				List.of(new dev.skypilot.mod.network.Dto.Maintenance("m1", "SkyBlock Maintenance", "in_progress", now - 3_600_000L, now + 5 * 3_600_000L, List.of("SkyBlock"), true,
 						"SkyBlock will be in maintenance to roll v0.27.2", "https://status.hypixel.net/incidents/m1")),
 				List.of(), List.of(), now - 60_000, "https://status.hypixel.net", "status.hypixel.net");
-		String[] pages = {"home", "mods", "features", "screenshots", "logs", "tools", "settings", "about"};
+		String[] pages = {"home", "mods", "features", "desk", "wardrobe", "screenshots", "logs", "tools", "settings", "about"};
 		String[][] runs = {{"en", "dark"}, {"ja", "dark"}, {"ja", "light"}};
 		for (String[] run : runs) {
 			LauncherSettings s = new LauncherSettings();
@@ -92,6 +92,7 @@ class LauncherFrameTest {
 				}
 			}
 			for (String page : run[1].equals("light") ? new String[] {"home", "mods", "settings"} : pages) {
+				if(page.equals("wardrobe")){var cfg=dev.skypilot.launcher.Instance.config(game);cfg.appearance.cape="aurora";cfg.appearance.hat="horns";cfg.appearance.back="dragon";dev.skypilot.launcher.Instance.saveConfig(game,cfg);}
 				JComponent[] content = new JComponent[1];
 				SwingUtilities.invokeAndWait(() -> content[0] = LauncherFrame.createContent(s, Pins.load(), page, launcherDir));
 				Thread.sleep(page.equals("mods") || page.equals("screenshots") || page.equals("tools") ? 1500 : 300);

@@ -81,6 +81,7 @@ final class Timers {
 
 	/** Once per second on the game thread. */
 	static void tickSecond(Minecraft mc) {
+		DeskRuntime.tick();
 		long now = System.currentTimeMillis();
 		SkyPilot sp = SkyPilot.get();
 		Lang l = sp.lang();

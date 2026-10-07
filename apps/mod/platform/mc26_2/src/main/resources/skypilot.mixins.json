@@ -12,7 +12,12 @@
 		"MouseInputMixin",
 		"ParticleEngineMixin",
 		"PlayerTabOverlayAccessor",
-		"SlotRenderMixin"
+		"SlotRenderMixin",
+		"SkinTextureMixin",
+		"MenuBackgroundMixin",
+		"MenuButtonMixin",
+		"MenuOptionMixin",
+		"MenuSliderMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

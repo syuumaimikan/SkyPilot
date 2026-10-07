@@ -288,6 +288,17 @@ public class LauncherTest {
 		assertNull(LauncherSettings.load(dir).minecraftDir);
 	}
 
+	@Test
+	void bundledApiNeedsNoSeparateMod(@TempDir Path dir) throws IOException {
+		Pins pins = Pins.load();
+		Mods.installSkyPilot(dir, pins, Pins.bundledMod());
+		assertTrue(Mods.fabricApiInstalled(dir, pins));
+		Mods.installFabricApi(dir, pins, url -> { throw new AssertionError("the bundled API needs no download"); });
+		assertEquals(1, Mods.list(dir).size());
+		Files.move(dir.resolve(pins.modFile()), dir.resolve(pins.modFile() + ".disabled"));
+		assertFalse(Mods.fabricApiInstalled(dir, pins));
+	}
+
 	// ---------------------------------------------------------------- the whole setup
 
 	@Test

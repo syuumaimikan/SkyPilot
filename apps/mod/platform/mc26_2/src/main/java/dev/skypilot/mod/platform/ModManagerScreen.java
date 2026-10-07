@@ -90,14 +90,14 @@ final class ModManagerScreen extends Screen {
 			scroll = 0;
 		});
 		addRenderableWidget(search);
-		addRenderableWidget(Button.builder(Component.literal(l.t(filter.en, filter.ja)), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t(filter.en, filter.ja)), b -> {
 			Filter[] fs = Filter.values();
 			filter = fs[(filter.ordinal() + 1) % fs.length];
 			scroll = 0;
 			rebuildWidgets();
 		}).bounds(listX + listW - 72, 21, 72, 20).build());
 		int bw = (detailW - 4) / 2;
-		addRenderableWidget(Button.builder(Component.literal(l.t("Open mods folder", "modsフォルダを開く")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Open mods folder", "modsフォルダを開く")), b -> {
 			try {
 				Files.createDirectories(ModManager.modsDir());
 				Util.getPlatform().openPath(ModManager.modsDir());
@@ -105,12 +105,12 @@ final class ModManagerScreen extends Screen {
 				setMessage(ex.getMessage(), true);
 			}
 		}).bounds(detailX, 21, bw, 20).build());
-		Button check = Button.builder(Component.literal(checking ? l.t("Checking…", "確認中…") : l.t("Check updates", "更新を確認")), b -> checkUpdates(l)).bounds(detailX + bw + 4, 21, bw, 20)
+		Button check = ClientButton.create(Component.literal(checking ? l.t("Checking…", "確認中…") : l.t("Check updates", "更新を確認")), b -> checkUpdates(l)).bounds(detailX + bw + 4, 21, bw, 20)
 				.build();
 		check.active = !checking;
 		addRenderableWidget(check);
 		if (selected != null) detailButtons(l);
-		addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(px, height - 26, pw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(px, height - 26, pw, 20).build());
 	}
 
 	private void detailButtons(Lang l) {
@@ -118,14 +118,14 @@ final class ModManagerScreen extends Screen {
 		int y = listY + listH - 44;
 		int bw = (detailW - 4) / 2;
 		boolean own = e.id().equals("skypilot");
-		Button config = Button.builder(Component.literal(l.t("Settings", "設定")), b -> {
+		Button config = ClientButton.create(Component.literal(l.t("Settings", "設定")), b -> {
 			Screen s = own ? new SettingsScreen(this) : ModManager.configScreen(e.id(), this);
 			if (s == null) setMessage(l.t("This mod has no settings screen (via Mod Menu).", "このMODには設定画面がありません（Mod Menu経由）。"), false);
 			else minecraft.gui.setScreen(s);
 		}).bounds(detailX, y, bw, 20).build();
 		config.active = own || ModManager.hasConfig(e.id());
 		addRenderableWidget(config);
-		Button toggle = Button.builder(Component.literal(e.kind() == ModManager.Kind.DISABLED ? l.t("Enable", "有効にする") : confirmDisable ? l.t("Disable anyway", "それでも無効にする") : l.t("Disable", "無効にする")),
+		Button toggle = ClientButton.create(Component.literal(e.kind() == ModManager.Kind.DISABLED ? l.t("Enable", "有効にする") : confirmDisable ? l.t("Disable anyway", "それでも無効にする") : l.t("Disable", "無効にする")),
 				b -> toggle(l)).bounds(detailX + bw + 4, y, bw, 20).build();
 		toggle.active = e.toggleable();
 		addRenderableWidget(toggle);
@@ -140,12 +140,12 @@ final class ModManagerScreen extends Screen {
 				case "sources" -> l.t("Source", "ソース");
 				default -> l.t("Issues", "不具合報告");
 			};
-			addRenderableWidget(Button.builder(Component.literal(label), b -> openLink(url)).bounds(detailX + n * (lw + 4), ly, lw, 20).build());
+			addRenderableWidget(ClientButton.create(Component.literal(label), b -> openLink(url)).bounds(detailX + n * (lw + 4), ly, lw, 20).build());
 			n++;
 		}
 		Dto.ModUpdate u = updateOf(e);
 		if (u != null && !u.upToDate()) {
-			addRenderableWidget(Button.builder(Component.literal(l.t("Open update page", "更新ページを開く")), b -> openLink(u.url())).bounds(detailX, y - 22, detailW, 20).build());
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Open update page", "更新ページを開く")), b -> openLink(u.url())).bounds(detailX, y - 22, detailW, 20).build());
 		}
 	}
 
@@ -248,6 +248,7 @@ final class ModManagerScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		if (SkyPilot.get().config().appearance.richMenus) ClientStyle.backdrop(g,width,height);
 		super.extractRenderState(g, mouseX, mouseY, delta);
 		Lang l = SkyPilot.get().lang();
 		g.centeredText(font, Component.literal(l.t("SkyPilot · Mods", "SkyPilot · MOD管理") + " (" + all.size() + ")"), width / 2, 8, 0xFFFFFFFF);

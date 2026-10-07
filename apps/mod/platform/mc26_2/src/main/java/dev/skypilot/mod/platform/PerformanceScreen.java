@@ -68,13 +68,13 @@ final class PerformanceScreen extends Screen {
 		Lang l = sp.lang();
 		pw = Math.max(200, Math.min(380, width - 8));
 		px = width / 2 - pw / 2;
-		Button sw = Button.builder(Component.literal(l.t("Switches", "スイッチ")), b -> {
+		Button sw = ClientButton.create(Component.literal(l.t("Switches", "スイッチ")), b -> {
 			videoTab = false;
 			rebuildWidgets();
 		}).bounds(px, 34, pw / 2 - 2, 20).build();
 		sw.active = videoTab;
 		addRenderableWidget(sw);
-		Button vid = Button.builder(Component.literal(l.t("Video settings", "ビデオ設定")), b -> {
+		Button vid = ClientButton.create(Component.literal(l.t("Video settings", "ビデオ設定")), b -> {
 			videoTab = true;
 			rebuildWidgets();
 		}).bounds(px + pw / 2 + 2, 34, pw / 2 - 2, 20).build();
@@ -83,7 +83,7 @@ final class PerformanceScreen extends Screen {
 		listY = 60;
 		if (videoTab) video(sp, c, l);
 		else switches(sp, c, l);
-		addRenderableWidget(Button.builder(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(px, height - 26, pw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(px, height - 26, pw, 20).build());
 	}
 
 	private void switches(SkyPilot sp, SkyPilotConfig c, Lang l) {
@@ -97,7 +97,7 @@ final class PerformanceScreen extends Screen {
 			String num = number(f, c, l);
 			int bw = num == null ? pw : pw - 44;
 			boolean on = c.on(f);
-			Button b = Button.builder(Component.literal(f.name(l) + (num == null ? "" : " (" + num + ")") + ": " + (on ? l.t("ON", "オン") : l.t("OFF", "オフ"))), btn -> {
+			Button b = ClientButton.create(Component.literal(f.name(l) + (num == null ? "" : " (" + num + ")") + ": " + (on ? l.t("ON", "オン") : l.t("OFF", "オフ"))), btn -> {
 				Features.set(c, f, !c.on(f));
 				sp.saveConfig();
 				rebuildWidgets();
@@ -105,12 +105,12 @@ final class PerformanceScreen extends Screen {
 			b.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(f.description(l))));
 			addRenderableWidget(b);
 			if (num != null) {
-				addRenderableWidget(Button.builder(Component.literal("−"), btn -> {
+				addRenderableWidget(ClientButton.create(Component.literal("−"), btn -> {
 					step(f, c, -1);
 					sp.saveConfig();
 					rebuildWidgets();
 				}).bounds(px + pw - 42, y, 20, 20).build());
-				addRenderableWidget(Button.builder(Component.literal("+"), btn -> {
+				addRenderableWidget(ClientButton.create(Component.literal("+"), btn -> {
 					step(f, c, 1);
 					sp.saveConfig();
 					rebuildWidgets();
@@ -119,19 +119,19 @@ final class PerformanceScreen extends Screen {
 			y += ROW;
 		}
 		int by = height - 50;
-		Button prev = Button.builder(Component.literal("‹"), b -> {
+		Button prev = ClientButton.create(Component.literal("‹"), b -> {
 			pageIndex--;
 			rebuildWidgets();
 		}).bounds(px, by, 20, 20).build();
 		prev.active = pageIndex > 0;
 		addRenderableWidget(prev);
-		Button next = Button.builder(Component.literal("›"), b -> {
+		Button next = ClientButton.create(Component.literal("›"), b -> {
 			pageIndex++;
 			rebuildWidgets();
 		}).bounds(px + 22, by, 20, 20).build();
 		next.active = pageIndex < pages - 1;
 		addRenderableWidget(next);
-		addRenderableWidget(Button.builder(Component.literal(l.t("Recommended on", "おすすめをオン")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Recommended on", "おすすめをオン")), b -> {
 			int n = 0;
 			for (Features.Feature f : list) {
 				if (f.recommended() && !c.on(f)) {
@@ -143,7 +143,7 @@ final class PerformanceScreen extends Screen {
 			message = l.t(n + " switched on.", n + " 個をオンにしました。");
 			rebuildWidgets();
 		}).bounds(px + 46, by, (pw - 46) / 2 - 2, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("All off", "すべてオフ")), b -> {
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("All off", "すべてオフ")), b -> {
 			Features.disableAll(c, Features.Category.PERFORMANCE);
 			sp.saveConfig();
 			message = l.t("Every performance switch is off.", "軽量化のスイッチをすべてオフにしました。");
@@ -153,27 +153,33 @@ final class PerformanceScreen extends Screen {
 
 	private void video(SkyPilot sp, SkyPilotConfig c, Lang l) {
 		int by = height - 50;
-		Button apply = Button.builder(Component.literal(l.t("Apply lightweight settings", "軽量設定を適用")), b -> {
+		Button apply = ClientButton.create(Component.literal(l.t("Lightweight", "軽量設定")), b -> {
 			int n = VideoPreset.apply(minecraft, c);
 			sp.saveConfig();
 			message = n == 0 ? l.t("Already as light as the preset.", "すでに軽量設定と同じかそれ以下です。")
 					: l.t(n + " option(s) lowered. \"Restore\" puts your values back.", n + " 項目を下げました。「元に戻す」で戻せます。");
 			rebuildWidgets();
-		}).bounds(px, by, pw / 2 - 2, 20).build();
+		}).bounds(px, by, pw / 3 - 2, 20).build();
 		apply.active = VideoPreset.pending(minecraft.options) > 0;
 		addRenderableWidget(apply);
-		Button restore = Button.builder(Component.literal(l.t("Restore my settings", "元に戻す")), b -> {
+		Button restore = ClientButton.create(Component.literal(l.t("Restore", "元に戻す")), b -> {
 			int n = VideoPreset.restore(minecraft, c);
 			sp.saveConfig();
 			message = l.t(n + " option(s) restored.", n + " 項目を元に戻しました。");
 			rebuildWidgets();
-		}).bounds(px + pw / 2 + 2, by, pw / 2 - 2, 20).build();
+		}).bounds(px + 2 * pw / 3 + 2, by, pw / 3 - 2, 20).build();
 		restore.active = c.perf.videoBackup != null;
 		addRenderableWidget(restore);
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Rich graphics", "リッチ画質")), b -> {
+			int n = VideoPreset.quality(minecraft, c); sp.saveConfig();
+			message = l.t(n + " graphics options updated; Restore returns your values.", n + " 項目を変更しました。「元に戻す」で復元できます。");
+			rebuildWidgets();
+		}).bounds(px + pw / 3 + 1, by, pw / 3 - 2, 20).build());
 	}
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		if (SkyPilot.get().config().appearance.richMenus) ClientStyle.backdrop(g,width,height);
 		// own backdrop, so the page stays readable over the HUD whatever the menu blur setting is
 		g.fill(px - 6, 2, px + pw + 6, height - 2, 0xD0101018);
 		super.extractRenderState(g, mouseX, mouseY, delta);
