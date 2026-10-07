@@ -35,6 +35,24 @@ public final class SkyPilotConfig {
 	public double valuableThreshold = 1_000_000;
 	/** Numbers for the performance features and the saved video settings. */
 	public Performance perf = new Performance();
+	/** Local appearance only; no account, purchase or server communication. */
+	public Appearance appearance = new Appearance();
+	public String deskNotes = "";
+	public int focusMinutes = 25;
+	public int tileBest = 0;
+
+	public static final class Appearance {
+		public boolean richMenus = true;
+		public boolean skin3d = false;
+		public String cape = "none";
+		public String accessory = "none"; // Legacy slot; migrated on load.
+		public String hat = "none";
+		public String back = "none";
+		public int color = 0xA38BFA;
+		public java.util.List<String> favorites = new java.util.ArrayList<>();
+		public java.util.List<WardrobeTools.Outfit> outfits = new java.util.ArrayList<>();
+	}
+
 
 	public static final class Performance {
 		public int backgroundFps = 15;
@@ -227,6 +245,18 @@ public final class SkyPilotConfig {
 		if (afk == null) afk = new Afk();
 		afk.minutes = (int) clamp(afk.minutes, 1, 30);
 		afk.fps = (int) clamp(afk.fps, 5, 30);
+		if (appearance == null) appearance = new Appearance();
+		if (!CosmeticCatalog.valid("cape", appearance.cape)) appearance.cape = "none";
+		if (!java.util.List.of("none", "crown", "halo", "wings").contains(appearance.accessory == null ? "" : appearance.accessory)) appearance.accessory = "none";
+		if (!CosmeticCatalog.valid("hat", appearance.hat)) appearance.hat = "none";
+		if (!CosmeticCatalog.valid("back", appearance.back)) appearance.back = "none";
+		CosmeticCatalog.migrate(appearance);
+		appearance.color &= 0xFFFFFF;
+		WardrobeTools.sanitize(appearance);
+		if(deskNotes==null)deskNotes="";
+		deskNotes=deskNotes.substring(0,Math.min(1400,deskNotes.length()));
+		focusMinutes=(int)clamp(focusMinutes,1,180);
+		tileBest=Math.max(0,tileBest);
 		if (perf == null) perf = new Performance();
 		perf.backgroundFps = (int) clamp(perf.backgroundFps, 5, 60);
 		perf.menuFps = (int) clamp(perf.menuFps, 15, 240);

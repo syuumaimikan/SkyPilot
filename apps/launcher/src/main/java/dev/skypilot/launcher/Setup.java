@@ -56,8 +56,10 @@ public final class Setup {
 		FabricInstaller.install(mc, pins, fetch);
 		progress.accept(l.t("Installing the SkyPilot mod…", "SkyPilot MODをインストール中…"));
 		Mods.installSkyPilot(s.mods(), pins, Pins.bundledMod());
-		progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
-		Mods.installFabricApi(s.mods(), pins, fetch);
+		if (!Mods.fabricApiInstalled(s.mods(), pins)) {
+			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
+			Mods.installFabricApi(s.mods(), pins, fetch);
+		}
 		progress.accept(l.t("Adding the profile to the official launcher…", "公式ランチャーにプロファイルを追加中…"));
 		Files.createDirectories(s.instance());
 		String icon = iconDataUri();

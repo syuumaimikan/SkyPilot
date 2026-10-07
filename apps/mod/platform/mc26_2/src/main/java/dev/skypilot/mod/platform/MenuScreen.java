@@ -135,15 +135,15 @@ final class MenuScreen extends Screen {
 			Tab t = tabs[i];
 			int col = i % perRow;
 			int row = i / perRow;
-			Button b = Button.builder(Component.literal(l.t(t.en, t.ja)), btn -> switchTo(t)).bounds(panelX + col * (tabW + 2), 22 + row * 22, tabW, 20).build();
+			Button b = ClientButton.create(Component.literal(l.t(t.en, t.ja)), btn -> switchTo(t)).bounds(panelX + col * (tabW + 2), 22 + row * 22, tabW, 20).build();
 			b.active = t != tab;
 			addRenderableWidget(b);
 		}
 		int bw = (panelW - 4) / 3;
 		int by = height - 24;
-		addRenderableWidget(Button.builder(Component.literal(l.t("Refresh", "更新")), b -> load(true)).bounds(panelX, by, bw, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Settings", "設定")), b -> minecraft.gui.setScreen(new SettingsScreen(this))).bounds(panelX + bw + 2, by, bw, 20).build());
-		addRenderableWidget(Button.builder(Component.literal(l.t("Close", "閉じる")), b -> onClose()).bounds(panelX + 2 * (bw + 2), by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Refresh", "更新")), b -> load(true)).bounds(panelX, by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Settings", "設定")), b -> minecraft.gui.setScreen(new SettingsScreen(this))).bounds(panelX + bw + 2, by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Close", "閉じる")), b -> onClose()).bounds(panelX + 2 * (bw + 2), by, bw, 20).build());
 		load(false);
 		builtVersion = -1;
 	}
@@ -1050,6 +1050,7 @@ final class MenuScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+		if (SkyPilot.get().config().appearance.richMenus) ClientStyle.backdrop(g, width, height);
 		super.extractRenderState(g, mouseX, mouseY, delta);
 		int version = dataVersion * 31 + versionOf(MarketData.get(MarketData.AH)) * 7 + versionOf(MarketData.get(MarketData.BAZAAR))
 				// countdowns on the status tab

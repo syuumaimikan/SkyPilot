@@ -87,6 +87,26 @@ final class VideoPreset {
 		return n;
 	}
 
+
+	/** Richer vanilla rendering, with the same reversible backup as the lightweight preset. */
+	static int quality(Minecraft mc, SkyPilotConfig cfg) {
+		if (cfg.perf.videoBackup == null) cfg.perf.videoBackup = new LinkedHashMap<>();
+		java.util.Map<String, Object> values = java.util.Map.of(
+				"renderDistance", 12, "entityDistanceScaling", 1.0, "particles", ParticleStatus.ALL,
+				"entityShadows", true, "cloudStatus", CloudStatus.FANCY, "biomeBlendRadius", 5,
+				"cutoutLeaves", true, "improvedTransparency", true, "menuBackgroundBlurriness", 5);
+		int n = 0;
+		for (Change<?> c : CHANGES) {
+			Object value = values.get(c.key());
+			if (Objects.equals(c.current(mc.options), value)) continue;
+			cfg.perf.videoBackup.putIfAbsent(c.key(), String.valueOf(c.current(mc.options)));
+			c.set(mc.options, value); n++;
+		}
+		if (cfg.perf.videoBackup.isEmpty()) cfg.perf.videoBackup = null;
+		if (n > 0) mc.options.save();
+		return n;
+	}
+
 	/** Put the player's own values back. */
 	static int restore(Minecraft mc, SkyPilotConfig cfg) {
 		if (cfg.perf.videoBackup == null) return 0;

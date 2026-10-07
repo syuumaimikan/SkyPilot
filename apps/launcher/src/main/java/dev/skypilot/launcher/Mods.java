@@ -108,14 +108,37 @@ public final class Mods {
 		switchOffOthers(modsDir, "skypilot", target);
 	}
 
-	/** An enabled Fabric API file with exactly the pinned hash is present. */
+	/** The pinned API is enabled, either nested in the trusted SkyPilot jar or as a separate file. */
 	public static boolean fabricApiInstalled(Path modsDir, Pins pins) {
+		if (bundledFabricApiInstalled(modsDir, pins)) return true;
 		for (ModFile m : list(modsDir)) {
 			try {
 				if (m.enabled() && m.id().equals("fabric-api") && Files.size(m.file()) == pins.fabricApiSize() && Net.sha512(m.file()).equals(pins.fabricApiSha512())) return true;
 			} catch (IOException e) {
 				// unreadable file: not the pinned one
 			}
+		}
+		return false;
+	}
+
+	private static boolean bundledFabricApiInstalled(Path modsDir, Pins pins) {
+		if (!skyPilotInstalled(modsDir, pins) || pins.fabricApiSize() <= 0 || pins.fabricApiSize() > 8_000_000) return false;
+		Path mod = modsDir.resolve(pins.modFile());
+		JsonObject metadata = modJson(mod);
+		if (metadata == null || !metadata.has("jars") || !metadata.get("jars").isJsonArray()) return false;
+		try (ZipFile zip = new ZipFile(mod.toFile())) {
+			for (var nested : metadata.getAsJsonArray("jars")) {
+				if (!nested.isJsonObject()) continue;
+				String file = str(nested.getAsJsonObject(), "file", "");
+				ZipEntry entry = zip.getEntry(file);
+				if (entry == null || entry.getSize() != pins.fabricApiSize()) continue;
+				try (InputStream in = zip.getInputStream(entry)) {
+					byte[] bytes = in.readNBytes((int) pins.fabricApiSize() + 1);
+					if (bytes.length == pins.fabricApiSize() && Net.sha512(bytes).equals(pins.fabricApiSha512())) return true;
+				}
+			}
+		} catch (IOException | RuntimeException ignored) {
+			// A broken or mismatched bundle still needs the separately verified API.
 		}
 		return false;
 	}

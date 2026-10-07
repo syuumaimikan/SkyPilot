@@ -102,8 +102,50 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			SkyPilot.get().rebuildApi();
 		});
 
+		ctx.setScreen(ClientHomeScreen::new);
+		ctx.waitTicks(3);
+		ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-client-home"));
+        ctx.setScreen(() -> new net.minecraft.client.gui.screens.options.OptionsScreen(new ClientHomeScreen(), net.minecraft.client.Minecraft.getInstance().options, false));
+        ctx.waitTicks(3); ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-options-style"));
+        ctx.setScreen(() -> new net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(new ClientHomeScreen()));
+        ctx.waitTicks(3); ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-multiplayer-style"));
+		ctx.setScreen(() -> null);
 		try (TestSingleplayerContext world = ctx.worldBuilder().create()) {
 			world.getConnection().waitForChunksRender(true, 1200);
+			ctx.runOnClient(mc -> {
+				var texture = net.minecraft.resources.Identifier.fromNamespaceAndPath("skypilot", "skin_cache_test");
+				var image = new com.mojang.blaze3d.platform.NativeImage(64, 64, false);
+				image.fillRect(0, 0, 64, 64, 0xFFA38BFA);
+				mc.getTextureManager().register(texture, new net.minecraft.client.renderer.texture.DynamicTexture(() -> "Skin cache test", image));
+				check(SkinPixels.get(texture)[0] == 0xFFA38BFA, "loaded dynamic skin pixels reused");
+				mc.getTextureManager().release(texture);
+				var cfg = SkyPilot.get().config();
+				cfg.appearance.cape = "aurora"; cfg.appearance.back = "dragon"; cfg.appearance.hat = "horns"; cfg.appearance.skin3d = true;
+				VideoPreset.quality(mc, cfg);
+				check(mc.options.renderDistance().get() == 12 && mc.options.entityShadows().get(), "rich graphics applied");
+				check(cfg.perf.videoBackup != null, "rich graphics are reversible");
+				VideoPreset.restore(mc, cfg);
+			});
+			ctx.setScreen(() -> new AppearanceScreen(null)); ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-wardrobe"));
+			ctx.setScreen(() -> new DeskScreen(null));ctx.waitTicks(3);
+            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-tool-desk"));
+            ctx.runOnClient(mc -> {var desk=(DeskScreen)mc.gui.screen();for(var child:desk.children())if(child instanceof net.minecraft.client.gui.components.EditBox box)box.setValue("1");for(var child:desk.children())if(child instanceof net.minecraft.client.gui.components.Button button&&button.getMessage().getString().equals("Start"))button.onPress(new net.minecraft.client.input.KeyEvent(257,0,0));check(DeskRuntime.FOCUS.running(),"focus starts through GUI");DeskRuntime.FOCUS.reset();});
+            for(String tabName:new String[]{"Notes","Calc","Random","Tasks","2048"}){
+                ctx.runOnClient(mc -> {var desk=(DeskScreen)mc.gui.screen();desk.children().stream().filter(child->child instanceof net.minecraft.client.gui.components.Button).map(child->(net.minecraft.client.gui.components.Button)child).filter(button->button.getMessage().getString().equals(tabName)).findFirst().orElseThrow().onPress(new net.minecraft.client.input.KeyEvent(257,0,0));});
+                ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-desk-"+tabName.toLowerCase(java.util.Locale.ROOT)));
+            }
+            ctx.runOnClient(mc->{var desk=(DeskScreen)mc.gui.screen();for(int key:new int[]{263,265,262,264})desk.keyPressed(new net.minecraft.client.input.KeyEvent(key,0,0));check(java.util.Arrays.stream(DeskRuntime.TILES.cells()).filter(v->v>0).count()>2,"2048 arrow keys update game");});
+            ctx.setScreen(() -> new OutfitScreen(null));ctx.waitTicks(3);
+            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-saved-outfits"));
+            ctx.setScreen(() -> new PuzzleScreen(null)); ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-puzzle-lab"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc -> mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
+			ctx.waitFor(mc -> PixelSkinLayer.submittedPixels > 0 && CosmeticLayer.submittedVoxels > 160, 100);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-local-cosmetics"));
+			ctx.runOnClient(mc -> { mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON); SkyPilot.get().config().appearance.cape = "none"; SkyPilot.get().config().appearance.back = "none"; SkyPilot.get().config().appearance.hat = "none"; SkyPilot.get().config().appearance.skin3d = false; });
+
 
 			// A sidebar like Hypixel SkyBlock's (title, "⏣ <area>", "Purse: n").
 			world.getServer().runOnServer(server -> {

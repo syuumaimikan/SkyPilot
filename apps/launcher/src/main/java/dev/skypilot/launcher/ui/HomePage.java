@@ -178,9 +178,11 @@ final class HomePage {
 		left.setOpaque(false);
 		left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
 		status.setAlignmentX(0);
+		left.add(Ui.label("SKYPILOT  /  CLIENT", 12f, Font.BOLD, new Color(180, 240, 233)));
+		left.add(Box.createVerticalStrut(10));
 		left.add(status);
 		left.add(Box.createVerticalStrut(14));
-		JLabel t = Ui.label("SkyPilot", 40f, Font.BOLD, Color.WHITE);
+		JLabel t = Ui.label("Make the sky yours.", 38f, Font.BOLD, Color.WHITE);
 		t.setAlignmentX(0);
 		left.add(t);
 		JLabel sub = Ui.label(c.t("Your Hypixel SkyBlock co-pilot  ·  Minecraft " + c.pins.minecraft() + "  ·  Fabric",

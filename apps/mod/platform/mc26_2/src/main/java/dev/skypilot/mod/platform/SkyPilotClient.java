@@ -54,9 +54,16 @@ public final class SkyPilotClient implements ClientModInitializer {
 		ClientReceiveMessageEvents.GAME.register(ChatHook::onGameMessage);
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, flag, lines) -> PriceCheck.tooltip(stack, lines));
 		ScreenOverlays.register();
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
+				helper.register(new PixelSkinLayer(avatar));
+				helper.register(new CosmeticLayer(avatar));
+			}
+		});
 		ClientPlayerBlockBreakEvents.AFTER.register((level, player, pos, state) -> Trackers.blockBroken(state));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen && SkyPilot.get().config().appearance.richMenus) mc.gui.setScreen(new ClientHomeScreen());
 			while (openSettings.consumeClick()) mc.gui.setScreen(new SettingsScreen(null));
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
 			while (openMenu.consumeClick()) mc.gui.setScreen(new MenuScreen(null, null));

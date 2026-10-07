@@ -57,11 +57,13 @@ public final class LauncherFrame {
 			new PageDef("home", "home", "Home", "ホーム", HomePage::new),
 			new PageDef("mods", "mods", "Mods", "MOD", ModsPage::new),
 			new PageDef("features", "features", "Features", "機能", FeaturesPage::new),
+			new PageDef("desk", "tools", "Tool desk", "ツールデスク", DeskPage::new),
+			new PageDef("wardrobe", "image", "Wardrobe", "ワードローブ", WardrobePage::new),
 			new PageDef("screenshots", "image", "Screenshots", "スクリーンショット", ScreenshotsPage::new),
 			new PageDef("logs", "terminal", "Logs & crashes", "ログとクラッシュ", LogsPage::new),
 			new PageDef("tools", "tools", "Tools", "ツール", ToolsPage::new),
 			new PageDef("settings", "settings", "Settings", "設定", SettingsPage::new),
-			new PageDef("about", "info", "About", "このランチャーについて", AboutPage::new));
+			new PageDef("about", "info", "About", "ランチャー情報", AboutPage::new));
 
 	private final Ctx c;
 	private final JPanel cards = new JPanel(new CardLayout());
@@ -188,6 +190,8 @@ public final class LauncherFrame {
 		if (page instanceof HomePage p) return p.view();
 		if (page instanceof ModsPage p) return p.view();
 		if (page instanceof FeaturesPage p) return p.view();
+		if (page instanceof WardrobePage p) return p.view();
+		if (page instanceof DeskPage p) return p.view();
 		if (page instanceof ScreenshotsPage p) return p.view();
 		if (page instanceof LogsPage p) return p.view();
 		if (page instanceof ToolsPage p) return p.view();
@@ -199,6 +203,7 @@ public final class LauncherFrame {
 		if (page instanceof HomePage p) p.refresh();
 		else if (page instanceof ModsPage p) p.reload();
 		else if (page instanceof FeaturesPage p) p.reload();
+		else if (page instanceof WardrobePage p) p.reload();
 		else if (page instanceof ScreenshotsPage p) p.reload();
 		else if (page instanceof LogsPage p) p.reload();
 		else if (page instanceof ToolsPage p) p.reload();
