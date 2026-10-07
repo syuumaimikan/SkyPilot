@@ -2,5 +2,17 @@
 	"key.category.skypilot.main": "SkyPilot",
 	"key.skypilot.settings": "SkyPilot の設定を開く",
 	"key.skypilot.edit_hud": "SkyPilot HUD の位置・サイズ変更",
-	"key.skypilot.menu": "SkyPilotメニューを開く"
+	"key.skypilot.menu": "SkyPilotメニューを開く",
+	"key.skypilot.zoom": "長押しでズーム",
+	"key.skypilot.wardrobe": "ワードローブを開く",
+	"key.skypilot.desk": "ツールデスクを開く",
+	"key.skypilot.puzzle": "パズルを開く",
+	"key.skypilot.visual": "演出スタジオを開く",
+	"key.skypilot.utility": "便利HUD設定を開く",
+	"key.skypilot.keys": "キー設定を開く",
+	"key.skypilot.perf": "描画設定を開く",
+	"key.skypilot.copy_position": "現在の座標をコピー",
+	"key.skypilot.cycle_shader": "画面シェーダーを切り替える",
+	"key.skypilot.random_outfit": "ランダムコーデを適用",
+	"key.skypilot.pause_focus": "集中タイマーを停止／再開"
 }

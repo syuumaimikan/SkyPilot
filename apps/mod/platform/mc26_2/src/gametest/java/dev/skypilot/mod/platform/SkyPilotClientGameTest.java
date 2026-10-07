@@ -147,6 +147,60 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			ctx.runOnClient(mc -> { mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON); SkyPilot.get().config().appearance.cape = "none"; SkyPilot.get().config().appearance.back = "none"; SkyPilot.get().config().appearance.hat = "none"; SkyPilot.get().config().appearance.skin3d = false; });
 
 
+            ctx.setScreen(() -> new KeySettingsScreen(null));ctx.waitTicks(3);
+            ctx.runOnClient(mc -> {
+                var key=net.minecraft.client.KeyMapping.get("key.skypilot.zoom");var screen=(KeySettingsScreen)mc.gui.screen();
+                screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals(key.getTranslatedKeyMessage().getString())).map(c->(net.minecraft.client.gui.components.Button)c).findFirst().orElseThrow().onPress(new net.minecraft.client.input.KeyEvent(257,0,0));
+                screen.keyPressed(new net.minecraft.client.input.KeyEvent(69,0,0));check(key.matches(new net.minecraft.client.input.KeyEvent(69,0,0)),"zoom rebinds through GUI");check(KeySettingsScreen.conflicts(key).stream().anyMatch(k->k==mc.options.keyInventory),"vanilla key conflicts detected");
+                try{check(java.nio.file.Files.readString(mc.gameDirectory.toPath().resolve("options.txt")).contains("key.skypilot.zoom:"+key.saveString()),"new key saved to vanilla options");}catch(java.io.IOException e){throw new AssertionError(e);}
+            });
+            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-key-conflict"));
+            ctx.runOnClient(mc -> {
+                var key=net.minecraft.client.KeyMapping.get("key.skypilot.zoom");var screen=(KeySettingsScreen)mc.gui.screen();
+                Runnable capture=()->screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals(key.getTranslatedKeyMessage().getString())).map(c->(net.minecraft.client.gui.components.Button)c).findFirst().orElseThrow().onPress(new net.minecraft.client.input.KeyEvent(257,0,0));
+                capture.run();screen.keyPressed(new net.minecraft.client.input.KeyEvent(256,0,0));check(key.matches(new net.minecraft.client.input.KeyEvent(69,0,0)),"escape cancels without unbinding");
+                capture.run();screen.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(20,20,new net.minecraft.client.input.MouseButtonInfo(4,0)),false);check(key.matchesMouse(new net.minecraft.client.input.MouseButtonEvent(20,20,new net.minecraft.client.input.MouseButtonInfo(4,0))),"mouse binding captured");
+                screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals("×")).map(c->(net.minecraft.client.gui.components.Button)c).toList().get(2).onPress(new net.minecraft.client.input.KeyEvent(257,0,0));check(key.isUnbound()&&KeySettingsScreen.conflicts(key).isEmpty(),"unbound mappings have no conflicts");
+                screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals("Reset")).map(c->(net.minecraft.client.gui.components.Button)c).toList().get(2).onPress(new net.minecraft.client.input.KeyEvent(257,0,0));check(key.isDefault(),"individual reset restores default");
+                for(int i=0;i<2;i++)screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals("›")).map(c->(net.minecraft.client.gui.components.Button)c).findFirst().orElseThrow().onPress(new net.minecraft.client.input.KeyEvent(257,0,0));
+            });
+            ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-key-actions"));
+            ctx.setScreen(() -> new UtilityScreen(null));ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-utility-settings"));
+            ctx.runOnClient(mc -> {var u=SkyPilot.get().config().utility;u.coordinates=u.fps=u.ping=u.clock=u.speed=u.durability=u.slots=u.focus=u.session=u.worldTime=true;DeskRuntime.FOCUS.start(1,DeskRuntime.now());check(UtilityHud.rows(mc).size()==10,"all ten utility rows render");ClientShortcuts.copyPosition(mc);var pos=mc.player.blockPosition();check(mc.keyboardHandler.getClipboard().equals(pos.getX()+" "+pos.getY()+" "+pos.getZ()),"coordinate copy stays local");});
+            ctx.setScreen(() -> null);ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-utility-hud"));
+            ctx.runOnClient(mc -> {
+                var mapping=net.minecraft.client.KeyMapping.get("key.skypilot.desk");mapping.setKey(com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(295));net.minecraft.client.KeyMapping.resetMapping();net.minecraft.client.KeyMapping.click(com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(295));ClientShortcuts.tick(mc);check(mc.gui.screen() instanceof DeskScreen,"desk shortcut opens local screen");mapping.setKey(mapping.getDefaultKey());net.minecraft.client.KeyMapping.resetMapping();mc.options.save();
+                var actionKey=com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(296);
+                var cycle=net.minecraft.client.KeyMapping.get("key.skypilot.cycle_shader");cycle.setKey(actionKey);net.minecraft.client.KeyMapping.resetMapping();SkyPilot.get().config().visuals.shader="none";
+                net.minecraft.client.KeyMapping.click(actionKey);ClientShortcuts.tick(mc);check(SkyPilot.get().config().visuals.shader.equals("none"),"new shortcut ignored while a screen is open");
+                mc.gui.setScreen(null);net.minecraft.client.KeyMapping.click(actionKey);ClientShortcuts.tick(mc);check(SkyPilot.get().config().visuals.shader.equals("cinematic"),"shader cycle shortcut works");cycle.setKey(cycle.getDefaultKey());
+                var pause=net.minecraft.client.KeyMapping.get("key.skypilot.pause_focus");pause.setKey(actionKey);net.minecraft.client.KeyMapping.resetMapping();net.minecraft.client.KeyMapping.click(actionKey);ClientShortcuts.tick(mc);check(!DeskRuntime.FOCUS.running(),"focus pauses through shortcut");net.minecraft.client.KeyMapping.click(actionKey);ClientShortcuts.tick(mc);check(DeskRuntime.FOCUS.running(),"focus resumes through shortcut");pause.setKey(pause.getDefaultKey());
+                var random=net.minecraft.client.KeyMapping.get("key.skypilot.random_outfit");var appearance=SkyPilot.get().config().appearance;var before=dev.skypilot.mod.core.WardrobeTools.capture("Test",appearance);random.setKey(actionKey);net.minecraft.client.KeyMapping.resetMapping();net.minecraft.client.KeyMapping.click(actionKey);ClientShortcuts.tick(mc);check(dev.skypilot.mod.core.CosmeticCatalog.valid("cape",appearance.cape)&&!appearance.cape.equals("none"),"random outfit shortcut equips valid cosmetics");dev.skypilot.mod.core.WardrobeTools.apply(before,appearance);random.setKey(random.getDefaultKey());net.minecraft.client.KeyMapping.resetMapping();mc.options.save();SkyPilot.get().config().visuals.shader="none";
+                SkyPilot.get().config().utility.clear();DeskRuntime.FOCUS.reset();
+            });
+
+            ctx.setScreen(() -> new VisualScreen(null));ctx.waitTicks(3);
+            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-visual-studio"));
+            ctx.setScreen(() -> null);
+            for(String shader:new String[]{"cinematic","warm","cool","mono","sketch"}){
+                ctx.runOnClient(mc -> SkyPilot.get().config().visuals.shader=shader);
+                ctx.waitTicks(8);
+                check(ctx.computeOnClient(mc -> net.minecraft.resources.Identifier.fromNamespaceAndPath("skypilot",shader).equals(mc.gameRenderer.currentPostEffect())),"shader active: "+shader);
+                ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-shader-"+shader));
+            }
+            ctx.runOnClient(mc -> {
+                var a=SkyPilot.get().config().visuals;a.shader="none";VisualEffects.tick(mc);check(mc.gameRenderer.currentPostEffect()==null,"shader disabled cleanly");
+                var external=net.minecraft.resources.Identifier.withDefaultNamespace("creeper");
+                ((dev.skypilot.mod.platform.mixin.PostEffectAccessor)mc.gameRenderer).skypilot$setPostEffect(external);
+                a.shader="warm";VisualEffects.tick(mc);check(external.equals(mc.gameRenderer.currentPostEffect()),"external post effect retained");mc.gameRenderer.clearPostEffect();a.shader="none";
+                var key=java.util.Arrays.stream(mc.options.keyMappings).filter(k->k.getName().equals("key.skypilot.zoom")).findFirst().orElseThrow();
+                a.zoom=true;a.smoothZoom=false;key.setDown(true);VisualEffects.tick(mc);check(VisualEffects.fov(80)==20&&VisualEffects.mouseScale()==.25,"zoom and sensitivity scaled");key.setDown(false);VisualEffects.tick(mc);check(VisualEffects.fov(80)==80,"zoom released");
+                var zombie=new net.minecraft.world.entity.monster.zombie.Zombie(net.minecraft.world.entity.EntityTypes.ZOMBIE,mc.level);zombie.setId(-9500);zombie.setPos(mc.player.getX()+2,mc.player.getY(),mc.player.getZ());
+                a.killParticles=true;a.hitMarker=true;a.combo=true;int before=VisualEffects.bursts;zombie.handleDamageEvent(zombie.damageSources().playerAttack(mc.player));zombie.setHealth(0);VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"received attack and death emit kill particles");VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"death emits once");
+                a.killParticles=false;zombie.setHealth(20);zombie.handleDamageEvent(zombie.damageSources().playerAttack(mc.player));zombie.setHealth(0);VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"disabled kill particles stay off");
+                SkyPilot.get().config().visuals=new dev.skypilot.mod.core.VisualSettings();VisualEffects.reset();
+            });
+
 			// A sidebar like Hypixel SkyBlock's (title, "⏣ <area>", "Purse: n").
 			world.getServer().runOnServer(server -> {
 				ServerScoreboard sb = server.getScoreboard();

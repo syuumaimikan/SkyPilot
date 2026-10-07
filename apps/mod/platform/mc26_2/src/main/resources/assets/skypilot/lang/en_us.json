@@ -2,5 +2,17 @@
 	"key.category.skypilot.main": "SkyPilot",
 	"key.skypilot.settings": "Open SkyPilot settings",
 	"key.skypilot.edit_hud": "Move / resize SkyPilot HUD",
-	"key.skypilot.menu": "Open SkyPilot menu"
+	"key.skypilot.menu": "Open SkyPilot menu",
+	"key.skypilot.zoom": "Hold to zoom",
+	"key.skypilot.wardrobe": "Open wardrobe",
+	"key.skypilot.desk": "Open tool desk",
+	"key.skypilot.puzzle": "Open puzzle lab",
+	"key.skypilot.visual": "Open visual studio",
+	"key.skypilot.utility": "Open utility HUD settings",
+	"key.skypilot.keys": "Open key bindings",
+	"key.skypilot.perf": "Open performance settings",
+	"key.skypilot.copy_position": "Copy current coordinates",
+	"key.skypilot.cycle_shader": "Cycle screen shaders",
+	"key.skypilot.random_outfit": "Apply random outfit",
+	"key.skypilot.pause_focus": "Pause / resume focus timer"
 }

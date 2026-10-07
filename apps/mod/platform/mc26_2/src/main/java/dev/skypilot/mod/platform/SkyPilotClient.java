@@ -35,9 +35,13 @@ public final class SkyPilotClient implements ClientModInitializer {
 
 		KeyMapping openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.settings", InputConstants.UNKNOWN.getValue(), CATEGORY));
 		KeyMapping editHud = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.edit_hud", InputConstants.UNKNOWN.getValue(), CATEGORY));
+		VisualEffects.key(KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.zoom", InputConstants.KEY_C, CATEGORY)));
+		ClientShortcuts.register(CATEGORY);
 		KeyMapping openMenu = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.skypilot.menu", InputConstants.KEY_J, CATEGORY));
 
 		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD, Identifier.fromNamespaceAndPath("skypilot", "hud"), HudRenderer::render);
+		HudElementRegistry.attachElementAfter(VanillaHudElements.CROSSHAIR,Identifier.fromNamespaceAndPath("skypilot","visuals"),VisualEffects::hud);
+		HudElementRegistry.attachElementAfter(Identifier.fromNamespaceAndPath("skypilot","visuals"),Identifier.fromNamespaceAndPath("skypilot","utility"),UtilityHud::render);
 		// after the SkyPilot HUD, so the info box can sit below it
 		HudElementRegistry.attachElementAfter(Identifier.fromNamespaceAndPath("skypilot", "hud"), Identifier.fromNamespaceAndPath("skypilot", "info"), InfoHud::render);
 		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD, Identifier.fromNamespaceAndPath("skypilot", "guide"), (g, delta) -> {
@@ -67,6 +71,8 @@ public final class SkyPilotClient implements ClientModInitializer {
 			while (openSettings.consumeClick()) mc.gui.setScreen(new SettingsScreen(null));
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
 			while (openMenu.consumeClick()) mc.gui.setScreen(new MenuScreen(null, null));
+			ClientShortcuts.tick(mc);
+			VisualEffects.tick(mc);
 			Performance.tick(mc);
 			Afk.tick(mc);
 			FarmBuilder.tick(mc);
@@ -80,12 +86,13 @@ public final class SkyPilotClient implements ClientModInitializer {
 				Timers.tickSecond(mc);
 			}
 		});
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> SkyPilot.get().refreshHud(System.currentTimeMillis(), true));
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {UtilityHud.join();SkyPilot.get().refreshHud(System.currentTimeMillis(), true);});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
 			SkyPilot.get().endSession();
 			ClickTranslate.clear();
 			ChatFeatures.clear();
 			Activity.disconnected();
+			VisualEffects.reset();
 		});
 		ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> SkyPilot.get().shutdown());
 

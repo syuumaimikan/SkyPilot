@@ -40,6 +40,8 @@ public final class SkyPilotConfig {
 	public String deskNotes = "";
 	public int focusMinutes = 25;
 	public int tileBest = 0;
+	public VisualSettings visuals = new VisualSettings();
+	public UtilitySettings utility = new UtilitySettings();
 
 	public static final class Appearance {
 		public boolean richMenus = true;
@@ -257,6 +259,9 @@ public final class SkyPilotConfig {
 		deskNotes=deskNotes.substring(0,Math.min(1400,deskNotes.length()));
 		focusMinutes=(int)clamp(focusMinutes,1,180);
 		tileBest=Math.max(0,tileBest);
+		if(utility==null)utility=new UtilitySettings();
+		if(visuals==null)visuals=new VisualSettings();
+		visuals.sanitize();
 		if (perf == null) perf = new Performance();
 		perf.backgroundFps = (int) clamp(perf.backgroundFps, 5, 60);
 		perf.menuFps = (int) clamp(perf.menuFps, 15, 240);
