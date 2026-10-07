@@ -28,9 +28,10 @@ final class VisualScreen extends Screen {
         button(t("Crosshair: ","照準種類: ")+a.crosshairStyle,x+156,y+110,w,()->a.crosshairStyle=next(a.crosshairStyle,List.of("dot","cross","ring")));
         button(t("Compass: ","方角表示: ")+state(a.compass),x,y+132,w,()->a.compass=!a.compass);
         button(t("Color: ","色: ")+String.format("#%06X",a.crosshairColor),x+156,y+132,w,()->{var p=dev.skypilot.mod.core.WardrobeTools.PALETTE;int i=0;while(i<p.length&&p[i]!=a.crosshairColor)i++;a.crosshairColor=p[(i+1)%p.length];});
-        button(t("Reset all effects","演出をリセット"),x,height-26,w,()->SkyPilot.get().config().visuals=new dev.skypilot.mod.core.VisualSettings());
-        addRenderableWidget(ClientButton.create(Component.literal(t("Back","戻る")),b->onClose()).bounds(x+156,height-26,w,18).build());
+        button(t("Reset all effects","演出をリセット"),x,height-26,100,()->SkyPilot.get().config().visuals=new dev.skypilot.mod.core.VisualSettings());
+        addRenderableWidget(ClientButton.create(Component.literal(t("Keys…","キー設定…")),b->minecraft.gui.setScreen(new KeySettingsScreen(this))).bounds(x+104,height-26,100,18).build());
+        addRenderableWidget(ClientButton.create(Component.literal(t("Back","戻る")),b->onClose()).bounds(x+208,height-26,100,18).build());
     }
-    @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta){ClientStyle.backdrop(g,width,height);g.centeredText(font,"VISUAL STUDIO",width/2,12,Ui.PURPLE);g.centeredText(font,t("Hold C to zoom · change binding in Controls","C長押しでズーム · キーは操作設定で変更可"),width/2,28,Ui.GRAY);super.extractRenderState(g,mx,my,delta);}
+    @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta){ClientStyle.backdrop(g,width,height);g.centeredText(font,"VISUAL STUDIO",width/2,12,Ui.PURPLE);g.centeredText(font,t("Zoom key: ","ズームキー: ")+net.minecraft.client.KeyMapping.get("key.skypilot.zoom").getTranslatedKeyMessage().getString(),width/2,28,Ui.GRAY);super.extractRenderState(g,mx,my,delta);}
     @Override public void onClose(){minecraft.gui.setScreen(parent);}
 }

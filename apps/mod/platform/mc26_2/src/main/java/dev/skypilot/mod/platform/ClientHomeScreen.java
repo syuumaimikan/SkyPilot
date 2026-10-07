@@ -20,12 +20,14 @@ final class ClientHomeScreen extends Screen {
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Tool desk", "ツールデスク")), b -> minecraft.gui.setScreen(new DeskScreen(this))).bounds(x+102,y+48,98,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Visual studio", "演出スタジオ")), b -> minecraft.gui.setScreen(new VisualScreen(this))).bounds(x,y+72,98,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Options", "設定")), b -> minecraft.gui.setScreen(new OptionsScreen(this,minecraft.options,false))).bounds(x+102,y+72,98,20).build());
-        addRenderableWidget(ClientButton.create(Component.literal(l.t("Quit", "終了")), b -> minecraft.stop()).bounds(x,y+96,200,20).build());
+        addRenderableWidget(ClientButton.create(Component.literal(l.t("Key bindings","キー設定")), b -> minecraft.gui.setScreen(new KeySettingsScreen(this))).bounds(x,y+96,98,20).build());
+        addRenderableWidget(ClientButton.create(Component.literal(l.t("Utility HUD","便利HUD")), b -> minecraft.gui.setScreen(new UtilityScreen(this))).bounds(x+102,y+96,98,20).build());
+        addRenderableWidget(ClientButton.create(Component.literal(l.t("Quit", "終了")), b -> minecraft.stop()).bounds(x,y+120,200,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         ClientStyle.backdrop(g,width,height);
         int y=Math.max(72,height/2-35);
-        ClientStyle.panel(g,width/2-112,y-10,224,140);
+        ClientStyle.panel(g,width/2-112,y-10,224,164);
         super.extractRenderState(g,mx,my,delta);
         g.centeredText(font,Component.literal("S K Y P I L O T"),width/2,y-42,Ui.WHITE);
         g.centeredText(font,Component.literal("YOUR SKY. YOUR STYLE."),width/2,y-27,0xFF55D6D2);
