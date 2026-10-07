@@ -17,7 +17,12 @@
 		"MenuBackgroundMixin",
 		"MenuButtonMixin",
 		"MenuOptionMixin",
-		"MenuSliderMixin"
+		"MenuSliderMixin",
+		"PostEffectAccessor",
+		"ZoomMixin",
+		"CombatEffectsMixin",
+		"CrosshairMixin",
+		"ZoomMouseMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

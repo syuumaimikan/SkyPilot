@@ -147,6 +147,28 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			ctx.runOnClient(mc -> { mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON); SkyPilot.get().config().appearance.cape = "none"; SkyPilot.get().config().appearance.back = "none"; SkyPilot.get().config().appearance.hat = "none"; SkyPilot.get().config().appearance.skin3d = false; });
 
 
+            ctx.setScreen(() -> new VisualScreen(null));ctx.waitTicks(3);
+            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-visual-studio"));
+            ctx.setScreen(() -> null);
+            for(String shader:new String[]{"cinematic","warm","cool","mono","sketch"}){
+                ctx.runOnClient(mc -> SkyPilot.get().config().visuals.shader=shader);
+                ctx.waitTicks(8);
+                check(ctx.computeOnClient(mc -> net.minecraft.resources.Identifier.fromNamespaceAndPath("skypilot",shader).equals(mc.gameRenderer.currentPostEffect())),"shader active: "+shader);
+                ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-shader-"+shader));
+            }
+            ctx.runOnClient(mc -> {
+                var a=SkyPilot.get().config().visuals;a.shader="none";VisualEffects.tick(mc);check(mc.gameRenderer.currentPostEffect()==null,"shader disabled cleanly");
+                var external=net.minecraft.resources.Identifier.withDefaultNamespace("creeper");
+                ((dev.skypilot.mod.platform.mixin.PostEffectAccessor)mc.gameRenderer).skypilot$setPostEffect(external);
+                a.shader="warm";VisualEffects.tick(mc);check(external.equals(mc.gameRenderer.currentPostEffect()),"external post effect retained");mc.gameRenderer.clearPostEffect();a.shader="none";
+                var key=java.util.Arrays.stream(mc.options.keyMappings).filter(k->k.getName().equals("key.skypilot.zoom")).findFirst().orElseThrow();
+                a.zoom=true;a.smoothZoom=false;key.setDown(true);VisualEffects.tick(mc);check(VisualEffects.fov(80)==20&&VisualEffects.mouseScale()==.25,"zoom and sensitivity scaled");key.setDown(false);VisualEffects.tick(mc);check(VisualEffects.fov(80)==80,"zoom released");
+                var zombie=new net.minecraft.world.entity.monster.zombie.Zombie(net.minecraft.world.entity.EntityTypes.ZOMBIE,mc.level);zombie.setId(-9500);zombie.setPos(mc.player.getX()+2,mc.player.getY(),mc.player.getZ());
+                a.killParticles=true;a.hitMarker=true;a.combo=true;int before=VisualEffects.bursts;zombie.handleDamageEvent(zombie.damageSources().playerAttack(mc.player));zombie.setHealth(0);VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"received attack and death emit kill particles");VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"death emits once");
+                a.killParticles=false;zombie.setHealth(20);zombie.handleDamageEvent(zombie.damageSources().playerAttack(mc.player));zombie.setHealth(0);VisualEffects.tick(mc);check(VisualEffects.bursts==before+1,"disabled kill particles stay off");
+                SkyPilot.get().config().visuals=new dev.skypilot.mod.core.VisualSettings();VisualEffects.reset();
+            });
+
 			// A sidebar like Hypixel SkyBlock's (title, "⏣ <area>", "Purse: n").
 			world.getServer().runOnServer(server -> {
 				ServerScoreboard sb = server.getScoreboard();

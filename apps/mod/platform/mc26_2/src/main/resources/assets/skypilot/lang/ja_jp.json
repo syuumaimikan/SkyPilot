@@ -2,5 +2,6 @@
 	"key.category.skypilot.main": "SkyPilot",
 	"key.skypilot.settings": "SkyPilot の設定を開く",
 	"key.skypilot.edit_hud": "SkyPilot HUD の位置・サイズ変更",
-	"key.skypilot.menu": "SkyPilotメニューを開く"
+	"key.skypilot.menu": "SkyPilotメニューを開く",
+	"key.skypilot.zoom": "長押しでズーム"
 }
