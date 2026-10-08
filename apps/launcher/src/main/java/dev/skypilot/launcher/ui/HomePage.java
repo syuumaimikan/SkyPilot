@@ -331,7 +331,7 @@ final class HomePage {
 			play.setText(c.t("PLAY", "プレイ"));
 			play.sub = (a == null ? "" : a.name() + "  ·  ") + (c.settings.joinHypixel ? c.t("joins Hypixel", "Hypixel に接続") : "Minecraft " + c.pins.minecraft());
 			play.setEnabled(true);
-		} else if (!launcherFound() && MicrosoftAuth.validClientId(c.settings.msClientId)) {
+		} else if (c.settings.needsSignIn(Account.signedIn(c.launcherDir))) {
 			setStatus(c.t("Sign in to play", "サインインしてプレイ"), Theme.WARN);
 			play.setText(c.t("SIGN IN", "サインイン"));
 			play.sub = c.t("with your Microsoft account", "Microsoft アカウントで");
@@ -625,7 +625,7 @@ final class HomePage {
 			playDirect();
 			return;
 		}
-		if (!launcherFound() && MicrosoftAuth.validClientId(c.settings.msClientId)) {
+		if (c.settings.needsSignIn(Account.signedIn(c.launcherDir))) {
 			SignInDialog.open(c, root, c.rebuild);
 			return;
 		}

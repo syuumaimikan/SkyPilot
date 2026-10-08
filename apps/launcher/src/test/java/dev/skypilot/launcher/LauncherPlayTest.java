@@ -31,6 +31,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class LauncherPlayTest {
 	static final String CLIENT = "11111111-2222-3333-4444-555555555555";
 
+	@Test
+	void approvedAppIsUsedForNewAndExistingEmptySettings(@TempDir Path dir) throws Exception {
+		assertEquals(LauncherSettings.DEFAULT_MS_CLIENT_ID, LauncherSettings.load(dir).msClientId);
+		Files.writeString(dir.resolve("launcher.json"), "{\"msClientId\":\"\",\"memoryMb\":6144}");
+		LauncherSettings migrated = LauncherSettings.load(dir);
+		assertEquals(LauncherSettings.DEFAULT_MS_CLIENT_ID, migrated.msClientId);
+		assertEquals(6144, migrated.memoryMb);
+		migrated.msClientId = CLIENT;
+		migrated.save(dir);
+		assertEquals(CLIENT, LauncherSettings.load(dir).msClientId);
+	}
+
+	@Test
+	void directModeRequiresSignInBeforePlay() {
+		LauncherSettings settings = new LauncherSettings();
+		settings.msClientId = CLIENT;
+		assertTrue(settings.needsSignIn(false));
+		assertFalse(settings.direct(false));
+		assertFalse(settings.needsSignIn(true));
+		assertTrue(settings.direct(true));
+		settings.launchMode = "official";
+		assertFalse(settings.needsSignIn(false));
+		assertFalse(settings.direct(true));
+		settings.launchMode = "direct";
+		settings.msClientId = "";
+		assertFalse(settings.needsSignIn(false));
+	}
+
 	/** Scripted answers by URL, in order; records what was sent. */
 	static final class FakeHttp implements MicrosoftAuth.Transport {
 		final List<String> sent = new ArrayList<>();
@@ -238,6 +266,6 @@ public class LauncherPlayTest {
 		assertFalse(s.direct(true));
 		s.msClientId = "x";
 		s.sanitize();
-		assertEquals("", s.msClientId);
+		assertEquals(LauncherSettings.DEFAULT_MS_CLIENT_ID, s.msClientId);
 	}
 }

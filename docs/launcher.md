@@ -32,17 +32,7 @@ apps/launcher/   (a Gradle subproject of apps/mod - shares core/, network/ and t
 
 ## Microsoft sign-in and direct start
 
-**One-time setup: a client ID.** Mojang lets only approved apps sign in to Minecraft
-(`api.minecraftservices.com` answers 403 to others), and SkyPilot does not borrow another
-launcher's ID. Before the first sign-in:
-
-1. Register a free app in Microsoft Entra (Azure portal → App registrations → New):
-   - Supported account types: **Personal Microsoft accounts only**.
-   - Authentication → **Allow public client flows: Yes** (needed for the device code flow).
-2. Ask Mojang to allow the app for Minecraft: <https://aka.ms/mce-reviewappid>. Approval can
-   take a while.
-3. Paste the **Application (client) ID** in Settings → Account and launch (or in the sign-in
-   dialog). Until then, PLAY opens the official Minecraft Launcher.
+SkyPilot includes its public Microsoft application ID (b6c08d26-b301-4de0-bec8-6b5d69a42325), approved by Mojang on 2026-10-07. No app registration or client ID entry is needed for normal use. Existing empty settings automatically use this ID; valid custom IDs are preserved. Microsoft sign-in uses the consumers endpoint for personal accounts, so the directory tenant ID is not used.
 
 **Signing in** (sidebar → "Sign in with Microsoft"):
 

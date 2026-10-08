@@ -16,7 +16,7 @@ import java.util.function.BooleanSupplier;
  * password), then Xbox Live, XSTS and Minecraft services turn the Microsoft token into a game
  * session. Endpoints and request shapes: minecraft.wiki "Microsoft authentication" (checked
  * 2026-10). A client ID must be registered in Azure and approved by Mojang
- * (https://aka.ms/mce-reviewappid); the launcher ships none of its own.
+ * (https://aka.ms/mce-reviewappid); SkyPilot ships its approved public application ID.
  */
 public final class MicrosoftAuth {
 	static final String DEVICE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";

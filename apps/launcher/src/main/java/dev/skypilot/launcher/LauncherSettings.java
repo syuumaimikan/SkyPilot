@@ -10,6 +10,8 @@ import java.nio.file.Path;
 /** The launcher's own settings ({@code <launcher dir>/launcher.json}). */
 public final class LauncherSettings {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+	/** Public application ID approved for SkyPilot's Minecraft API access. */
+	public static final String DEFAULT_MS_CLIENT_ID = "b6c08d26-b301-4de0-bec8-6b5d69a42325";
 
 	/** Null = the official launcher's default .minecraft. */
 	public String minecraftDir;
@@ -33,11 +35,10 @@ public final class LauncherSettings {
 	public int windowX, windowY, windowW, windowH;
 	public String lastPage = "home";
 	/**
-	 * Azure application (client) ID for Microsoft sign-in, registered by you and approved by
-	 * Mojang (https://aka.ms/mce-reviewappid). Empty = sign-in unavailable, play through the
-	 * official launcher.
+	 * Public Microsoft application ID. Existing empty settings migrate to SkyPilot's approved
+	 * ID; a valid custom application ID is preserved.
 	 */
-	public String msClientId = "";
+	public String msClientId = DEFAULT_MS_CLIENT_ID;
 	/** "direct" (start the game from this launcher when signed in) or "official". */
 	public String launchMode = "direct";
 	/** Join Hypixel right after the game starts (Minecraft's Quick Play). */
@@ -48,6 +49,11 @@ public final class LauncherSettings {
 	/** True when the next Play starts the game here (signed in, direct mode). */
 	public boolean direct(boolean signedIn) {
 		return signedIn && "direct".equals(launchMode) && MicrosoftAuth.validClientId(msClientId);
+	}
+
+	/** Direct mode asks for a Microsoft account even if the official launcher is installed. */
+	public boolean needsSignIn(boolean signedIn) {
+		return !signedIn && "direct".equals(launchMode) && MicrosoftAuth.validClientId(msClientId);
 	}
 
 	public LauncherProfiles.Options profileOptions() {
@@ -83,7 +89,7 @@ public final class LauncherSettings {
 		if (playerName == null || !(playerName.isEmpty() || Avatar.validName(playerName))) playerName = "";
 		if (lastPage == null || !lastPage.matches("[a-z]{2,16}")) lastPage = "home";
 		msClientId = msClientId == null ? "" : msClientId.strip();
-		if (!msClientId.isEmpty() && !MicrosoftAuth.validClientId(msClientId)) msClientId = "";
+		if (!MicrosoftAuth.validClientId(msClientId)) msClientId = DEFAULT_MS_CLIENT_ID;
 		if (!"official".equals(launchMode)) launchMode = "direct";
 		windowW = Math.max(0, Math.min(windowW, 10_000));
 		windowH = Math.max(0, Math.min(windowH, 10_000));
