@@ -236,6 +236,7 @@ export function ErrorView({ error, retry }: { error: unknown; retry?: () => void
   let msg = e?.message ?? String(error);
   if (e?.code === "NETWORK") msg = t("The SkyPilot API is unreachable. Is the server running?", "SkyPilot API に接続できません。サーバーは起動していますか？");
   if (e?.code === "RATE_LIMITED") msg = t("Too many requests - please wait a moment.", "リクエストが多すぎます。少し待ってください。");
+  if (e?.code === "HYPIXEL_KEY_MISSING") msg = t("The server has no Hypixel API key. Its owner must create an application on developer.hypixel.net and configure HYPIXEL_API_KEY, then restart the API server. Your in-game API switches cannot fix this.", "サーバーに Hypixel API キーが設定されていません。管理者が developer.hypixel.net でアプリを登録し、HYPIXEL_API_KEY を設定して API サーバーを再起動してください。ゲーム内の API 設定では解消できません。");
   return (
     <Alert tone={e?.code === "HYPIXEL_UNAVAILABLE" || e?.code === "HYPIXEL_KEY_MISSING" ? "warn" : "bad"} className="flex flex-wrap items-center justify-between gap-3">
       <span>

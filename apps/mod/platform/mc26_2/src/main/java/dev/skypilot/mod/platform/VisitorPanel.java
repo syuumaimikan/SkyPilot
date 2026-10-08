@@ -86,7 +86,14 @@ final class VisitorPanel {
 			}
 			rows.add(new String[] {n.name(), " ×" + n.amount(), cost});
 		}
-		int h = 32 + rows.size() * 11 + (offer.copper().isPresent() ? 24 : 0);
+		double rewardValue=0; boolean rewardsKnown=true;
+		for(var reward:offer.rewards()){
+			var p=NamePrices.get(reward.name());
+			if(reward.name().equalsIgnoreCase("Coins"))rewardValue+=reward.amount();
+			else if(p!=null&&p.value()!=null)rewardValue+=p.value()*reward.amount();
+			else rewardsKnown=false;
+		}
+		int h = 62 + rows.size() * 11 + (offer.copper().isPresent() ? 24 : 0);
 		g.fill(x0, y0, x0 + w, y0 + h, Ui.PANEL);
 		g.outline(x0, y0, w, h, Ui.PANEL_BORDER);
 		g.text(font, l.t("SkyPilot · visitor cost", "SkyPilot · 訪問者のコスト"), x0 + 5, y0 + 5, Ui.PURPLE, false);
@@ -102,6 +109,11 @@ final class VisitorPanel {
 		}
 		String totalText = l.t("Total ", "合計 ") + Text.coins(total) + (complete ? "" : l.t(" (some unknown)", "（一部不明）"));
 		g.text(font, font.plainSubstrByWidth(totalText, w - 10), x0 + 5, y + 2, complete ? Ui.GOLD : Ui.GRAY, false);
+		String value=l.t("Sellable rewards ","売却可能な報酬 ")+Text.coins(rewardValue)+(rewardsKnown?"":" + ?");
+		g.text(font,font.plainSubstrByWidth(value,w-10),x0+5,y+14,Ui.GOLD,false);
+		String net=complete&&rewardsKnown?l.t("Net ","推定損益 ")+(rewardValue-total>=0?"+":"")+Text.coins(rewardValue-total):l.t("Net: unknown prices","損益: 価格不明あり");
+		g.text(font,font.plainSubstrByWidth(net,w-10),x0+5,y+25,complete&&rewardsKnown?(rewardValue>=total?0xFF55FF88:0xFFFF7777):Ui.GRAY,false);
+		y+=26;
 		if (offer.copper().isPresent()) {
 			double copper = offer.copper().getAsDouble();
 			g.text(font, l.t("Copper +", "コッパー +") + Text.coins(copper), x0 + 5, y + 14, 0xFFFF8855, false);

@@ -16,6 +16,7 @@ import java.util.Map;
 final class MarketData {
 	static final String AH = "ah";
 	static final String BAZAAR = "bazaar";
+	static final String CRAFT = "craft";
 	private static final long REFRESH_MS = 30_000;
 	private static final Map<String, Dto.MarketPanel> PANELS = new HashMap<>();
 	private static final Map<String, Long> FETCHED = new HashMap<>();

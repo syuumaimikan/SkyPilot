@@ -26,6 +26,7 @@ final class ScreenOverlays {
 	}
 
 	private static final Map<Screen, Panels> PANELS = new WeakHashMap<>();
+	private static final Map<Screen, ExperimentOverlay> EXPERIMENTS = new WeakHashMap<>();
 
 	private ScreenOverlays() {
 	}
@@ -36,7 +37,11 @@ final class ScreenOverlays {
 			Panels p = new Panels(new ItemBrowser(screen), new ChestValue(container), new VisitorPanel(container), new AuctionHighlight(container),
 					new SackValue(container), new BazaarOrders(container), ContainerPanel.kindOf(screen.getTitle().getString()));
 			PANELS.put(screen, p);
+			ExperimentOverlay experiments = new ExperimentOverlay(container);
+			EXPERIMENTS.put(screen, experiments);
+			TerminalOverlay terminal = new TerminalOverlay(container);
 			ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
+				if (TerminalOverlay.active(container)) { terminal.render(g,mouseX,mouseY); return; }
 				ContainerScreenAccessor box = (ContainerScreenAccessor) s;
 				var font = Minecraft.getInstance().font;
 				if (p.browser().layout(box.skypilot$leftPos() + box.skypilot$imageWidth() + 6)) p.browser().render(g, font, mouseX, mouseY);
@@ -51,9 +56,12 @@ final class ScreenOverlays {
 				}
 				p.auction().render(g);
 				p.orders().render(g, font, mouseX, mouseY);
+				OrderSync.observe(container);
+				experiments.render(g);
 				ItemIcons.flush();
 			});
 			ScreenMouseEvents.allowMouseClick(screen).register((s, event) -> {
+				if (TerminalOverlay.active(container)) return true;
 				boolean browser = p.browser().layout(((ContainerScreenAccessor) s).skypilot$leftPos() + ((ContainerScreenAccessor) s).skypilot$imageWidth() + 6)
 						&& p.browser().click(event.x(), event.y(), event.button());
 				boolean chest = !browser && p.flipKind() == null && p.chest().layout() && p.chest().click(event.x(), event.y());
@@ -100,6 +108,8 @@ final class ScreenOverlays {
 		return true;
 	}
 
+	/** For tests. */
+	static ExperimentOverlay experimentsOf(Screen screen) { return EXPERIMENTS.get(screen); }
 	/** For tests. */
 	static AuctionHighlight auctionOf(Screen screen) {
 		Panels p = PANELS.get(screen);

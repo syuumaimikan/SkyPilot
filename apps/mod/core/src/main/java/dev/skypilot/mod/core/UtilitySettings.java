@@ -4,5 +4,6 @@ package dev.skypilot.mod.core;
 public final class UtilitySettings {
     public boolean coordinates,fps,ping,clock,speed,durability,slots,focus,session,worldTime;
     public boolean right=true,background=true;
-    public void clear(){coordinates=fps=ping=clock=speed=durability=slots=focus=session=worldTime=false;}
+    public boolean armor,effects,memory,gc,inventoryWarning,durabilityWarning,itemComparison;
+    public void clear(){coordinates=fps=ping=clock=speed=durability=slots=focus=session=worldTime=armor=effects=memory=gc=inventoryWarning=durabilityWarning=itemComparison=false;}
 }

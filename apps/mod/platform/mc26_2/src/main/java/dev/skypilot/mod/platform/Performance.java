@@ -36,6 +36,26 @@ public final class Performance {
 	/** Armor stand → is a damage number (names of damage numbers never change). */
 	private static final java.util.Map<ArmorStand, Boolean> SPLASH = new java.util.WeakHashMap<>();
 	private static int ticks;
+	private static boolean adaptive, farParticles;
+	private static double particleDist2;
+	private static int adaptiveCap;
+	private static long lastFrame;
+	private static boolean wasSampling;
+	private static final dev.skypilot.mod.core.FrameSamples FRAMES = new dev.skypilot.mod.core.FrameSamples(300);
+	private static String frameStats = "—";
+
+	/** Called once per rendered frame, including frames where the HUD is hidden. */
+	public static void frame() {
+		Minecraft mc = Minecraft.getInstance();
+		SkyPilot sp = SkyPilot.get();
+		boolean sampling = sp != null && sp.config().on(Features.PERF_FRAME_STATS) && mc.level != null && mc.isWindowActive() && mc.gui.screen() == null;
+		long now = System.nanoTime();
+		if (!sampling || !wasSampling) { FRAMES.clear(); frameStats = "—"; lastFrame = 0; }
+		if (sampling && lastFrame != 0) FRAMES.add((now - lastFrame) / 1_000_000.0);
+		lastFrame = sampling ? now : 0; wasSampling = sampling;
+	}
+
+	static String frameStats() { return frameStats; }
 
 	private Performance() {
 	}
@@ -61,6 +81,17 @@ public final class Performance {
 		bgFps = c.perf.backgroundFps;
 		menuFps = c.perf.menuFps;
 		particlesPerTick = c.perf.particlesPerTick;
+		adaptive = c.on(Features.PERF_ADAPTIVE);
+		farParticles = c.on(Features.PERF_FAR_PARTICLES);
+		particleDist2 = (double)c.perf.particleDistance * c.perf.particleDistance;
+		if (!adaptive || adaptiveCap == 0 || mc.level == null) adaptiveCap = particlesPerTick;
+		adaptiveCap = Math.min(adaptiveCap, particlesPerTick);
+		if (ticks % 20 == 0) {
+			if (adaptive && mc.level != null && mc.isWindowActive() && mc.gui.screen() == null)
+				adaptiveCap = PerfRules.adaptiveBudget(adaptiveCap, particlesPerTick, mc.getFps(), c.perf.targetFps);
+			frameStats = FRAMES.count() < 30 ? "—" : String.format(java.util.Locale.ROOT, "p95 %.1f ms · p99 %.1f ms · p99 FPS %.0f", FRAMES.percentile(.95), FRAMES.percentile(.99), FRAMES.slowFrameFps());
+		}
+		if (adaptive) particlesPerTick = adaptiveCap;
 		entityDist2 = (double) c.perf.entityDistance * c.perf.entityDistance;
 		playerDist2 = (double) c.perf.playerDistance * c.perf.playerDistance;
 		BUDGET.reset();
@@ -95,12 +126,18 @@ public final class Performance {
 
 	/** May this particle be created? */
 	public static boolean allowParticle(ParticleOptions options) {
-		if (!(fireworks || explosions || hits || cap)) return true;
+		if (!(fireworks || explosions || hits || cap || adaptive)) return true;
 		ParticleType<?> type = options.getType();
 		if (fireworks && FIREWORK.contains(type)) return false;
 		if (explosions && EXPLOSION.contains(type)) return false;
 		if (hits && HIT.contains(type)) return false;
-		return !cap || BUDGET.take(particlesPerTick);
+		return !(cap || adaptive) || BUDGET.take(particlesPerTick);
+	}
+
+	public static boolean allowParticle(ParticleOptions options, double x, double y, double z) {
+		var camera = Minecraft.getInstance().getCameraEntity();
+		if (farParticles && camera != null && camera.distanceToSqr(x, y, z) > particleDist2) return false;
+		return allowParticle(options);
 	}
 
 	/** Block break and mining crumbs. */

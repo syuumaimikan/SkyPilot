@@ -13,6 +13,7 @@ import java.util.*;
 
 /** Optional local visuals, using received damage events; no combat or movement automation. */
 public final class VisualEffects {
+    public static boolean nightVision(){var sp=SkyPilot.get();return sp!=null&&sp.config().visuals.nightVision&&Minecraft.getInstance().level!=null;}
     private record Hit(LivingEntity entity,long at) {}
     private static final Map<Integer,Hit> hits=new LinkedHashMap<>();
     private static long hitAt,lastKill;
@@ -46,7 +47,7 @@ public final class VisualEffects {
     public static float fov(float original){return (float)(original*zoom);}
     public static double mouseScale(){return zoom;}
     static void shader(Minecraft mc,String name){
-        Identifier desired="none".equals(name)||mc.level==null||mc.getCameraEntity()!=mc.player?null:Identifier.fromNamespaceAndPath("skypilot",name);
+        Identifier desired="none".equals(name)||mc.level==null||mc.getCameraEntity()!=mc.player||ShaderCompatibility.externalShaderActive()?null:Identifier.fromNamespaceAndPath("skypilot",name);
         Identifier current=mc.gameRenderer.currentPostEffect();
         if(applied!=null&&!applied.equals(current))applied=null;
         if(desired==null){if(applied!=null&&applied.equals(current))mc.gameRenderer.clearPostEffect();applied=null;return;}

@@ -34,6 +34,7 @@ import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
  */
 final class Commands {
 	private static final String[] PANELS = {"goal", "next", "roadmap", "market", "mining", "slayer", "farming"};
+	private static int nightVision(Boolean enabled){var sp=SkyPilot.get();sp.config().visuals.nightVision=enabled==null?!sp.config().visuals.nightVision:enabled;sp.saveConfig();MccLang.info("Night vision: "+sp.config().visuals.nightVision,"暗視: "+(sp.config().visuals.nightVision?"オン":"オフ"));return 1;}
 
 	private Commands() {
 	}
@@ -44,9 +45,20 @@ final class Commands {
 		root.then(literal("keys").executes(c -> { Minecraft.getInstance().gui.setScreen(new KeySettingsScreen(null)); return 1; }));
 		root.then(literal("utility").executes(c -> { Minecraft.getInstance().gui.setScreen(new UtilityScreen(null)); return 1; }));
 		root.then(literal("visual").executes(c -> { Minecraft.getInstance().gui.setScreen(new VisualScreen(null)); return 1; }));
+		root.then(literal("font").executes(c -> openLater(() -> new FontScreen(null))));
+		root.then(literal("nightvision").executes(c -> nightVision(null)).then(literal("on").executes(c -> nightVision(true))).then(literal("off").executes(c -> nightVision(false))));
+		root.then(literal("pests").executes(c -> {var sp=SkyPilot.get();var f=dev.skypilot.mod.core.Features.PEST_TRACKER;boolean value=!Feat.on(f);dev.skypilot.mod.core.Features.set(sp.config(),f,value);sp.saveConfig();MccLang.info("Pest tracking: "+value,"ペスト追従: "+(value?"オン":"オフ"));return 1;}));
+		root.then(literal("moneytools").executes(c -> {WebApp.open(null,"/money");return 1;}));
 		root.then(literal("desk").executes(c -> { Minecraft.getInstance().gui.setScreen(new DeskScreen(null)); return 1; }));
 		root.then(literal("puzzle").executes(c -> { Minecraft.getInstance().gui.setScreen(new PuzzleScreen(null)); return 1; }));
+		root.then(literal("dungeon").executes(c -> openLater(() -> new DungeonScreen(null)))
+			.then(literal("on").executes(c -> {SkyPilot.get().config().dungeonSolver=true;SkyPilot.get().saveConfig();return 1;}))
+			.then(literal("off").executes(c -> {SkyPilot.get().config().dungeonSolver=false;SkyPilot.get().saveConfig();return 1;})));
 		root.then(literal("help").executes(c -> help()));
+		root.then(literal("web").executes(c -> { WebApp.open(null); return 1; }));
+		root.then(literal("media").executes(c -> openLater(() -> new MediaScreen(null))));
+		root.then(literal("guides").executes(c -> { WebApp.open(null, "/guides"); return 1; }));
+		root.then(literal("apihelp").executes(c -> { WebApp.open(null, "/help/api"); return 1; }));
 		root.then(literal("status").executes(c -> status()));
 		root.then(literal("link").executes(c -> startLink()));
 		root.then(literal("unlink").executes(c -> {
@@ -190,6 +202,12 @@ final class Commands {
 				{"/skypilot lookup <name>", l.t("open an item's page", "アイテムのページを開く")},
 				{"/skypilot highlight <price>", l.t("outline items worth this much", "この価格以上を縁取り")},
 				{"/skypilot server <url>", l.t("SkyPilot server address", "SkyPilotサーバーのURL")},
+				{"/skypilot web", l.t("open SkyPilot Web in your browser", "SkyPilot Web をブラウザで開く")},
+				{"/skypilot media", l.t("play, pause and skip system media", "メディアの再生・一時停止・曲送り")},
+				{"/skypilot nightvision [on|off]", l.t("toggle local night vision", "暗視を切り替え")},
+				{"/skypilot pests", l.t("toggle following visible pest bodies", "ペスト個体の位置追従を切り替え")},
+				{"/skypilot font", l.t("change the game font using a local TTF", "手持ちの TTF でゲームのフォントを変更")},
+				{"/skypilot moneytools", l.t("target, payback and income tools", "目標額・投資回収・実測時給のツール")},
 		};
 		for (String[] r : rows) {
 			McText.chat(Component.literal("  " + r[0]).withStyle(ChatFormatting.AQUA).append(Component.literal(" - " + r[1]).withStyle(ChatFormatting.GRAY)));

@@ -255,6 +255,7 @@ final class HomePage {
 	}
 
 	private JComponent quickCard() {
+		// Uses the same configured web origin as the mod's API client.
 		JPanel body = new JPanel(new GridLayout(0, 1, 0, 6));
 		body.setOpaque(false);
 		body.add(action("server", c.t("Add Hypixel to the server list", "サーバー一覧にHypixelを追加"), () -> c.async(() -> ServerList.addHypixel(c.settings.instance()), added -> c.ok(
@@ -265,6 +266,9 @@ final class HomePage {
 						"設定 " + (r.options() ? "✔" : "–") + "、サーバー +" + r.servers() + "、リソースパック +" + r.packs())),
 				e -> c.fail(c.t("Import failed", "取り込みに失敗しました"), e))));
 		body.add(action("bolt", c.t("FPS boost (performance switches)", "FPSブースト（軽量化スイッチ）"), this::fpsBoost));
+		body.add(action("globe", c.t("Open SkyPilot Web", "SkyPilot Web を開く"), c::openWeb));
+		body.add(action("globe", c.t("Equipment, pets & activity guides", "装備・ペット・攻略ガイド"), () -> c.openWeb("/guides")));
+		body.add(action("globe", c.t("API setup walkthrough", "API 設定の図解ガイド"), () -> c.openWeb("/help/api")));
 		body.add(action("folder", c.t("Open the game folder", "ゲームフォルダを開く"), () -> Ui.openFolder(c.settings.instance())));
 		return Widgets.card("bolt", c.t("Quick actions", "クイック操作"), null, body);
 	}

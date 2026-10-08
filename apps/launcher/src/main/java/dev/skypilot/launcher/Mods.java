@@ -19,7 +19,7 @@ import java.util.zip.ZipFile;
 /**
  * The SkyPilot game folder's mods: installing the bundled SkyPilot mod and the pinned Fabric API
  * (hash-checked), listing mod files, switching them on / off and adding a local mod file the
- * player picked. Mods are never deleted - replaced files are switched off instead.
+ * player picked. Deletion is an explicit user action; replaced files are switched off instead.
  */
 public final class Mods {
 	public record ModFile(Path file, String id, String name, String version, boolean enabled) {
@@ -66,9 +66,24 @@ public final class Mods {
 	public static Path toggle(ModFile m) throws IOException {
 		String n = m.file().getFileName().toString();
 		Path to = m.enabled() ? m.file().resolveSibling(n + ".disabled") : m.file().resolveSibling(n.substring(0, n.length() - ".disabled".length()));
-		if (Files.exists(to)) throw new IOException(to.getFileName() + " already exists");
+		if(m.enabled()&&Files.exists(to)){
+			String base=n.substring(0,n.length()-4);int backup=1;
+			do{to=m.file().resolveSibling(base+".backup-"+(backup++)+".jar.disabled");}while(Files.exists(to));
+		}else if (Files.exists(to)) throw new IOException(to.getFileName() + " already exists");
 		Files.move(m.file(), to);
 		return to;
+	}
+
+	/** Removes just the selected regular mod file in this instance, never a folder or a link. */
+	public static void delete(Path modsDir, Path file) throws IOException {
+		Path target = file.toAbsolutePath().normalize();
+		String name = target.getFileName().toString();
+		if (!(name.endsWith(".jar") || name.endsWith(".jar.disabled"))
+				|| target.getParent() == null || !target.getParent().toRealPath().equals(modsDir.toRealPath())
+				|| !Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+			throw new IOException("Only a regular .jar or .jar.disabled file in the mods folder can be deleted");
+		}
+		Files.delete(target);
 	}
 
 	/** Copy a mod file the player picked into the mods folder (Fabric mods only). */

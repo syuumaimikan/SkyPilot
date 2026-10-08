@@ -65,6 +65,14 @@ const USER_COLS: &str = "id, login, password_hash, minecraft_uuid, minecraft_nam
 
 #[async_trait]
 impl Store for PgStore {
+    async fn save_orders(&self, user_id: Uuid, source: &str, snapshot: &serde_json::Value) -> StoreResult<()> {
+        sqlx::query("INSERT INTO market_orders (user_id, source, snapshot) VALUES ($1,$2,$3) ON CONFLICT (user_id,source) DO UPDATE SET snapshot=EXCLUDED.snapshot")
+            .bind(user_id).bind(source).bind(Json(snapshot)).execute(&self.pool).await?; Ok(())
+    }
+    async fn orders(&self, user_id: Uuid, source: &str) -> StoreResult<Option<serde_json::Value>> {
+        let row=sqlx::query("SELECT snapshot FROM market_orders WHERE user_id=$1 AND source=$2").bind(user_id).bind(source).fetch_optional(&self.pool).await?;
+        Ok(row.map(|r|r.get::<Json<serde_json::Value>,_>("snapshot").0))
+    }
     fn kind(&self) -> &'static str {
         "postgres"
     }

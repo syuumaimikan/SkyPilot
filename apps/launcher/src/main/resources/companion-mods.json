@@ -1,0 +1,81 @@
+{
+  "minecraft": "26.2",
+  "mods": [
+    {
+      "id": "sodium",
+      "name": "Sodium",
+      "version": "mc26.2-0.9.2-fabric",
+      "file": "sodium-fabric-0.9.2+mc26.2.jar",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/xJZxADzI/sodium-fabric-0.9.2%2Bmc26.2.jar",
+      "sha512": "9b7a7aade8824543ce2a804fddfd04e37f57d1f91c00574e7dc87e554eb1835d888313ee6f715a7599bd729840cf01fd74e02aeae87b4e5a3c10c34a016e407c",
+      "size": 1885572,
+      "license": "LicenseRef-Polyform-Shield-1.0.0",
+      "homepage": "https://modrinth.com/mod/sodium",
+      "requires": []
+    },
+    {
+      "id": "iris",
+      "name": "Iris Shaders",
+      "version": "1.11.4+26.2-fabric",
+      "file": "iris-fabric-1.11.4+mc26.2.jar",
+      "url": "https://cdn.modrinth.com/data/YL57xq9U/versions/gxZWWnKH/iris-fabric-1.11.4%2Bmc26.2.jar",
+      "sha512": "dee955580976aebc92373f5c2d88398ad1019b043c6254a41fe7ab8a6ca3a5ff29d58df2b22ec43a31198beb769e814658eef06fbf980066a2e2c216eeafd32a",
+      "size": 2821616,
+      "license": "LGPL-3.0-only",
+      "homepage": "https://modrinth.com/mod/iris",
+      "requires": [
+        "sodium"
+      ]
+    },
+    {
+      "id": "ferritecore",
+      "name": "FerriteCore",
+      "version": "9.0.0-fabric",
+      "file": "ferritecore-9.0.0-fabric.jar",
+      "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/d5ddUdiB/ferritecore-9.0.0-fabric.jar",
+      "sha512": "d81fa97e11784c19d42f89c2f433831d007603dd7193cee45fa177e4a6a9c52b384b198586e04a0f7f63cd996fed713322578bde9a8db57e1188854ae5cbe584",
+      "size": 72677,
+      "license": "MIT",
+      "homepage": "https://modrinth.com/mod/ferrite-core",
+      "requires": []
+    },
+    {
+      "id": "lithium",
+      "name": "Lithium",
+      "version": "mc26.2-0.25.3-fabric",
+      "file": "lithium-fabric-0.25.3+mc26.2.jar",
+      "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/f7vZ0VWU/lithium-fabric-0.25.3%2Bmc26.2.jar",
+      "sha512": "148b638f3c6229fbaf487120a2344a0af5e411a5aa6533d5db9d75da0a8c0d8304f63eb4cca13f4d03b2c9b4c23d559dd74c1d832422ef8a3087bd005e62a8bd",
+      "size": 912850,
+      "license": "LGPL-3.0-only",
+      "homepage": "https://modrinth.com/mod/lithium",
+      "requires": []
+    },
+    {
+      "id": "fabric-language-kotlin",
+      "name": "Fabric Language Kotlin",
+      "version": "1.14.1+kotlin.2.4.20",
+      "file": "fabric-language-kotlin-1.14.1+kotlin.2.4.20.jar",
+      "url": "https://cdn.modrinth.com/data/Ha28R6CL/versions/eRRZzGMc/fabric-language-kotlin-1.14.1%2Bkotlin.2.4.20.jar",
+      "sha512": "91404f87774466ce8604aafea791d8cc97b603bc310dce17c8188f94f7783cca6dc14fc726ce871ca317bfe9033c199d8d858d51284106a00754e952147703b8",
+      "size": 8142858,
+      "license": "Apache-2.0",
+      "homepage": "https://modrinth.com/mod/fabric-language-kotlin",
+      "requires": []
+    },
+    {
+      "id": "skyblocker",
+      "name": "Skyblocker • Hypixel Skyblock",
+      "version": "v6.10.4+26.2",
+      "file": "skyblocker-6.10.4+26.2.jar",
+      "url": "https://cdn.modrinth.com/data/y6DuFGwJ/versions/Kegf578l/skyblocker-6.10.4%2B26.2.jar",
+      "sha512": "6c11fa897495b27f7bc686c2d15e890a13f37267d523ca81a5b0613ad9267debe684335b89be5c06bea7c705266da6a48174101500da77abbbfe86280bfe1edb",
+      "size": 19980109,
+      "license": "LGPL-3.0-only",
+      "homepage": "https://modrinth.com/mod/skyblocker-liap",
+      "requires": [
+        "fabric-language-kotlin"
+      ]
+    }
+  ]
+}

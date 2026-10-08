@@ -101,31 +101,31 @@ final class HypixelStatus {
 				title = l.t("SkyBlock maintenance scheduled", "SkyBlockメンテナンス予定");
 				line = when(a.maintenance(), now, l);
 				color = HudRow.WARN;
-				icon = new ItemStack(Items.CLOCK);
+				icon = Feat.icon(Items.CLOCK);
 			}
 			case SOON -> {
 				title = l.t("SkyBlock maintenance soon", "まもなくSkyBlockメンテナンス");
 				line = l.t("starts in ", "開始まで ") + InfoHud.eta(a.maintenance().startsMs() - now) + " (" + clock(a.maintenance().startsMs(), now) + ")";
 				color = HudRow.WARN;
-				icon = new ItemStack(Items.CLOCK);
+				icon = Feat.icon(Items.CLOCK);
 			}
 			case STARTED -> {
 				title = l.t("SkyBlock maintenance started", "SkyBlockメンテナンス開始");
 				line = a.maintenance().endsMs() != null ? l.t("planned end ", "終了予定 ") + clock(a.maintenance().endsMs(), now) : "";
 				color = HudRow.BAD;
-				icon = new ItemStack(Items.BARRIER);
+				icon = Feat.icon(Items.BARRIER);
 			}
 			case BACK -> {
 				title = l.t("SkyBlock is back", "SkyBlockが再開しました");
 				line = l.t("status.hypixel.net: operational", "status.hypixel.net: 稼働中");
 				color = HudRow.GOOD;
-				icon = new ItemStack(Items.EMERALD);
+				icon = Feat.icon(Items.EMERALD);
 			}
 			default -> {
 				title = l.t("Hypixel: ", "Hypixel: ") + a.incident().name();
 				line = impact(a.incident().impact(), l) + " · " + incidentStatus(a.incident().status(), l);
 				color = HudRow.BAD;
-				icon = new ItemStack(Items.REDSTONE_TORCH);
+				icon = Feat.icon(Items.REDSTONE_TORCH);
 			}
 		}
 		Feat.toast(icon, title, color, line);

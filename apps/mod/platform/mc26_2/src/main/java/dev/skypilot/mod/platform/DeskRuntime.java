@@ -11,5 +11,5 @@ final class DeskRuntime {
     static final FocusTimer FOCUS=new FocusTimer();
     static final TileGame TILES=new TileGame(ThreadLocalRandom.current());
     static long now(){return System.nanoTime()/1_000_000;}
-    static void tick(){if(FOCUS.finished(now())){var l=SkyPilot.get().lang();Feat.toast(new ItemStack(Items.CLOCK),l.t("Focus complete","集中タイマー終了"),0xFF55D6D2,l.t("Time for a short break.","短い休憩を取りましょう。"));}}
+    static void tick(){if(FOCUS.finished(now())){var l=SkyPilot.get().lang();Feat.toast(Feat.icon(Items.CLOCK),l.t("Focus complete","集中タイマー終了"),0xFF55D6D2,l.t("Time for a short break.","短い休憩を取りましょう。"));}}
 }

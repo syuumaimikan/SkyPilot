@@ -20,6 +20,7 @@ const MAX_BAZAAR_POINTS: usize = 1_000_000;
 
 #[derive(Default)]
 struct Inner {
+    orders: HashMap<(Uuid, String), serde_json::Value>,
     users: HashMap<Uuid, UserRow>,
     sessions: HashMap<String, SessionRow>,
     goals: HashMap<Uuid, Vec<SavedGoal>>,
@@ -44,6 +45,12 @@ pub struct MemoryStore {
 
 #[async_trait]
 impl Store for MemoryStore {
+    async fn save_orders(&self, user_id: Uuid, source: &str, snapshot: &serde_json::Value) -> StoreResult<()> {
+        self.inner.write().orders.insert((user_id, source.into()), snapshot.clone()); Ok(())
+    }
+    async fn orders(&self, user_id: Uuid, source: &str) -> StoreResult<Option<serde_json::Value>> {
+        Ok(self.inner.read().orders.get(&(user_id, source.into())).cloned())
+    }
     fn kind(&self) -> &'static str {
         "memory"
     }

@@ -48,18 +48,19 @@ impl<'a> CraftCalculator<'a> {
         if id == "SKYBLOCK_COIN" {
             return Some(leaf(id, "Coins", 1.0, Some(1.0), "Coins"));
         }
-        if let Some(m) = self.memo.get(id) {
+        if let Some(m) = self.memo.get(id).filter(|_|depth==0) {
             return m.clone();
         }
         if !visiting.insert(id.to_string()) {
             return None; // cycle
         }
         let name = self.registry.display_name(id);
-        let bought = self.oracle.quote(id, PriceSide::Buy).map(|q| leaf(id, &name, 1.0, Some(q.price), q.source));
+        let bought = self.oracle.quote(id, PriceSide::Buy).filter(|q|q.price.is_finite()&&q.price>0.0).map(|q| leaf(id, &name, 1.0, Some(q.price), q.source));
         let mut best = bought;
         if depth < MAX_DEPTH {
             let recipes: Vec<(Stack, Vec<Stack>)> = self.crafting_recipes(id).into_iter().map(|(o, i)| (o.clone(), i.clone())).collect();
             for (output, inputs) in recipes {
+                if !valid_recipe(&output,&inputs) {continue;}
                 let mut children = Vec::new();
                 let mut total = 0.0;
                 let mut complete = true;
@@ -68,7 +69,7 @@ impl<'a> CraftCalculator<'a> {
                         Some(c) => {
                             let unit = c.unit_price.unwrap_or(0.0);
                             total += unit * input.amount;
-                            children.push(IngredientCost { amount: input.amount, total: Some(unit * input.amount), ..c });
+                            children.push(scaled(c,input.amount/output.amount));
                         }
                         None => {
                             complete = false;
@@ -94,7 +95,7 @@ impl<'a> CraftCalculator<'a> {
             }
         }
         visiting.remove(id);
-        self.memo.insert(id.to_string(), best.clone());
+        if depth==0 {self.memo.insert(id.to_string(), best.clone());}
         best
     }
 
@@ -103,6 +104,7 @@ impl<'a> CraftCalculator<'a> {
         let recipes: Vec<(Stack, Vec<Stack>)> = self.crafting_recipes(id).into_iter().map(|(o, i)| (o.clone(), i.clone())).collect();
         let mut best: Option<(f64, f64, Vec<IngredientCost>)> = None;
         for (output, inputs) in recipes {
+            if !valid_recipe(&output,&inputs) {continue;}
             let mut total = 0.0;
             let mut children = Vec::new();
             let mut ok = true;
@@ -111,7 +113,7 @@ impl<'a> CraftCalculator<'a> {
                     Some(c) if c.unit_price.is_some() => {
                         let unit = c.unit_price.unwrap_or(0.0);
                         total += unit * input.amount;
-                        children.push(IngredientCost { amount: input.amount, total: Some(unit * input.amount), ..c });
+                        children.push(scaled(c,input.amount));
                     }
                     _ => {
                         ok = false;
@@ -119,12 +121,25 @@ impl<'a> CraftCalculator<'a> {
                     }
                 }
             }
-            if ok && best.as_ref().is_none_or(|b| total / output.amount < b.0 / b.1) {
+            if ok && total.is_finite() && best.as_ref().is_none_or(|b| total / output.amount < b.0 / b.1) {
                 best = Some((total, output.amount.max(1.0), children));
             }
         }
         best
     }
+}
+
+fn valid_recipe(output:&Stack,inputs:&[Stack])->bool {
+    output.amount.is_finite()&&output.amount>=1.0&&!inputs.is_empty()&&inputs.iter().all(|i|i.amount.is_finite()&&i.amount>0.0)
+}
+fn scaled(mut c:IngredientCost,factor:f64)->IngredientCost {
+    c.amount*=factor;c.total=c.total.map(|v|v*factor);
+    c.children=c.children.into_iter().map(|child|scaled(child,factor)).collect();c
+}
+fn ingredient_confidence(c:&IngredientCost,oracle:&dyn PriceOracle)->f64 {
+    if c.item_id=="SKYBLOCK_COIN" {return 1.0;}
+    if c.children.is_empty() {return oracle.quote(&c.item_id,PriceSide::Buy).map(|q|q.confidence).filter(|c|c.is_finite()).unwrap_or(0.0).clamp(0.0,1.0);}
+    c.children.iter().map(|i|ingredient_confidence(i,oracle)).fold(1.0,f64::min)
 }
 
 fn leaf(id: &str, name: &str, amount: f64, unit: Option<f64>, source: &str) -> IngredientCost {
@@ -153,22 +168,20 @@ pub fn craft_flips(registry: &Registry, oracle: &dyn PriceOracle, bazaar_tax: f6
     ids.sort();
     for id in ids {
         let Some(sale) = oracle.quote(&id, PriceSide::Sell) else { continue };
-        if sale.price <= 0.0 || sale.confidence < 0.3 {
+        if !sale.price.is_finite() || !sale.confidence.is_finite() || !sale.sales_per_day.is_finite() || sale.price <= 0.0 || sale.confidence < 0.3 {
             continue;
         }
         let Some((material_cost, output_count, ingredients)) = calc.craft_cost(&id) else { continue };
         let sale_total = sale.price * output_count;
         let fees = if oracle.is_bazaar(&id) { sale_total * bazaar_tax } else { fee_for_ah(sale_total) };
         let profit = sale_total - fees - material_cost;
-        if profit < min_profit || material_cost <= 0.0 {
+        if !profit.is_finite() || !fees.is_finite() || fees<0.0 || profit < min_profit || material_cost <= 0.0 {
             continue;
         }
         // Liquidity of every ingredient bounds confidence (thin ingredients = unreliable cost).
         let mut conf = sale.confidence;
         for ing in &ingredients {
-            if let Some(q) = oracle.quote(&ing.item_id, PriceSide::Buy) {
-                conf = conf.min(q.confidence.max(0.3));
-            }
+            conf=conf.min(ingredient_confidence(ing,oracle));
         }
         let item = registry.item(&id);
         let requirement = item.and_then(|i| i.requirements.first()).map(|r| r.describe());

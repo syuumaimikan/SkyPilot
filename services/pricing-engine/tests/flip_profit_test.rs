@@ -87,6 +87,14 @@ fn no_sales_history_means_no_flip() {
 }
 
 #[test]
+fn cheaper_competing_listing_blocks_inflated_resale_profit(){
+    let key="SHADOW_FURY|s5";
+    let mut st=state_with(vec![listing("lowest",key,30_000_000.0,"a"),listing("second",key,35_000_000.0,"b"),listing("expensive",key,49_000_000.0,"c")],&[48_000_000.0;10]);
+    let flips=run(&mut st);
+    assert!(!flips.iter().any(|f|f.auction_id=="second"));
+}
+
+#[test]
 fn seller_cluster_is_flagged_do_not_flip() {
     let key = "RARE_THING";
     let mut st = state_with(

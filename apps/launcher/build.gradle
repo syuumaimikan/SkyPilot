@@ -161,6 +161,8 @@ tasks.register('jpackageImage', Exec) {
 	def appVersion = project.version.toString()
 	def mainCls = application.mainClass
 	doFirst {
+		// jpackage can leave its Windows launcher read-only; Groovy deleteDir cannot remove it.
+		if (destDir.exists()) destDir.eachFileRecurse { it.setWritable(true) }
 		destDir.deleteDir()
 		if (destDir.exists()) throw new GradleException("cannot delete ${destDir} - is SkyPilot Launcher.exe still running?")
 		executable jpackageExe.get()
@@ -175,6 +177,11 @@ tasks.register('jpackageInstaller', Exec) {
 	description = 'Builds the Windows installer (SkyPilot-Launcher-<version>.exe) with jpackage + WiX.'
 	dependsOn jpackageInput, appIcon
 	onlyIf { System.getProperty('os.name').toLowerCase().contains('win') }
+	// dotnet global tools are not necessarily on PATH in an existing terminal/Gradle daemon.
+	def dotnetTools = new File(System.getProperty('user.home'), '.dotnet/tools')
+	if (System.getProperty('os.name').toLowerCase().contains('win')) {
+		environment 'PATH', dotnetTools.absolutePath + File.pathSeparator + System.getenv('PATH')
+	}
 	def inputDir = layout.buildDirectory.dir('jpackage-input').get().asFile
 	def jarName = tasks.named('launcherJar').flatMap { it.archiveFileName }
 	def destDir = layout.buildDirectory.dir('installer').get().asFile
@@ -182,7 +189,9 @@ tasks.register('jpackageInstaller', Exec) {
 	def appVersion = project.version.toString()
 	def mainCls = application.mainClass
 	doFirst {
+		if (destDir.exists()) destDir.eachFileRecurse { it.setWritable(true) }
 		destDir.deleteDir()
+		if (destDir.exists()) throw new GradleException("cannot delete ${destDir} - close the installer before rebuilding")
 		executable jpackageExe.get()
 		args jpackageCommon(jarName.get(), mainCls.get(), inputDir, icon, appVersion) + ['--type', 'exe', '--dest', destDir.absolutePath,
 				'--win-per-user-install', '--win-menu', '--win-menu-group', 'SkyPilot', '--win-shortcut',

@@ -57,7 +57,8 @@ pub async fn bazaar(State(state): State<Arc<AppState>>, Query(p): Query<CapitalP
 
 pub async fn craft(State(state): State<Arc<AppState>>) -> Json<Value> {
     let (flips, at) = state.market.craft_flips();
-    let (_, _, bz) = state.market.freshness();
+    let (ah, _, mut bz) = state.market.freshness();
+    bz.stale |= ah.stale; bz.age_seconds=bz.age_seconds.max(ah.age_seconds);
     Json(json!({"flips": flips.into_iter().take(300).collect::<Vec<_>>(), "computedAtMs": at, "freshness": bz}))
 }
 

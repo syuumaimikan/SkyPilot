@@ -48,6 +48,30 @@ impl Provider for PetsProvider {
         ));
         s.sources = vec![DataSource::HypixelProfile, DataSource::NeuRepo, DataSource::Market];
         r.sections.push(s);
+        // Activity recommendations are explicit guidance, not a simulation of pet abilities.
+        for (activity, activity_ja, types) in [
+            ("Melee combat", "近接戦闘", vec!["TIGER", "LION", "ENDER_DRAGON"]),
+            ("Archer", "アーチャー", vec!["SKELETON", "ENDER_DRAGON"]),
+            ("Mage", "メイジ", vec!["SHEEP"]),
+            ("Tank / survival", "タンク・生存", vec!["BLUE_WHALE", "BABY_YETI"]),
+            ("Mining", "採掘", vec!["SILVERFISH", "MITHRIL_GOLEM", "BAL", "SCATHA"]),
+            ("Farming", "農業", vec!["RABBIT", "ELEPHANT", "MOOSHROOM_COW"]),
+            ("Fishing", "釣り", vec!["DOLPHIN", "SQUID", "FLYING_FISH"]),
+            ("Foraging", "伐採", vec!["OCELOT", "MONKEY"]),
+        ] {
+            let mut guide = section(&format!("activity-{}", activity.replace(' ', "-")), ctx.t(format!("Pet guide: {activity}"), format!("ペットガイド：{activity_ja}")));
+            guide.table = Some(table(&["Pet", "Owned / level", "Active", "Legendary market quote", "Budget"], types.iter().map(|kind| {
+                let owned = pets.iter().filter(|p| p.pet_type == *kind).max_by_key(|p| p.level);
+                let price = ctx.buy(&format!("PET:{kind}:LEGENDARY")).map(|q| q.price);
+                vec![text(skypilot_items::fingerprint::title_case(kind)),
+                    text(owned.map(|p| format!("{} Lv{}", p.tier, p.level)).unwrap_or_else(|| ctx.t("Not owned", "未所持"))),
+                    yes_no(ctx, pets.iter().any(|p| p.pet_type == *kind && p.active)), coins_opt(price),
+                    text(if owned.is_some() { ctx.t("Try your owned pet first", "まず所持ペットを比較") } else if price.is_some_and(|v| v <= ctx.spendable()) { ctx.t("Within budget", "予算内") } else { ctx.t("Quote unavailable or over budget", "価格不明または予算超過") })]
+            }).collect()));
+            guide.notes.push(ctx.t("Activity shortlist: compare level, rarity, held item and the current in-game ability description before buying. A Legendary quote is not a level-matched price. Pet abilities, location changes and set synergy are not simulated.", "用途別の候補です。購入前にレベル・レアリティ・持ち物・ゲーム内の最新能力説明を比較してください。Legendary の価格はレベル一致を保証しません。能力・エリア変更・セット相性は未計算です。"));
+            guide.sources = vec![DataSource::HypixelProfile, DataSource::Market, DataSource::SkyPilotHeuristic];
+            r.sections.push(guide);
+        }
         // Pets recommended by the slayer gear tiers for goal slayers.
         let mut wanted = Vec::new();
         for g in goals {

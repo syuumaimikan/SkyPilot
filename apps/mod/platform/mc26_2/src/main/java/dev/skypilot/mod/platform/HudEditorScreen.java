@@ -18,6 +18,8 @@ final class HudEditorScreen extends Screen {
 	private HudLayout.Box infoBox = new HudLayout.Box(0, 0, 0, 0);
 	private boolean dragging;
 	private boolean draggingInfo;
+	private String draggingElement;
+	private String selectedElement="scoreboard";
 	private double offX;
 	private double offY;
 
@@ -32,6 +34,10 @@ final class HudEditorScreen extends Screen {
 		SkyPilotConfig.Hud h = SkyPilot.get().config().hud;
 		int y = height - 28;
 		int x = width / 2 - 160;
+		addRenderableWidget(Button.builder(Component.literal("選択: "+UiTransforms.name(selectedElement)),b->{int n=java.util.Arrays.asList(UiTransforms.ELEMENTS).indexOf(selectedElement);selectedElement=UiTransforms.ELEMENTS[(n+1)%UiTransforms.ELEMENTS.length];rebuildWidgets();}).bounds(x,height-126,320,18).build());
+		addRenderableWidget(Button.builder(Component.literal("情報HUD: コンパクト/全表示"),b->{SkyPilot.get().config().compactInfo=!SkyPilot.get().config().compactInfo;}).bounds(x,height-82,200,18).build());
+		addRenderableWidget(Button.builder(Component.literal("Blaze: 昇順/降順"),b->{SkyPilot.get().config().blazeDescending=!SkyPilot.get().config().blazeDescending;}).bounds(x+204,height-82,116,18).build());
+		addRenderableWidget(Button.builder(Component.literal("インベントリ中のHUD: 表示/非表示"),b->{SkyPilot.get().config().hudInContainers=!SkyPilot.get().config().hudInContainers;}).bounds(x,height-104,320,18).build());
 		addRenderableWidget(Button.builder(Component.literal(l.t("Opacity -", "不透明度 -")), b -> h.opacity = Math.max(0, h.opacity - 0.1)).bounds(x, y, 76, 20).build());
 		addRenderableWidget(Button.builder(Component.literal(l.t("Opacity +", "不透明度 +")), b -> h.opacity = Math.min(1, h.opacity + 0.1)).bounds(x + 80, y, 76, 20).build());
 		addRenderableWidget(Button.builder(Component.literal(l.t("Reset", "リセット")), b -> {
@@ -40,6 +46,7 @@ final class HudEditorScreen extends Screen {
 			h.scale = 1.0;
 			h.opacity = 0.6;
 			SkyPilotConfig.InfoHud i = SkyPilot.get().config().infoHud;
+			SkyPilot.get().config().uiPositions.clear();
 			i.x = 4;
 			i.y = -1;
 			i.scale = 1.0;
@@ -50,7 +57,7 @@ final class HudEditorScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-		super.extractRenderState(g, mouseX, mouseY, delta);
+		if(minecraft.player!=null){var preview=(dev.skypilot.mod.platform.mixin.HudPreviewAccessor)minecraft.gui.hud;var d=net.minecraft.client.DeltaTracker.ZERO;preview.skypilot$scoreboard(g,d);preview.skypilot$actionbar(g,d);preview.skypilot$bossbar(g,d);preview.skypilot$hotbar(g,d);preview.skypilot$effects(g,d);}
 		SkyPilot sp = SkyPilot.get();
 		box = HudRenderer.draw(g, font, HudRenderer.rows(sp), sp.config().hud, width, height, true);
 		java.util.List<dev.skypilot.mod.hud.HudRow> info = minecraft.player == null ? java.util.List.of() : InfoHud.rows(sp, minecraft, System.currentTimeMillis());
@@ -59,14 +66,19 @@ final class HudEditorScreen extends Screen {
 					dev.skypilot.mod.hud.HudRow.MUTED));
 		}
 		infoBox = InfoHud.draw(g, info, sp.config().infoHud, box, width, height, true);
+		GardenMap.render(g,true);DungeonMap.render(g,true);WindowsMedia.render(g);
+		var selected=UiTransforms.box(selectedElement,width,height);g.outline(selected.x(),selected.y(),selected.width(),selected.height(),0xFFAA88FF);g.text(font,UiTransforms.name(selectedElement),selected.x(),Math.max(0,selected.y()-10),0xFFFFFF88,true);
 		Lang l = sp.lang();
 		SkyPilotConfig.Hud h = sp.config().hud;
 		g.centeredText(font, l.t("Drag to move · scroll to resize", "ドラッグで移動 · スクロールでサイズ変更"), width / 2, height - 44, 0xFFFFFFFF);
 		g.centeredText(font, String.format(Locale.ROOT, "x %d  y %d  ×%.1f  %.0f%%", h.x, h.y, h.scale, h.opacity * 100), width / 2, height - 56, 0xFFAAAAAA);
+		super.extractRenderState(g,mouseX,mouseY,delta);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if(event.y()>=height-126&&super.mouseClicked(event,doubleClick))return true;
+		{String id=selectedElement;var b=UiTransforms.box(id,width,height);if(event.button()==0&&b.contains(event.x(),event.y())){draggingElement=id;offX=event.x()-b.x();offY=event.y()-b.y();return true;}}
 		if (event.button() == 0 && box.contains(event.x(), event.y())) {
 			dragging = true;
 			offX = event.x() - box.x();
@@ -84,6 +96,7 @@ final class HudEditorScreen extends Screen {
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		if(draggingElement!=null){var p=UiTransforms.position(draggingElement);var b=UiTransforms.base(draggingElement,width,height);var size=UiTransforms.box(draggingElement,width,height);p.dx=(int)Math.clamp(event.x()-offX,0,Math.max(0,width-size.width()))-b.x();p.dy=(int)Math.clamp(event.y()-offY,0,Math.max(0,height-size.height()))-b.y();return true;}
 		if (dragging) {
 			SkyPilotConfig.Hud h = SkyPilot.get().config().hud;
 			h.x = (int) Math.max(0, Math.round(event.x() - offX));
@@ -105,11 +118,13 @@ final class HudEditorScreen extends Screen {
 	public boolean mouseReleased(MouseButtonEvent event) {
 		dragging = false;
 		draggingInfo = false;
+		draggingElement=null;
 		return super.mouseReleased(event);
 	}
 
 	@Override
 	public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
+		if(UiTransforms.box(selectedElement,width,height).contains(x,y)){var p=UiTransforms.position(selectedElement);p.scale=Math.clamp(p.scale+scrollY*.1,.5,2);return true;}
 		if (infoBox.contains(x, y)) {
 			SkyPilotConfig.InfoHud i = SkyPilot.get().config().infoHud;
 			i.scale = Math.max(0.5, Math.min(2.5, Math.round((i.scale + scrollY * 0.1) * 10) / 10.0));

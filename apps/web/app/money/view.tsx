@@ -9,6 +9,9 @@ import { EmbeddedReport } from "@/components/report";
 import { fmtCoins } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
+import { WealthForecast } from "@/components/wealth-forecast";
+import { MoneyTools } from "@/components/money-tools";
+import { MoneyLab } from "@/components/money-lab";
 
 export function MoneyView() {
   const { t } = useI18n();
@@ -88,6 +91,9 @@ export function MoneyView() {
           </Card>
         )}
       </Section>
+      <MoneyTools methods={q.data ?? []} />
+      <MoneyLab methods={q.data ?? []} />
+      <WealthForecast />
       <EmbeddedReport domain="money" />
     </div>
   );

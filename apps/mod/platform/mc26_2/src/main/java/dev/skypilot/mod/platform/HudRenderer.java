@@ -25,6 +25,7 @@ final class HudRenderer {
 		Minecraft mc = Minecraft.getInstance();
 		if (sp == null || !sp.config().hud.enabled || mc.player == null) return;
 		if (mc.gui.screen() instanceof HudEditorScreen) return; // the editor draws its own preview
+		if(!sp.config().hudInContainers && mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>)return;
 		if (!sp.context().inSkyBlock()) return;
 		lastBox = draw(g, mc.font, rows(sp), sp.config().hud, g.guiWidth(), g.guiHeight(), false);
 	}

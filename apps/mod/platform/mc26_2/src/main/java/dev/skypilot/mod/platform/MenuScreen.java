@@ -39,7 +39,7 @@ import java.util.function.Supplier;
 final class MenuScreen extends Screen {
 	enum Tab {
 		NOW("Now", "今やること"), STATUS("Status & events", "状態・予定"), ROADMAP("Roadmap", "ロードマップ"), FIT("Fit", "適性"), PROGRESS("Guides", "進め方"), GUIDE("Advice", "アドバイス"),
-		BUILD("Builds", "ビルド"), GEAR("Gear", "装備"), MONEY("Money", "金策"), AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), ALERTS("Alerts", "通知・表示");
+		BUILD("Builds", "ビルド"), GEAR("Gear", "装備"), MONEY("Money", "金策"), AH("AH flips", "AHフリップ"), BAZAAR("Bazaar", "バザー"), CRAFT("Craft", "クラフト"), ALERTS("Alerts", "通知・表示");
 
 		final String en;
 		final String ja;
@@ -139,11 +139,13 @@ final class MenuScreen extends Screen {
 			b.active = t != tab;
 			addRenderableWidget(b);
 		}
-		int bw = (panelW - 4) / 3;
+		int bw = (panelW - 8) / 5;
 		int by = height - 24;
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Refresh", "更新")), b -> load(true)).bounds(panelX, by, bw, 20).build());
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Settings", "設定")), b -> minecraft.gui.setScreen(new SettingsScreen(this))).bounds(panelX + bw + 2, by, bw, 20).build());
-		addRenderableWidget(ClientButton.create(Component.literal(l.t("Close", "閉じる")), b -> onClose()).bounds(panelX + 2 * (bw + 2), by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Web", "Webを開く")), b -> WebApp.open(this)).bounds(panelX + 2 * (bw + 2), by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Media", "メディア")), b -> minecraft.gui.setScreen(new MediaScreen(this))).bounds(panelX + 3 * (bw + 2), by, bw, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Close", "閉じる")), b -> onClose()).bounds(panelX + 4 * (bw + 2), by, bw, 20).build());
 		load(false);
 		builtVersion = -1;
 	}
@@ -266,6 +268,7 @@ final class MenuScreen extends Screen {
 			}
 			case AH -> MarketData.refresh(MarketData.AH, force);
 			case BAZAAR -> MarketData.refresh(MarketData.BAZAAR, force);
+            case CRAFT -> MarketData.refresh(MarketData.CRAFT, force);
 			case ALERTS -> {
 			}
 		}
@@ -333,6 +336,7 @@ final class MenuScreen extends Screen {
 			case MONEY -> buildMoney(l);
 			case AH -> buildMarket(l, MarketData.AH);
 			case BAZAAR -> buildMarket(l, MarketData.BAZAAR);
+            case CRAFT -> buildMarket(l, MarketData.CRAFT);
 			case ALERTS -> buildAlerts(l);
 		}
 		docHeight = lines.stream().mapToInt(Line::height).sum();
@@ -1052,7 +1056,7 @@ final class MenuScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
 		if (SkyPilot.get().config().appearance.richMenus) ClientStyle.backdrop(g, width, height);
 		super.extractRenderState(g, mouseX, mouseY, delta);
-		int version = dataVersion * 31 + versionOf(MarketData.get(MarketData.AH)) * 7 + versionOf(MarketData.get(MarketData.BAZAAR))
+		int version = versionOf(MarketData.get(MarketData.CRAFT)) * 13 + dataVersion * 31 + versionOf(MarketData.get(MarketData.AH)) * 7 + versionOf(MarketData.get(MarketData.BAZAAR))
 				// countdowns on the status tab
 				+ (tab == Tab.STATUS ? (int) (System.currentTimeMillis() / 1000) * 13 : 0);
 		if (version != builtVersion) {

@@ -14,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class ParticleEngineMixin {
 	@Inject(method = "createParticle", at = @At("HEAD"), cancellable = true)
 	private void skypilot$filter(ParticleOptions options, double x, double y, double z, double xs, double ys, double zs, CallbackInfoReturnable<Particle> cir) {
-		if (!Performance.allowParticle(options)) cir.setReturnValue(null);
+		if (!Performance.allowParticle(options, x, y, z)) cir.setReturnValue(null);
 	}
 }

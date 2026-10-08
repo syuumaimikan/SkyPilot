@@ -329,6 +329,21 @@ pub async fn market(State(state): State<Arc<AppState>>, Query(q): Query<MarketQu
         return Err(AppError::bad_request("sort must be score, profit, roi or hour"));
     }
     let panel = match q.kind.as_deref().unwrap_or("ah") {
+        "craft" => {
+            let (flips, _) = state.market.craft_flips();
+            let mut rows: Vec<ModFlipRow> = flips.iter().filter(|f|budget.is_none_or(|b| f.material_cost+f.craft_cost<=b) && f.confidence.score>=0.5 && f.sales_per_day>=1.0 && f.expected_profit-(f.sale_price+f.material_cost)*0.05>0.0).map(|f| {
+                let mut notes=f.confidence.reasons.clone();
+                if let Some(r)=&f.requirement {notes.push(r.clone());}
+                for i in &f.ingredients {notes.push(format!("{} x{}: {:.0} coins ({})",i.name,i.amount,i.total.unwrap_or(0.0),i.source));}
+                notes.push(format!("Fees: {:.0} coins; sales/day: {:.1}",f.fees,f.sales_per_day));
+                notes.push(format!("Profit with sale -5%, materials +5%: {:.0} coins",f.expected_profit-(f.sale_price+f.material_cost)*0.05));
+                notes.push("Multi-output recipes may assume reuse of surplus ingredients".into());
+                ModFlipRow{id:f.item_id.clone(),kind:"CRAFT".into(),item_id:f.item_id.clone(),name:f.name.clone(),rarity:None,modifiers:vec![],buy:f.material_cost+f.craft_cost,sell:f.sale_price,profit:f.expected_profit,roi:f.roi,profit_per_hour:None,amount:Some(f.output_count),confidence:f.confidence.score,confidence_label:confidence_label(&f.confidence),risk:if f.confidence.score>=0.7&&f.sales_per_day>=10.0 {"MEDIUM"}else{"HIGH"}.into(),sell_time:None,do_not_flip:false,notes,command:None,icon:icon_of(&registry,&f.item_id)}
+            }).collect();
+            sort_rows(&mut rows,sort);rows.truncate(limit);
+            let (ah,_,bz)=state.market.freshness();
+            ModMarketPanel{kind:"CRAFT".into(),title:lang.t("Craft flips","クラフトフリップ"),rows,age_seconds:ah.age_seconds.max(bz.age_seconds) as i64,stale:ah.stale||bz.stale,note}
+        }
         "bazaar" | "bz" => {
             let list = state.market.bazaar_list_for(budget.unwrap_or(f64::MAX), q.flipper.unwrap_or(0));
             let mut rows: Vec<ModFlipRow> = list.flips.iter().map(|f| bazaar_row(&registry, f)).collect();
@@ -359,7 +374,7 @@ pub async fn market(State(state): State<Arc<AppState>>, Query(q): Query<MarketQu
                 note,
             }
         }
-        _ => return Err(AppError::bad_request("kind must be ah or bazaar")),
+        _ => return Err(AppError::bad_request("kind must be ah, bazaar or craft")),
     };
     Ok(Json(panel))
 }

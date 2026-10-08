@@ -6,6 +6,8 @@ base {
 	archivesName = 'skypilot'
 }
 
+apply from: 'solver-runtime.gradle'
+
 def sharedModules = [':core', ':network', ':translation', ':session', ':hud']
 
 dependencies {
@@ -15,6 +17,12 @@ dependencies {
 	// Ship the runtime API as a nested Fabric mod: users only need the SkyPilot jar.
 	include "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
+	// Optional local smoke test of the same pinned companions offered by the launcher.
+	def companionSmokeDir = providers.gradleProperty('companionSmokeDir')
+	if (companionSmokeDir.isPresent()) {
+		runtimeOnly files(fileTree(companionSmokeDir.get()) { include '*.jar' })
+	}
+
 	// The version-independent modules are nested inside the mod jar (jar-in-jar).
 	sharedModules.each {
 		implementation project(it)
@@ -22,7 +30,17 @@ dependencies {
 	}
 }
 
+def mediaProject = file('../../../media-bridge/SkyPilot.Media.csproj')
+def mediaOutput = layout.buildDirectory.dir('media-bridge')
+def mediaBridge = tasks.register('buildMediaBridge', Exec) {
+	inputs.files(fileTree('../../../media-bridge') { include '*.cs', '*.csproj' })
+	outputs.file(mediaOutput.map { it.file('SkyPilot.Media.exe') })
+	commandLine 'dotnet', 'publish', mediaProject.absolutePath, '-c', 'Release', '-o', mediaOutput.get().asFile.absolutePath
+	onlyIf { System.getProperty('os.name').toLowerCase().contains('win') }
+}
 processResources {
+	dependsOn mediaBridge
+	from(mediaOutput) { include 'SkyPilot.Media.exe'; into 'native/windows' }
 	def version = project.version
 	inputs.property 'version', version
 	filesMatching('fabric.mod.json') {
@@ -46,7 +64,9 @@ fabricApi {
 }
 
 // ---------------------------------------------------------------- release integrity
-// The mod never downloads or executes code. Releases are verified out-of-band:
+// The mod never downloads code. Optional Windows media support executes its own bundled
+// self-contained WinRT bridge; no external runtime installation is required.
+// Releases are verified out-of-band:
 //  * build/libs/skypilot-<version>.jar.sha256 is published next to every jar;
 //  * when a code-signing keystore is provided (CI secrets SKYPILOT_SIGN_KEYSTORE,
 //    SKYPILOT_SIGN_ALIAS, SKYPILOT_SIGN_STOREPASS) the jar is signed with jarsigner and can be

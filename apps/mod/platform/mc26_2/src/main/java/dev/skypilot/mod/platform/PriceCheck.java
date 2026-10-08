@@ -75,7 +75,13 @@ final class PriceCheck {
 			return;
 		}
 		Item item = item(stack);
-		if (item == null) return;
+		if (item == null) {
+			if(sp.config().priceTooltip&&!stack.isEmpty()&&!isFiller(stack)){
+				var named=NamePrices.get(dev.skypilot.mod.core.Text.strip(stack.getHoverName().getString()));
+				if(named!=null&&named.value()!=null)lines.add(Component.literal(sp.lang().t("SkyPilot value ≈ ","SkyPilot 推定価値 ≈ ")+Text.coins(named.value()*stack.getCount())).withStyle(ChatFormatting.GOLD));
+			}
+			return;
+		}
 		Lang l = sp.lang();
 		if (Feat.on(Features.TOOLTIP_ID)) lines.add(Component.literal("ID: " + item.skyblockId()).withStyle(ChatFormatting.DARK_GRAY));
 		boolean price = sp.config().priceTooltip;
@@ -95,7 +101,7 @@ final class PriceCheck {
 			return;
 		}
 		Dto.PriceResponse r = c.price();
-		if (price) lines.addAll(describe(r, l));
+		if (price) {lines.add(Component.literal("──────── SkyPilot ────────").withStyle(ChatFormatting.DARK_GRAY));lines.addAll(describe(r, l));}
 		if (whole && r.estimatedValue() != null) {
 			lines.add(Component.literal("  ×" + stack.getCount() + " = " + Text.coins(r.estimatedValue() * stack.getCount())).withStyle(ChatFormatting.GOLD));
 		}

@@ -6,6 +6,7 @@ import { ErrorView, Freshness, KnownView, Loading, NeedsAnalysis, PageHeader, St
 import { fmtCoins, fmtPct, rarityClass } from "@/lib/format";
 import { useApi, useWorkspace } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
+import { WealthForecast } from "@/components/wealth-forecast";
 
 function Liquidation() {
   const { t } = useI18n();
@@ -69,6 +70,7 @@ export function NetworthView() {
         description={t("Valued with robust fair values, split by how easily each part can be turned into coins.", "外れ値に強い適正価格で評価し、換金しやすさ別に分けています。")}
         actions={a ? <Freshness f={a.fetched} /> : null}
       />
+      <WealthForecast />
       {!a ? (
         <NeedsAnalysis />
       ) : (

@@ -32,4 +32,10 @@ final class Feat {
 	static void toast(ItemStack icon, String title, int color, String line) {
 		Minecraft.getInstance().gui.toastManager().addToast(new FlipToast(icon, title, color, line));
 	}
+
+	/** 26.2 item components are bound by a world connection, not by reaching the title screen. */
+	static ItemStack icon(net.minecraft.world.item.Item item) {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.level == null || mc.player == null ? ItemStack.EMPTY : new ItemStack(item);
+	}
 }

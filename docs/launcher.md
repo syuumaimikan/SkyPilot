@@ -85,6 +85,9 @@ Nothing of this is sent to the SkyPilot server, logged or shown. The start comma
 
 ## Install and update
 
+The Mods page now offers optional, SHA-512-verified performance, Iris and Skyblocker packs
+for Fabric 26.2. See [client expansion](client-expansion.md) for the pinned versions and new in-game features.
+
 ```bash
 cd apps/mod
 ./gradlew :launcher:jpackageImage       # portable app: apps/launcher/build/jpackage/SkyPilot Launcher/
@@ -93,8 +96,16 @@ cd apps/mod
 
 - The installer needs WiX Toolset 5 on the PATH:
   `dotnet tool install --global wix --version 5.0.2`, then
-  `wix extension add -g WixToolset.UI.wixext/5.0.2` and `… WixToolset.Util.wixext/5.0.2`.
-  CI builds both and uploads them as artifacts.
+  `wix extension add -g WixToolset.UI.wixext/5.0.2` and
+  `wix extension add -g WixToolset.Util.wixext/5.0.2`.
+  If `wix` is not found, use `"$USERPROFILE/.dotnet/tools/wix.exe"` in Git Bash
+  or `& "$env:USERPROFILE/.dotnet/tools/wix.exe"` in PowerShell.
+  The Gradle installer task also searches the user's `.dotnet/tools` directory.
+- Double-click `build/jpackage/SkyPilot Launcher/SkyPilot Launcher.exe` to start
+  the portable app. Keep the entire `SkyPilot Launcher` folder together: its `app`
+  and `runtime` folders are required, and Java does not need to be installed separately.
+  Close the app before rebuilding; read-only output attributes are cleared automatically.
+- Double-click `build/installer/SkyPilot-Launcher-<version>.exe` to install it.
 - The installer is per user (no administrator rights), adds Start menu and desktop shortcuts and
   appears in "Installed apps" for removal. A fixed upgrade UUID lets a newer installer replace
   the installed version.
@@ -125,6 +136,12 @@ whoever has it can sign launcher updates.
 
 ## Pages
 
+Open the web app from Home → Quick actions → **Open SkyPilot Web**. In Minecraft,
+press **J** and select **Web**, or run **`/skypilot web`**. Minecraft displays its link
+confirmation before opening your browser. Both use the server URL configured in the
+launcher Settings / the mod Settings (default: `http://localhost:3000`). The web server
+must be running at that address; opening the browser does not start a local server.
+
 | Page | Contents |
 |---|---|
 | Home | Hero with PLAY (install / sign in / start / running), "Join Hypixel right away", Hypixel server status (SkyBlock / server / login / API, maintenance with local times and countdowns, incidents; refreshed every 2 min), mayor and perks, upcoming events, SkyBlock news, installation checks with Repair, quick actions (add Hypixel, import settings, FPS boost, game folder) |
@@ -143,7 +160,7 @@ whoever has it can sign launcher updates.
 - Sends your sign-in anywhere but Microsoft, Xbox Live and Minecraft services.
 - Runs anything it downloaded without a check: game files against Mojang's / Fabric's SHA-1,
   mods against pinned hashes, launcher updates against SkyPilot's signature.
-- Downloads other mods for you (update checks only link to Modrinth), or deletes your files
+- Installs other mods without selecting an expansion pack (update checks still only link to Modrinth), or deletes a mod without explicit confirmation
   (mods are switched off by renaming; settings are backed up before changes).
 
 ## Tests
@@ -165,6 +182,11 @@ with an offline session until the title screen; it runs only with
 `-Dskypilot.liveLaunch=<empty folder>`.
 
 ## Removing it
+
+To delete an individual mod, select it on the Mods page and click **Delete…** in its details.
+The confirmation names the exact `.jar` or `.jar.disabled` file. Deletion is permanent;
+switching off continues to keep the file. Close Minecraft first. Repair / Play reinstalls the
+bundled SkyPilot and Fabric API when they are missing.
 
 1. Windows: "Installed apps" → SkyPilot Launcher → Uninstall (or delete the portable folder).
 2. Delete the "SkyPilot (SkyBlock)" profile in the official launcher (or restore

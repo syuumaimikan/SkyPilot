@@ -1,4 +1,5 @@
 {
+  "key.skypilot.night_vision": "Toggle night vision",
 	"key.category.skypilot.main": "SkyPilot",
 	"key.skypilot.settings": "Open SkyPilot settings",
 	"key.skypilot.edit_hud": "Move / resize SkyPilot HUD",
@@ -14,5 +15,9 @@
 	"key.skypilot.copy_position": "Copy current coordinates",
 	"key.skypilot.cycle_shader": "Cycle screen shaders",
 	"key.skypilot.random_outfit": "Apply random outfit",
-	"key.skypilot.pause_focus": "Pause / resume focus timer"
+	"key.skypilot.pause_focus": "Pause / resume focus timer",
+	"key.skypilot.media_toggle": "Media play / pause",
+	"key.skypilot.media_next": "Media next track",
+	"key.skypilot.media_previous": "Media previous track",
+	"key.skypilot.ttt_center": "Calibrate tic-tac-toe board center"
 }

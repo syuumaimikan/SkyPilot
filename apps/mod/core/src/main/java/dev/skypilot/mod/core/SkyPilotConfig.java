@@ -7,6 +7,7 @@ package dev.skypilot.mod.core;
  * default and session statistics are only uploaded when {@link Session#upload} is enabled.
  */
 public final class SkyPilotConfig {
+    public boolean dungeonSolver = true;
 	/** SkyPilot backend (web origin). Plain http is only accepted for localhost. */
 	public String apiBaseUrl = "http://localhost:3000";
 	/** "auto" (follow the game language), "en" or "ja". */
@@ -42,6 +43,11 @@ public final class SkyPilotConfig {
 	public int tileBest = 0;
 	public VisualSettings visuals = new VisualSettings();
 	public UtilitySettings utility = new UtilitySettings();
+	public java.util.Map<String, UiPosition> uiPositions = new java.util.LinkedHashMap<>();
+	public boolean compactInfo = true;
+	public boolean hudInContainers = false;
+	public boolean blazeDescending = false;
+	public static final class UiPosition { public int dx,dy; public double scale=1; }
 
 	public static final class Appearance {
 		public boolean richMenus = true;
@@ -62,6 +68,8 @@ public final class SkyPilotConfig {
 		public int entityDistance = 48;
 		public int playerDistance = 32;
 		public int particlesPerTick = 150;
+		public int particleDistance = 32;
+		public int targetFps = 60;
 		/** The player's own video settings before "lightweight video settings" (null = not applied). */
 		public java.util.Map<String, String> videoBackup;
 	}
@@ -224,6 +232,9 @@ public final class SkyPilotConfig {
 		if (features == null) features = new java.util.LinkedHashMap<>();
 		features.values().removeIf(v -> v == null || !v);
 		if (infoHud == null) infoHud = new InfoHud();
+		if(uiPositions==null)uiPositions=new java.util.LinkedHashMap<>();
+		uiPositions.entrySet().removeIf(e->e.getValue()==null||!java.util.Set.of("scoreboard","actionbar","bossbar","hotbar","effects","media","garden","dungeon").contains(e.getKey()));
+		for(var p:uiPositions.values()){p.dx=(int)clamp(p.dx,-10000,10000);p.dy=(int)clamp(p.dy,-10000,10000);p.scale=Double.isFinite(p.scale)?clamp(p.scale,.5,2):1;}
 		infoHud.scale = clamp(infoHud.scale, 0.5, 2.5);
 		infoHud.opacity = clamp(infoHud.opacity, 0.0, 1.0);
 		infoHud.x = (int) clamp(infoHud.x, -10_000, 10_000);
@@ -268,6 +279,8 @@ public final class SkyPilotConfig {
 		perf.entityDistance = (int) clamp(perf.entityDistance, 8, 128);
 		perf.playerDistance = (int) clamp(perf.playerDistance, 4, 128);
 		perf.particlesPerTick = (int) clamp(perf.particlesPerTick, 20, 2000);
+		perf.particleDistance = (int) clamp(perf.particleDistance, 8, 128);
+		perf.targetFps = (int) clamp(perf.targetFps, 30, 240);
 		if (perf.videoBackup != null) {
 			perf.videoBackup.entrySet().removeIf(e -> e.getKey() == null || e.getValue() == null || e.getKey().length() > 40 || e.getValue().length() > 40);
 			if (perf.videoBackup.isEmpty()) perf.videoBackup = null;

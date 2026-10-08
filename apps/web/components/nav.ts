@@ -50,6 +50,8 @@ export const NAV: NavGroup[] = [
     ja: "概要",
     items: [
       { href: "/", en: "Dashboard", ja: "ダッシュボード", icon: LayoutDashboard },
+      { href: "/guides", en: "Guides", ja: "ガイド一覧", icon: BookOpen },
+      { href: "/help/api", en: "API setup guide", ja: "API 設定ガイド", icon: BookOpen },
       { href: "/roadmap", en: "Roadmap", ja: "ロードマップ", icon: Map },
       { href: "/money", en: "Money Making", ja: "金策", icon: Coins },
       { href: "/daily", en: "Daily & Events", ja: "デイリー・イベント", icon: Calendar },
@@ -62,6 +64,7 @@ export const NAV: NavGroup[] = [
       { href: "/market/flips", en: "Live Flips", ja: "ライブフリップ", icon: TrendingUp },
       { href: "/market/bazaar", en: "Bazaar", ja: "バザー", icon: Store },
       { href: "/market/craft", en: "Craft & Forge", ja: "クラフト・フォージ", icon: Hammer },
+      { href: "/market/orders", en: "My Orders", ja: "出品・注文状況", icon: Package },
       { href: "/market/price", en: "Price Explorer", ja: "価格エクスプローラー", icon: Search },
       { href: "/networth", en: "Networth", ja: "資産", icon: Wallet },
     ],
@@ -74,6 +77,7 @@ export const NAV: NavGroup[] = [
       { href: "/combat/dungeons", en: "Dungeons", ja: "ダンジョン", icon: Landmark },
       { href: "/combat/kuudra", en: "Kuudra & Crimson", ja: "クードラ・クリムゾン", icon: Swords },
       { href: "/combat/gear", en: "Gear", ja: "装備", icon: Shield },
+      { href: "/combat/weapons", en: "Weapons", ja: "武器", icon: Swords },
     ],
   },
   {

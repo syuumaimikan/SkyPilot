@@ -1,0 +1,7 @@
+SkyPilot embeds unmodified Skyblocker 6.10.4+26.2 (LGPL-3.0-or-later)
+and Fabric Language Kotlin 1.14.1+kotlin.2.4.20 (Apache-2.0).
+Their original license notices are retained in the nested jars.
+Skyblocker corresponding source:
+https://github.com/SkyblockerMod/Skyblocker/tree/v6.10.4%2B26.2
+Source archive is distributed alongside the Windows installer.
+See docs/dungeon-solver.md for replacement and build instructions.

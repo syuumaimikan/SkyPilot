@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { deadlineRate,upgradePayback,sessionRate } from "../apps/web/lib/money-plan.ts";
+assert.equal(deadlineRate(10e6,100e6,10,3,1e6,0).hourly,80e6/30);
+assert.equal(deadlineRate(100e6,100e6,7,2,0,0).hourly,0);
+assert.equal(deadlineRate(0,100,7,0,0,0).hourly,null);
+assert.equal(deadlineRate(0,100,10,0,10,0).hourly,0);
+assert.equal(deadlineRate(0,100,10,1,0,5).hourly,15);
+assert.deepEqual(upgradePayback(10e6,1e6,2e6,2),{gain:1e6,hours:10,days:5});
+assert.equal(upgradePayback(10e6,2e6,1e6,2).hours,null);
+assert.deepEqual(sessionRate(10e6,16e6,5e6,30),{net:1e6,hourly:2e6});
+assert.equal(sessionRate(10e6,6e6,-5e6,60).net,1e6);
+assert.equal(sessionRate(1,2,0,0).hourly,null);
+assert.equal(sessionRate(10e6,9e6,0,30).hourly,-2e6);
+console.log("Money planning: deadline, expenses, payback, external transfers and losses passed.");

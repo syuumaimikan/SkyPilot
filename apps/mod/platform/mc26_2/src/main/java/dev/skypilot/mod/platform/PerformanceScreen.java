@@ -45,6 +45,8 @@ final class PerformanceScreen extends Screen {
 		if (f == Features.PERF_FAR_ENTITIES) return c.perf.entityDistance + l.t(" blocks", " ブロック");
 		if (f == Features.PERF_FAR_PLAYERS) return c.perf.playerDistance + l.t(" blocks", " ブロック");
 		if (f == Features.PERF_PARTICLE_CAP) return c.perf.particlesPerTick + l.t("/tick", "/tick");
+		if (f == Features.PERF_ADAPTIVE) return c.perf.targetFps + " FPS";
+		if (f == Features.PERF_FAR_PARTICLES) return c.perf.particleDistance + l.t(" blocks", " ブロック");
 		return null;
 	}
 
@@ -54,6 +56,8 @@ final class PerformanceScreen extends Screen {
 		if (f == Features.PERF_FAR_ENTITIES) c.perf.entityDistance += 8 * dir;
 		if (f == Features.PERF_FAR_PLAYERS) c.perf.playerDistance += 4 * dir;
 		if (f == Features.PERF_PARTICLE_CAP) c.perf.particlesPerTick += (c.perf.particlesPerTick + (dir > 0 ? 0 : -1) >= 200 ? 100 : 25) * dir;
+		if (f == Features.PERF_ADAPTIVE) c.perf.targetFps += 15 * dir;
+		if (f == Features.PERF_FAR_PARTICLES) c.perf.particleDistance += 8 * dir;
 		c.sanitize();
 	}
 

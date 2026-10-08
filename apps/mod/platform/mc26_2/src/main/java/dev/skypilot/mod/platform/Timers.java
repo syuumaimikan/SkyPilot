@@ -82,6 +82,8 @@ final class Timers {
 	/** Once per second on the game thread. */
 	static void tickSecond(Minecraft mc) {
 		DeskRuntime.tick();
+		// Keep reminders pending until a world is ready; title-screen item components are unbound.
+		if (mc.level == null || mc.player == null) return;
 		long now = System.currentTimeMillis();
 		SkyPilot sp = SkyPilot.get();
 		Lang l = sp.lang();
@@ -152,7 +154,7 @@ final class Timers {
 		SkyPilotConfig.Watch w = list.get(watchCursor++ % list.size());
 		Minecraft mc = Minecraft.getInstance();
 		sp.api().price(w.itemId, null).whenComplete((p, err) -> mc.execute(() -> {
-			if (p == null) return;
+			if (p == null || mc.level == null || mc.player == null || !Feat.on(Features.MARKET_WATCHLIST)) return;
 			Double price = watchedPrice(p, w.below);
 			if (price == null) return;
 			String key = w.itemId + (w.below ? "<" : ">") + w.price;

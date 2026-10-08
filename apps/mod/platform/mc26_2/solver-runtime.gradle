@@ -1,0 +1,36 @@
+// Unmodified, separately licensed solver modules. No code is downloaded by the game.
+def solverCatalog = new groovy.json.JsonSlurper().parse(file('../../../launcher/src/main/resources/companion-mods.json'))
+solverCatalog.mods.findAll { it.id in ['skyblocker', 'fabric-language-kotlin'] }.each { entry ->
+    def target = layout.buildDirectory.file("solver-runtime/${entry.file}")
+    def fetch = tasks.register("fetchSolver_${entry.id.replace('-', '_')}") {
+        inputs.property('sha512', entry.sha512)
+        outputs.file(target)
+        doLast {
+            def output = target.get().asFile
+            output.parentFile.mkdirs()
+            byte[] bytes = new URI(entry.url).toURL().openStream().withCloseable { it.readAllBytes() }
+            def hash = java.security.MessageDigest.getInstance('SHA-512').digest(bytes).encodeHex().toString()
+            if (bytes.length != entry.size || hash != entry.sha512) throw new GradleException("Solver integrity check failed: ${entry.id}")
+            output.bytes = bytes
+        }
+    }
+    def artifact = files(target).builtBy(fetch)
+    dependencies.add('runtimeOnly', artifact)
+    // Loom requires module capabilities for include dependencies; these verified binary files
+    // are nested explicitly with Fabric metadata instead of inventing Maven coordinates.
+    tasks.named('jar') {
+        dependsOn(fetch)
+        from(target) { into 'META-INF/jars' }
+    }
+}
+def solverNames = solverCatalog.mods.findAll { it.id in ['skyblocker', 'fabric-language-kotlin'] }.collect { it.file }
+tasks.named('processResources') {
+    inputs.property('solverJars', solverNames)
+    def manifest = layout.buildDirectory.file('resources/main/fabric.mod.json')
+    doLast {
+        def file = manifest.get().asFile
+        def json = new groovy.json.JsonSlurper().parse(file)
+        json.jars = (json.jars ?: []) + solverNames.collect { [file: "META-INF/jars/${it}"] }
+        file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+    }
+}

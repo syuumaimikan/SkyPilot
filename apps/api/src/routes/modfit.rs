@@ -55,14 +55,17 @@ pub async fn fit(State(state): State<Arc<AppState>>, jar: CookieJar, headers: He
     let registry = state.registry();
     let fit = tokio::task::block_in_place(|| {
         let ctx = state.ctx(&registry, &player, &user, lang);
-        // --- classes: level (profile) + the most valuable weapon of each class the player owns
+        // --- classes: level + verified usable weapon lore, never the weapon's market price.
         let dungeons = ctx.analysis.dungeons.as_ref();
         let mut best_weapon: std::collections::HashMap<&str, (String, f64)> = std::collections::HashMap::new();
         for o in ctx.inv.all_items() {
             let Some(id) = o.item.skyblock_id.as_deref() else { continue };
             let Some(def) = registry.item(id) else { continue };
+            if skypilot_reco::requirements::item_requirements_met(&ctx, id).0 != Some(true) { continue; }
             let Some(class) = weapon_class(def) else { continue };
-            let value = ctx.buy(id).map(|q| q.price).unwrap_or(0.0);
+            let purpose = match class { "Mage" => "f7_mage", "Archer" => "archer", "Healer" => "healer", _ => "berserker" };
+            let stats = o.item.lore_stats();
+            let value = providers::gear::weights(purpose).iter().map(|(_, label, weight)| stats.get(*label).copied().unwrap_or(0.0) * weight).sum::<f64>();
             let e = best_weapon.entry(class).or_insert((String::new(), -1.0));
             if value > e.1 {
                 *e = (registry.display_name(id), value);
@@ -91,7 +94,7 @@ pub async fn fit(State(state): State<Arc<AppState>>, jar: CookieJar, headers: He
                     class: c.to_string(),
                     level,
                     progress: info.map(|l| l.progress).unwrap_or(0.0),
-                    score: (0.6 * (level as f64 / 50.0).min(1.0) + 0.4 * weapon_score).clamp(0.0, 1.0),
+                    score: if ctx.inv.available { (0.6 * (level as f64 / 50.0).min(1.0) + 0.4 * weapon_score).clamp(0.0, 1.0) } else { 0.0 },
                     reasons,
                     selected: dungeons.and_then(|d| d.selected_class.as_deref()).is_some_and(|s| s.eq_ignore_ascii_case(c)),
                 }
@@ -167,8 +170,8 @@ pub async fn fit(State(state): State<Arc<AppState>>, jar: CookieJar, headers: He
             slayers,
             goals,
             notes: vec![lang.t(
-                "Class fit is a SkyPilot heuristic: 60% class level, 40% the most valuable weapon of that class you own (bows → Archer, wands → Healer, Intelligence swords → Mage, other swords → Berserk; from Hypixel's item data).",
-                "クラス適性はSkyPilotの推定です: クラスレベル60%、そのクラス向けで最も価値の高い所持武器40%（弓→アーチャー、ワンド→ヒーラー、知性の剣→メイジ、その他の剣→バーサーク。Hypixelのアイテムデータより）。",
+                "Class fit is a SkyPilot heuristic: 60% class level, 40% relative lore score of usable owned weapons. Item prices do not indicate suitability. Pet abilities, set effects and party roles are not simulated. Missing inventory data prevents a class recommendation.",
+                "クラス適性はSkyPilotの推定です：クラスレベル60%、使用条件を満たす所持武器の説明文スコア40%。装備価格は適性に使用しません。ペット能力・セット効果・パーティーでの役割は未計算。インベントリ不足時はクラス推薦を行いません。",
             )],
             message: None,
         }

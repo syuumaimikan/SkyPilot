@@ -10,6 +10,7 @@ import { NAV } from "./nav";
 import { useI18n } from "@/lib/i18n";
 import { useApi, useWorkspace } from "@/lib/hooks";
 import { Freshness } from "./common";
+import { ApiHelp } from "./api-help";
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -136,7 +137,7 @@ export function Shell({ children, theme }: { children: ReactNode; theme: "dark" 
             <ThemeToggle initialDark={theme === "dark"} />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-8"><ApiHelp access={ws.data?.lastAnalysis?.analysis.apiAccess} />{children}</main>
         <footer className="border-t border-border px-8 py-4 text-[11px] text-muted-foreground">
           {t(
             "SkyPilot is an information tool. It never plays, buys, sells or moves for you, and is not affiliated with Hypixel or Mojang.",

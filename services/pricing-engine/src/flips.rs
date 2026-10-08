@@ -101,7 +101,7 @@ pub fn scan(
             let others: Vec<f64> = all_prices.iter().enumerate().filter(|(j, _)| *j != i).map(|(_, p)| *p).collect();
             let fair = fair_value::compute(&key, &listing.market_id, &others, &sales, now_ms, state.history_since_ms, fv_cfg);
             let Some(value) = fair.value else { continue };
-            let next_other = others.iter().copied().filter(|p| *p >= unit_buy).fold(f64::INFINITY, f64::min);
+            let next_other = others.iter().copied().filter(|p| p.is_finite() && *p > 0.0).fold(f64::INFINITY, f64::min);
             // A falling market is planned at a lower price: half of the 24h drop, at most -20%.
             let falling = fair.trend.filter(|t| *t < -0.05);
             let planned = value * (1.0 + falling.map(|t| (t * 0.5).max(-0.2)).unwrap_or(0.0));

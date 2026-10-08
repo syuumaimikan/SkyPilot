@@ -326,6 +326,9 @@ public final class ApiClient {
 	}
 
 	// ---------------------------------------------------------------- plumbing
+	public CompletableFuture<Void> uploadOrders(String source, java.util.List<java.util.Map<String,Object>> orders) {
+		return request("POST","/api/mod/orders",GSON.toJson(java.util.Map.of("source",source,"orders",orders)),true).thenApply(r->null);
+	}
 
 	private <T> CompletableFuture<T> getCachedAuth(String path, Class<T> type, long ttlMillis, boolean authenticated) {
 		long now = clock.getAsLong();

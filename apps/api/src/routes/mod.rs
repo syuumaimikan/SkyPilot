@@ -3,6 +3,7 @@ pub mod analyze;
 pub mod auth_routes;
 pub mod launcher;
 pub mod market;
+pub mod orders;
 pub mod misc;
 pub mod modapi;
 pub mod modfit;
@@ -75,6 +76,8 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/farms/{id}", get(advisor::farm))
         // market
         .route("/market/status", get(market::status))
+        .route("/market/orders", get(orders::get))
+        .route("/mod/orders", post(orders::save))
         .route("/market/flips", get(market::flips))
         .route("/market/bazaar", get(market::bazaar))
         .route("/market/craft", get(market::craft))

@@ -57,7 +57,15 @@ public final class SkyPilotClient implements ClientModInitializer {
 		ClientReceiveMessageEvents.MODIFY_GAME.register(ChatFeatures::modify);
 		ClientReceiveMessageEvents.GAME.register(ChatHook::onGameMessage);
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, flag, lines) -> PriceCheck.tooltip(stack, lines));
+		ItemTooltipCallback.EVENT.register((stack, tooltipContext, flag, lines) -> EquipmentComparison.tooltip(stack, lines));
 		ScreenOverlays.register();
+		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD,Identifier.fromNamespaceAndPath("skypilot","maps_media"),(g,d)->{GardenMap.render(g,false);DungeonMap.render(g,false);WindowsMedia.render(g);});
+		LevelRenderEvents.BEFORE_GIZMOS.register(context -> PuzzleGuides.render());
+		LevelRenderEvents.BEFORE_GIZMOS.register(context -> DungeonSolver.world());
+		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD,Identifier.fromNamespaceAndPath("skypilot","solver"),(g,d)->DungeonSolver.hud(g));
+		LevelRenderEvents.BEFORE_GIZMOS.register(context -> GardenMap.world());
+		LevelRenderEvents.BEFORE_GIZMOS.register(context -> PestTracker.world());
+		HudElementRegistry.attachElementAfter(VanillaHudElements.SCOREBOARD,Identifier.fromNamespaceAndPath("skypilot","pest_tracker"),(g,d)->PestTracker.hud(g));
 		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
 			if (renderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer<?> avatar) {
 				helper.register(new PixelSkinLayer(avatar));
@@ -67,6 +75,9 @@ public final class SkyPilotClient implements ClientModInitializer {
 		ClientPlayerBlockBreakEvents.AFTER.register((level, player, pos, state) -> Trackers.blockBroken(state));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			WindowsMedia.tick();
+			PestTracker.tick();
+			DungeonSolver.tick();
 			if (mc.gui.screen() instanceof net.minecraft.client.gui.screens.TitleScreen && SkyPilot.get().config().appearance.richMenus) mc.gui.setScreen(new ClientHomeScreen());
 			while (openSettings.consumeClick()) mc.gui.setScreen(new SettingsScreen(null));
 			while (editHud.consumeClick()) mc.gui.setScreen(new HudEditorScreen(null));
@@ -74,6 +85,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 			ClientShortcuts.tick(mc);
 			VisualEffects.tick(mc);
 			Performance.tick(mc);
+			AmbientEffects.tick(mc);
 			Afk.tick(mc);
 			FarmBuilder.tick(mc);
 			if (!Performance.lite() || ticks % 5 == 0) Activity.tick(mc);
@@ -94,7 +106,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 			Activity.disconnected();
 			VisualEffects.reset();
 		});
-		ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> SkyPilot.get().shutdown());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> {WindowsMedia.stop();SkyPilot.get().shutdown();});
 
 		SkyPilot.LOG.info("SkyPilot loaded for Minecraft 26.2 (server: {})", SkyPilot.get().config().apiBaseUrl);
 	}

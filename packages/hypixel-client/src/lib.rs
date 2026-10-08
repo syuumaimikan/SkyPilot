@@ -352,6 +352,13 @@ impl HypixelClient {
         Ok(v)
     }
 
+    pub async fn player_auctions(&self, uuid: &str) -> Result<serde_json::Value, HypixelError> {
+        if !is_valid_uuid(uuid) { return Err(HypixelError::InvalidInput("invalid uuid".into())); }
+        let v: serde_json::Value = self.get_json(&format!("skyblock/auction?player={}",uuid.replace('-',"")),true).await?;
+        if v.get("success").and_then(|s|s.as_bool())!=Some(true) { return Err(HypixelError::Upstream{status:200,message:"auction API unavailable".into()}); }
+        Ok(v)
+    }
+
     pub async fn museum(&self, profile_id: &str) -> Result<serde_json::Value, HypixelError> {
         if !is_valid_uuid(profile_id) {
             return Err(HypixelError::InvalidInput("invalid profile id".into()));

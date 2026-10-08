@@ -100,7 +100,7 @@ public final class Afk {
 		Minecraft mc = Minecraft.getInstance();
 		long now = System.currentTimeMillis();
 		Lang l = sp.lang();
-		Feat.toast(new ItemStack(Items.BELL), l.t("While you are away", "離席中の通知"), 0xFFFFAA00, l.t(e.en, e.ja));
+		Feat.toast(Feat.icon(Items.BELL), l.t("While you are away", "離席中の通知"), 0xFFFFAA00, l.t(e.en, e.ja));
 		if (now - lastAlert > 4_000) {
 			lastAlert = now;
 			mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_BELL, 1.0f));

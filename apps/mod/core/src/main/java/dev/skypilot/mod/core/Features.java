@@ -59,6 +59,18 @@ public final class Features {
 	}
 
 	// ---------------------------------------------------------------- chat
+	public static final Feature PEST_TRACKER=f("garden.pest_tracker",Category.FARMING,"Follow visible pests","ペスト個体の位置追従","Tracks visible pest bodies with distance and direction; approach the plot to detect them.","見えているペスト個体の移動位置・距離・方向を追従表示。プロットに近づくと検出します。","");
+	public static final Feature GARDEN_MAP=f("garden.pest_map",Category.FARMING,"Pest plot map","ペストのプロット地図","Shows plot numbers from the tab list on a Garden grid.","タブの害虫プロットを地図に表示します。","");
+	public static final Feature DUNGEON_MAP=f("dungeons.minimap",Category.DUNGEONS,"Dungeon minimap","ダンジョンミニマップ","Displays the received dungeon map and its markers.","所持しているダンジョンマップとマーカーをHUDに表示します。","");
+	public static final Feature BLAZE_GUIDE=f("dungeons.blaze_guide",Category.DUNGEONS,"Blaze order guide","Blazeの順番ガイド","Draws numbers and lines between visible Blaze health labels. Order can be reversed in the HUD editor.","見えているBlazeのHPラベルを順番と線で表示。HUD編集で昇順/降順を切り替えます。","");
+	public static final Feature MEDIA=f("tools.windows_media",Category.TOOLS,"Windows now playing","Windowsの再生中メディア","Local Windows media title, cover and previous/play/next keys.","Windowsの曲名・ジャケットを表示。キーで前曲/再生停止/次曲を操作。","");
+	public static final Feature TTT_GUIDE=f("dungeons.tictactoe_guide",Category.DUNGEONS,"Tic-tac-toe world guide","三目並べの現地ガイド","Aim at the central wall cell and press the calibration key; reads revealed map pieces and outlines the next move for O.","壁の盤面中央を狙って中央記録キーを押すと、公開された額縁マップを読みOの次の一手を現地に表示します。","");
+	public static final Feature CREEPER_GUIDE=f("dungeons.creeper_guide",Category.DUNGEONS,"Creeper beam guide","Creeperビームガイド","Shows candidate block pairs whose beam intersects the visible Creeper.","見えているCreeperを通るブロックの組をガイド線で表示します。","");
+	public static final Feature EXP_PAIRS = f("experiments.pairs", Category.INVENTORY, "Superpairs memory", "神経衰弱のカード記録", "Remembers revealed cards in the current Superpairs window.", "Superpairsで一度めくったカードを閉じた後も表示します。", "");
+	public static final Feature EXP_MATCHES = f("experiments.matches", Category.INVENTORY, "Matching pairs", "一致ペアの強調", "Outlines matching observed rewards and their partner slot.", "記録済みの一致ペアと、カーソルを合わせたカードの相手を強調します。", "");
+	public static final Feature EXP_NAMES = f("experiments.names", Category.INVENTORY, "Remembered reward names", "記録した報酬の名前", "Shows the hovered remembered card name above the board.", "記録済みカードにカーソルを合わせると報酬名を表示します。", "");
+	public static final Feature EXP_NUMBERS = f("experiments.numbers", Category.INVENTORY, "Ultrasequencer numbers", "Ultrasequencerの番号記録", "Retains the numbers shown during the observation phase.", "観察フェーズで見えた番号を各マスに表示します。", "");
+	public static final Feature EXP_SEQUENCE = f("experiments.sequence", Category.INVENTORY, "Chronomatron sequence", "Chronomatronの発光順記録", "Numbers observed flashes in order, including repeated cells.", "観察フェーズの発光順を番号で表示します。同じマスの繰り返しにも対応。", "");
 	public static final Feature CHAT_CLICK_TRANSLATE = f("chat.click_translate", Category.CHAT, "Click to translate", "クリック翻訳",
 			"A [→JA] button on chat lines; click to show that line in Japanese.", "チャットの各行に[訳]ボタンを付け、クリックした行だけ日本語にします。", "nc");
 	public static final Feature CHAT_TIMESTAMPS = f("chat.timestamps", Category.CHAT, "Timestamps", "タイムスタンプ",
@@ -391,6 +403,13 @@ public final class Features {
 			"Shows how many entities and particles the client is handling right now.", "今処理しているエンティティとパーティクルの数を表示します。", "");
 
 	// ---------------------------------------------------------------- AFK guard
+	public static final Feature PERF_ADAPTIVE = f("perf.adaptive_particles", Category.PERFORMANCE, "Adaptive particle budget", "自動粒子予算",
+			"Reduces particle creation below the target FPS and gradually restores it when FPS recovers.", "目標FPSを下回ると粒子の生成数を減らし、回復すると徐々に戻します。", "");
+	public static final Feature PERF_FAR_PARTICLES = f("perf.far_particles", Category.PERFORMANCE, "Particle render distance", "遠距離の粒子を省く",
+			"Skips new particles beyond the configured camera distance.", "カメラから設定距離より遠い粒子の生成を省きます。", "");
+	public static final Feature PERF_FRAME_STATS = f("perf.frame_stats", Category.PERFORMANCE, "Frame pacing HUD", "フレーム安定性HUD",
+			"Shows rolling frame p95, p99 and FPS from p99 frame time (up to 300 frames).", "最大300フレームのp95・p99時間とp99から算出したFPSを表示します。", "");
+
 	// Notification only: nothing is pressed or moved for you (no "anti-AFK"), nothing is sent.
 	public static final Feature AFK_DETECT = f("afk.detect", Category.AFK, "AFK detection", "放置の検知",
 			"After a few minutes without keyboard or mouse input (default 3; /skypilot afk) you are marked AFK; the info HUD shows for how long.",

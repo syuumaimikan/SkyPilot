@@ -17,6 +17,16 @@ public final class PerfRules {
 	private PerfRules() {
 	}
 
+	/** One adjustment per second, with a dead band to prevent oscillation. */
+	public static int adaptiveBudget(int current, int maximum, int fps, int target) {
+		maximum = Math.max(20, maximum);
+		current = Math.max(20, Math.min(maximum, current));
+		if (fps <= 0 || target <= 0) return current;
+		if (fps < target * .85) return Math.max(20, current - Math.max(5, current / 8));
+		if (fps > target * 1.1) return Math.min(maximum, current + Math.max(5, maximum / 20));
+		return current;
+	}
+
 	/** Damage numbers are short-lived armor stands, so old ones (over 15 s) are never matched. */
 	public static boolean isDamageSplash(String plainName, int ageTicks) {
 		if (plainName == null || plainName.isEmpty() || ageTicks > 300) return false;

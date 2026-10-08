@@ -16,7 +16,7 @@ import java.util.Set;
 
 /**
  * Downloads, only over https and only from the two hosts the launcher needs: Fabric's metadata
- * server (the loader's version file) and Modrinth's CDN (the pinned Fabric API file). Every
+ * server (the loader's version file) and Modrinth's CDN (pinned Fabric API and opt-in companions). Every
  * download has a size limit, and files are checked against the pinned hash before use.
  */
 public final class Net {

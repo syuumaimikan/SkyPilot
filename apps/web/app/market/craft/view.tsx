@@ -137,8 +137,16 @@ export function CraftView() {
   const craft = useApi<CraftResp>("/api/market/craft", undefined, { refetchInterval: 60_000 });
   const time = useApi<TimeResp>("/api/market/time", undefined, { refetchInterval: 60_000 });
   const [search, setSearch] = useState("");
+  const [budget, setBudget] = useState(50_000_000);
+  const [minConfidence, setMinConfidence] = useState(0.5);
+  const [minVolume, setMinVolume] = useState(1);
+  const [stress, setStress] = useState(5);
   const s = search.trim().toLowerCase();
-  const craftRows = useMemo(() => (craft.data?.flips ?? []).filter((f) => !s || f.name.toLowerCase().includes(s)), [craft.data, s]);
+  const craftRows = useMemo(() => (craft.data?.flips ?? []).filter((f) =>
+    (!s || f.name.toLowerCase().includes(s)) && f.materialCost + f.craftCost <= budget &&
+    f.confidence.score >= minConfidence && f.salesPerDay >= minVolume &&
+    f.expectedProfit - (f.salePrice + f.materialCost) * stress / 100 > 0
+  ).sort((a,b)=>(b.expectedProfit-(b.salePrice+b.materialCost)*stress/100)*b.confidence.score-(a.expectedProfit-(a.salePrice+a.materialCost)*stress/100)*a.confidence.score), [craft.data, s, budget, minConfidence, minVolume, stress]);
   const timeRows = useMemo(() => (time.data?.flips ?? []).filter((f) => !s || f.name.toLowerCase().includes(s)), [time.data, s]);
   return (
     <div className="flex flex-col gap-6">
@@ -151,6 +159,13 @@ export function CraftView() {
         actions={craft.data ? <Freshness f={craft.data.freshness} /> : null}
       />
       <Input className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("Search", "検索")} aria-label={t("Search", "検索")} />
+      <div className="grid gap-3 sm:grid-cols-4">
+        <label>{t("Budget (coins)","予算（coins）")}<Input type="number" min={0} value={budget} onChange={e=>setBudget(Math.max(0,Number(e.target.value)||0))}/></label>
+        <label>{t("Min confidence (0–1)","最低信頼度（0〜1）")}<Input type="number" min={0} max={1} step={0.1} value={minConfidence} onChange={e=>setMinConfidence(Math.min(1,Math.max(0,Number(e.target.value)||0)))}/></label>
+        <label>{t("Min sales/day","最低販売数/日")}<Input type="number" min={0} value={minVolume} onChange={e=>setMinVolume(Math.max(0,Number(e.target.value)||0))}/></label>
+        <label>{t("Price stress (%)","価格変動の余裕（%）")}<Input type="number" min={0} max={50} value={stress} onChange={e=>setStress(Math.min(50,Math.max(0,Number(e.target.value)||0)))}/></label>
+      </div>
+      <p className="text-sm text-muted-foreground">{t("Ranks by confidence-weighted profit after a sale-price drop and material-price rise of the selected percentage. Displayed profits use current quotes; this is a scenario, not a guarantee. Recipe costs may assume reusable surplus from multi-output crafts.","売値の下落と材料費の上昇を指定%見込んだ利益×信頼度で順位付けします。表の利益は現在価格による試算です。複数個できる材料のレシピは余剰の再利用を前提とする場合があります。")}</p>
       <Tabs defaultValue="craft">
         <TabsList>
           <TabsTrigger value="craft">{t("Craft flips", "クラフトフリップ")}</TabsTrigger>

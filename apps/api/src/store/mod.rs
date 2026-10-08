@@ -80,6 +80,8 @@ pub struct RawProfile {
 #[async_trait]
 pub trait Store: Send + Sync {
     fn kind(&self) -> &'static str;
+    async fn save_orders(&self, user_id: Uuid, source: &str, snapshot: &serde_json::Value) -> StoreResult<()>;
+    async fn orders(&self, user_id: Uuid, source: &str) -> StoreResult<Option<serde_json::Value>>;
 
     // users & sessions
     async fn create_user(&self) -> StoreResult<Uuid>;

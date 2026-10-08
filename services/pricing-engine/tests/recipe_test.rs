@@ -34,6 +34,18 @@ fn recursive_craft_cost_matches_neu_recipes() {
     assert_eq!(block.unit_price, Some(51_200.0)); // 160 x 320
     assert_eq!(block.children[0].item_id, "ENCHANTED_MELON");
     assert_eq!(block.children[0].amount, 160.0);
+    assert_eq!(block.children[0].children[0].amount, 25_600.0);
+    assert_eq!(block.children[0].children[0].total, Some(51_200.0));
+}
+
+#[test]
+fn invalid_market_numbers_do_not_become_ingredient_costs(){
+    let reg=common::registry();
+    for price in [f64::NAN,f64::INFINITY,-1.0,0.0] {
+        let oracle=Fixed(HashMap::from([("MELON",price)]));
+        let mut calc=CraftCalculator::new(&reg,&oracle);
+        assert!(calc.unit_cost("ENCHANTED_MELON").is_none());
+    }
 }
 
 #[test]

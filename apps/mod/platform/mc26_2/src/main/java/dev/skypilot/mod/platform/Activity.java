@@ -256,7 +256,7 @@ final class Activity {
 	}
 
 	private static boolean tabWanted() {
-		return Feat.on(Features.HUD_PET) || Feat.on(Features.HUD_PROFILE) || Feat.on(Features.MINING_FORGES) || Feat.on(Features.MINING_CRYSTALS)
+		return Feat.on(Features.GARDEN_MAP) || Feat.on(Features.HUD_PET) || Feat.on(Features.HUD_PROFILE) || Feat.on(Features.MINING_FORGES) || Feat.on(Features.MINING_CRYSTALS)
 				|| Feat.on(Features.FARMING_GARDEN) || Feat.on(Features.FARMING_CONTEST_TAB) || Feat.on(Features.FISHING_TROPHY_TAB) || Feat.on(Features.DUNGEONS_PUZZLES)
 				|| Feat.on(Features.HUD_EFFECTS) || Feat.on(Features.HUD_TIMERS) || Feat.on(Features.HUD_DAILY) || Feat.on(Features.HUD_ESSENCE)
 				|| Feat.on(Features.HUD_COLLECTION) || Feat.on(Features.HUD_SKILLS_TAB) || Feat.on(Features.COMBAT_SLAYER_TAB) || Feat.on(Features.COMBAT_BESTIARY)

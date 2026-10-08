@@ -1,4 +1,5 @@
 {
+  "key.skypilot.night_vision": "暗視の切り替え",
 	"key.category.skypilot.main": "SkyPilot",
 	"key.skypilot.settings": "SkyPilot の設定を開く",
 	"key.skypilot.edit_hud": "SkyPilot HUD の位置・サイズ変更",
@@ -14,5 +15,9 @@
 	"key.skypilot.copy_position": "現在の座標をコピー",
 	"key.skypilot.cycle_shader": "画面シェーダーを切り替える",
 	"key.skypilot.random_outfit": "ランダムコーデを適用",
-	"key.skypilot.pause_focus": "集中タイマーを停止／再開"
+	"key.skypilot.pause_focus": "集中タイマーを停止／再開",
+	"key.skypilot.media_toggle": "メディアを再生／一時停止",
+	"key.skypilot.media_next": "メディアを次の曲へ",
+	"key.skypilot.media_previous": "メディアを前の曲へ",
+	"key.skypilot.ttt_center": "三目並べの盤面中央を記録"
 }

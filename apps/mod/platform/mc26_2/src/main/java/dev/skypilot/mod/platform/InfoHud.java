@@ -35,13 +35,14 @@ final class InfoHud {
 		SkyPilot sp = SkyPilot.get();
 		Minecraft mc = Minecraft.getInstance();
 		if (sp == null || mc.player == null || mc.gui.screen() instanceof HudEditorScreen) return;
+		if(!sp.config().hudInContainers && mc.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>)return;
 		lowHealth(g, mc);
 		if (Feat.on(Features.HUD_COMPASS)) compass(g, mc);
 		long now = System.currentTimeMillis();
 		// Lite mode: rebuild the lines 4 times a second instead of every frame.
-		List<HudRow> rows = Performance.lite() && cachedRows != null && now - cachedAt < 250 ? cachedRows : rows(sp, mc, now);
-		cachedRows = rows;
-		cachedAt = now;
+		boolean reuse = Performance.lite() && cachedRows != null && now - cachedAt < 250;
+		List<HudRow> rows = reuse ? cachedRows : rows(sp, mc, now);
+		if (!reuse) { cachedRows = rows; cachedAt = now; }
 		if (!rows.isEmpty()) draw(g, rows, sp.config().infoHud, HudRenderer.lastBox, g.guiWidth(), g.guiHeight(), false);
 	}
 
@@ -50,6 +51,7 @@ final class InfoHud {
 		int width = 0;
 		for (HudRow r : rows) width = Math.max(width, font.width(r.text()));
 		width = Math.min(width, 260) + HudLayout.PADDING * 2;
+		if(SkyPilot.get().config().compactInfo&&rows.size()>18){var reduced=new ArrayList<HudRow>(rows.subList(0,17));reduced.add(HudRow.text("… +"+(rows.size()-17)+SkyPilot.get().lang().t(" rows (HUD editor: expand)","行（HUD編集で展開）"),HudRow.MUTED));rows=reduced;}
 		int x = cfg.x >= 0 ? cfg.x : screenW - (int) Math.round(width * cfg.scale) + cfg.x;
 		int y = cfg.y >= 0 ? cfg.y : mainHud != null ? mainHud.y() + mainHud.height() + 4 : 4;
 		return HudRenderer.draw(g, font, rows, Math.max(0, x), y, cfg.scale, cfg.opacity, 260, screenW, screenH, outline);
@@ -73,6 +75,7 @@ final class InfoHud {
 			long used = rt.totalMemory() - rt.freeMemory();
 			out.add(HudRow.text(dev.skypilot.mod.core.PerfRules.memory(used, rt.maxMemory()), used > rt.maxMemory() * 0.85 ? HudRow.BAD : HudRow.MUTED));
 		}
+		if (Feat.on(Features.PERF_FRAME_STATS)) out.add(HudRow.text(Performance.frameStats(), HudRow.MUTED));
 		if (Feat.on(Features.PERF_HUD_COUNTS) && mc.level != null) {
 			out.add(HudRow.text(l.t("Entities ", "エンティティ ") + mc.level.getEntityCount() + "  " + l.t("Particles ", "パーティクル ") + dev.skypilot.mod.core.PerfRules.particleTotal(mc.particleEngine.countParticles()), HudRow.MUTED));
 		}

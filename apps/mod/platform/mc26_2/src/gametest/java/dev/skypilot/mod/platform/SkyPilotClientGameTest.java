@@ -1,5 +1,7 @@
 package dev.skypilot.mod.platform;
 
+import dev.skypilot.mod.core.Features;
+
 import dev.skypilot.mod.core.SkyBlockContext;
 import dev.skypilot.mod.network.Dto;
 import dev.skypilot.mod.platform.mixin.ChatComponentAccessor;
@@ -94,6 +96,7 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
 		check(ctx.computeOnClient(mc -> SkyPilot.get() != null), "SkyPilot initialised");
+		check(ctx.computeOnClient(mc -> DungeonSolver.available() && DungeonSolver.verifyBackend()), "pinned solver module and all adapter fields available");
 		check(ctx.computeOnClient(mc -> !SkyPilot.get().config().translation.mode.name().equals("AUTO")), "translation is not on by default");
 		// No SkyPilot server during the test (as on CI): a server running on this PC would replace
 		// the synthetic data the screens are checked with.
@@ -103,6 +106,18 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 		});
 
 		ctx.setScreen(ClientHomeScreen::new);
+		ctx.runOnClient(mc -> {
+			check(mc.level == null && mc.player == null, "regression runs before item component binding");
+			check(Feat.icon(Items.EMERALD).isEmpty(), "title-screen toast uses an empty icon");
+			long now = System.currentTimeMillis();
+			Timers.skyblock = new Dto.SkyblockNow(null, null, null, List.of(new Dto.FireSale("REGRESSION", "Regression sale", now - 1000, now + 60000, 1L, 1L)));
+			Features.set(SkyPilot.get().config(), Features.MARKET_FIRE_SALE, true);
+			Timers.remind(0, "Regression reminder");
+			Timers.tickSecond(mc);
+			check(Timers.REMINDERS.size() == 1, "reminder retained while no world is connected");
+			Timers.REMINDERS.clear(); Timers.skyblock = null;
+			Features.set(SkyPilot.get().config(), Features.MARKET_FIRE_SALE, false);
+		});
 		ctx.waitTicks(3);
 		ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-client-home"));
         ctx.setScreen(() -> new net.minecraft.client.gui.screens.options.OptionsScreen(new ClientHomeScreen(), net.minecraft.client.Minecraft.getInstance().options, false));
@@ -166,6 +181,20 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
             });
             ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-key-actions"));
             ctx.setScreen(() -> new UtilityScreen(null));ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-utility-settings"));
+			ctx.setScreen(() -> {var screen=new UtilityScreen(null);screen.showExtras();return screen;});ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-extra-helpers"));
+			ctx.runOnClient(mc -> {
+				var u=SkyPilot.get().config().utility;
+				u.itemComparison=true;
+				var previous=mc.player.getMainHandItem().copy();
+				try {
+					mc.player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND,order(Items.DIAMOND_SWORD,"Equipped","Damage: +100","Strength: +50"));
+					var lines=new ArrayList<Component>();
+					EquipmentComparison.tooltip(order(Items.DIAMOND_SWORD,"Candidate","Damage: +130","Strength: +45"),lines);
+					check(lines.size()==3 && lines.get(1).getString().contains("+30.0"),"equipped lore comparison renders deltas");
+					u.memory=u.gc=u.armor=true;
+					check(UtilityHud.rows(mc).stream().anyMatch(s->s.startsWith("GC")),"GC diagnostics render");
+				} finally {mc.player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND,previous);u.clear();}
+			});
             ctx.runOnClient(mc -> {var u=SkyPilot.get().config().utility;u.coordinates=u.fps=u.ping=u.clock=u.speed=u.durability=u.slots=u.focus=u.session=u.worldTime=true;DeskRuntime.FOCUS.start(1,DeskRuntime.now());check(UtilityHud.rows(mc).size()==10,"all ten utility rows render");ClientShortcuts.copyPosition(mc);var pos=mc.player.blockPosition();check(mc.keyboardHandler.getClipboard().equals(pos.getX()+" "+pos.getY()+" "+pos.getZ()),"coordinate copy stays local");});
             ctx.setScreen(() -> null);ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-utility-hud"));
             ctx.runOnClient(mc -> {
@@ -181,8 +210,56 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 
             ctx.setScreen(() -> new VisualScreen(null));ctx.waitTicks(3);
             ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-visual-studio"));
+            var localFont=java.nio.file.Path.of("C:/Windows/Fonts/segoeui.ttf");
+            if(java.nio.file.Files.isRegularFile(localFont)){
+                int oldWidth=ctx.computeOnClient(mc -> mc.font.width("SkyPilot 012345"));
+                var reload=new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CompletableFuture<Void>>();
+                ctx.runOnClient(mc -> {
+                    try {
+                        var format=net.minecraft.SharedConstants.getCurrentVersion().packVersion(net.minecraft.server.packs.PackType.CLIENT_RESOURCES);
+                        dev.skypilot.mod.core.FontPack.create(mc.getResourcePackDirectory(),localFont,format.major(),format.minor(),10);
+                        var repo=mc.getResourcePackRepository();repo.reload();
+                        check(repo.getPack("file/"+dev.skypilot.mod.core.FontPack.FILE)!=null,"generated font discovered");
+                        check(repo.addPack("file/"+dev.skypilot.mod.core.FontPack.FILE),"generated font enabled");
+                        reload.set(mc.reloadResourcePacks());
+                    } catch(java.io.IOException e){throw new AssertionError(e);}
+                });
+                ctx.waitFor(mc -> reload.get().isDone(),600);
+                check(!reload.get().isCompletedExceptionally(),"TTF reload succeeds");
+                ctx.waitFor(mc -> mc.gui.overlay()==null,200);
+                check(ctx.computeOnClient(mc -> mc.font.width("SkyPilot 012345")!=oldWidth),"game default font changes");
+                ctx.setScreen(() -> new FontScreen(null));ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-game-font"));
+                ctx.runOnClient(mc -> {mc.getResourcePackRepository().removePack("file/"+dev.skypilot.mod.core.FontPack.FILE);reload.set(mc.reloadResourcePacks());});
+                ctx.waitFor(mc -> reload.get().isDone(),600);
+                ctx.waitFor(mc -> mc.gui.overlay()==null,200);
+                check(ctx.computeOnClient(mc -> mc.font.width("SkyPilot 012345")==oldWidth),"font restore returns original metrics");
+            }
+            ctx.runOnClient(mc -> {
+                var pos=mc.player.getEyePosition().add(mc.player.getLookAngle().scale(2));
+                var pest=new net.minecraft.world.entity.decoration.ArmorStand(mc.level,pos.x,pos.y,pos.z);
+                pest.setId(199992);
+                pest.setCustomName(Component.literal("[Lv1] Beetle 5,000/5,000❤"));
+                var found=PestTracker.detect(mc,List.of(pest));
+                check(found.size()==1,"visible named pest detected");
+                pest.setPos(pos.x+.5,pos.y,pos.z);
+                check(found.getFirst().entity().getX()==pos.x+.5,"tracked entity follows movement without frozen waypoint");
+                pest.setInvisible(true);check(PestTracker.detect(mc,List.of(pest)).isEmpty(),"hidden pest does not produce a tracker");
+                pest.setInvisible(false);pest.setCustomName(Component.literal("PEST TRAP #3"));
+                check(PestTracker.detect(mc,List.of(pest)).isEmpty(),"trap is not a pest");
+                pest.setCustomName(Component.literal("[Lv1] Beetle 5,000❤"));pest.discard();
+                check(PestTracker.detect(mc,List.of(pest)).isEmpty(),"despawned pest drops out");
+            });
+            ctx.runOnClient(mc -> {
+                var light=new net.minecraft.client.renderer.LightmapRenderStateExtractor(mc.gameRenderer,mc);
+                var state=new net.minecraft.client.renderer.state.LightmapRenderState();
+                SkyPilot.get().config().visuals.nightVision=true;light.tick();light.extract(state,0);
+                check(state.nightVisionEffectIntensity==1,"night vision applies to lightmap");
+                SkyPilot.get().config().visuals.nightVision=false;light.tick();light.extract(state,0);
+                check(state.nightVisionEffectIntensity<1,"night vision turns off cleanly");
+            });
+			ctx.setScreen(() -> {var screen=new VisualScreen(null);screen.showAmbient();return screen;});ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-ambient-settings"));
             ctx.setScreen(() -> null);
-            for(String shader:new String[]{"cinematic","warm","cool","mono","sketch"}){
+            for(String shader:dev.skypilot.mod.core.VisualSettings.SHADERS.stream().filter(s->!s.equals("none")).toList()){
                 ctx.runOnClient(mc -> SkyPilot.get().config().visuals.shader=shader);
                 ctx.waitTicks(8);
                 check(ctx.computeOnClient(mc -> net.minecraft.resources.Identifier.fromNamespaceAndPath("skypilot",shader).equals(mc.gameRenderer.currentPostEffect())),"shader active: "+shader);
@@ -713,18 +790,28 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				offer.set(DataComponents.CUSTOM_NAME, Component.literal("Accept Offer"));
 				offer.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(List.of(Component.literal("Items Required:"),
 						Component.literal(" Enchanted Hay Bale x2"), Component.literal(" Wheat x64"), Component.literal(""), Component.literal("Rewards:"),
-						Component.literal(" +4,000 Farming XP"), Component.literal(" +12 Copper"))));
+						Component.literal(" +4,000 Farming XP"), Component.literal(" +12 Copper"),Component.literal(" +1 Overgrown Grass"))));
 				menu.getSlot(29).set(offer);
 				VisitorPanel.setPrice("Enchanted Hay Bale", 150_000.0);
 				VisitorPanel.setPrice("Wheat", 6.0);
+				VisitorPanel.setPrice("Overgrown Grass", 5_000_000.0);
 				return new ContainerScreen(menu, mc.player.getInventory(), Component.literal("Jacob"));
 			});
 			ctx.waitTicks(3);
 			ctx.runOnClient(mc -> check(VisitorPanel.find((ContainerScreen) mc.gui.screen()) != null, "visitor offer recognised"));
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-visitor"));
+			ctx.runOnClient(mc->{Activity.tab=List.of("Pests:","Alive: 3","Plots: 7, 13, 19");SkyPilot.get().config().uiPositions.get("scoreboard").dx=-20;});
 			ctx.setScreen(() -> new HudEditorScreen(null));
 			ctx.waitTicks(2);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-hud-editor-info"));
+			ctx.runOnClient(mc->{Features.set(SkyPilot.get().config(),Features.MEDIA,true);WindowsMedia.tick();var id=new net.minecraft.world.level.saveddata.maps.MapId(555);var data=net.minecraft.world.level.saveddata.maps.MapItemSavedData.createForClient((byte)0,false,mc.level.dimension());for(int i=0;i<data.colors.length;i++)data.colors[i]=(byte)((i%128/16+i/128/16)%2==0?114:33);mc.level.overrideMapData(id,data);var item=new ItemStack(Items.FILLED_MAP);item.set(DataComponents.MAP_ID,id);mc.player.getInventory().setItem(8,item);});
+			ctx.waitTicks(90);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-media-map-preview"));
+			ctx.setScreen(() -> null);
+			ctx.runOnClient(mc->{var p=UiTransforms.position("media");p.dx=mc.getWindow().getGuiScaledWidth()-210;p.dy=-mc.getWindow().getGuiScaledHeight()+140;});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-now-playing"));
+			ctx.runOnClient(mc->{Features.set(SkyPilot.get().config(),Features.MEDIA,false);WindowsMedia.stop();mc.player.getInventory().setItem(8,ItemStack.EMPTY);SkyPilot.get().config().uiPositions.clear();});
 			ctx.setScreen(() -> null);
 			ctx.runOnClient(mc -> {
 				dev.skypilot.mod.core.Features.disableAll(SkyPilot.get().config(), null);
@@ -762,6 +849,16 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				sb.getOrCreatePlayerScore(ScoreHolder.forNameOnly("Purse: 1,300,000"), o).set(2);
 			});
 			ctx.waitFor(mc -> Activity.dungeon != null && "F7".equals(Activity.dungeon.floor()), 100);
+			ctx.setScreen(() -> {
+				var mc=Minecraft.getInstance();var menu=ChestMenu.fourRows(8,mc.player.getInventory());
+				for(int slot=0;slot<36;slot++)menu.slots.get(slot).set(new ItemStack(Items.STAINED_GLASS_PANE.black()));
+				menu.slots.get(10).set(new ItemStack(Items.STAINED_GLASS_PANE.red(),3));menu.slots.get(11).set(new ItemStack(Items.STAINED_GLASS_PANE.red(),1));menu.slots.get(12).set(new ItemStack(Items.STAINED_GLASS_PANE.red(),2));
+				return new ContainerScreen(menu,mc.player.getInventory(),Component.literal("Click in order!"));
+			});
+			ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-dungeon-terminal"));
+			ctx.runOnClient(mc -> check(TerminalOverlay.active((ContainerScreen)mc.gui.screen()),"terminal guide active in dungeon context"));
+			ctx.setScreen(() -> new DungeonScreen(null));ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-dungeon-settings"));
+			ctx.setScreen(() -> null);
 			world.getServer().runOnServer(server -> {
 				var pl = server.getPlayerList();
 				for (String line : List.of("[Sacks] +123 items. (Last 30s.)", "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬", "You uncovered a treasure chest!",
@@ -1058,6 +1155,41 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 			});
 			ctx.waitTicks(2);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-features-3"));
+			// Experiment memories observe real container stacks and retain only revealed rewards.
+			ctx.runOnClient(mc -> {
+				for(var f:List.of(Features.EXP_PAIRS,Features.EXP_MATCHES,Features.EXP_NAMES,Features.EXP_NUMBERS,Features.EXP_SEQUENCE))Features.set(SkyPilot.get().config(),f,true);
+			});
+			ctx.setScreen(() -> {
+				var mc=Minecraft.getInstance();var menu=ChestMenu.sixRows(19,mc.player.getInventory());
+				menu.getSlot(10).set(order(Items.EXPERIENCE_BOTTLE,"100,000 Enchanting XP"));
+				menu.getSlot(20).set(order(Items.EXPERIENCE_BOTTLE,"100,000 Enchanting XP"));
+				return new ContainerScreen(menu,mc.player.getInventory(),Component.literal("Superpairs (Grand)"));
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc->{var s=(ContainerScreen)mc.gui.screen();var m=ScreenOverlays.experimentsOf(s).memory();check(m.known()==2,"only revealed cards stored");check(m.pair(10)==20,"matching rewards");s.getMenu().getSlot(10).set(new ItemStack(Items.STAINED_GLASS.cyan()));s.getMenu().getSlot(20).set(new ItemStack(Items.STAINED_GLASS.cyan()));});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-superpairs-memory"));
+			ctx.runOnClient(mc->check(ScreenOverlays.experimentsOf(mc.gui.screen()).memory().known()==2,"hidden glass never replaces reward"));
+			ctx.setScreen(() -> {
+				var mc=Minecraft.getInstance();var menu=ChestMenu.sixRows(20,mc.player.getInventory());
+				menu.getSlot(49).set(order(Items.GLOWSTONE,"Remember the pattern!"));
+				menu.getSlot(10).set(order(Items.DYE.red(),"3"));
+				return new ContainerScreen(menu,mc.player.getInventory(),Component.literal("Ultrasequencer (Grand)"));
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc->{var s=(ContainerScreen)mc.gui.screen();check(ScreenOverlays.experimentsOf(s).memory().number(10)==3,"number parsed from name");s.getMenu().getSlot(49).set(order(Items.CLOCK,"Timer: 5"));s.getMenu().getSlot(10).set(new ItemStack(Items.STAINED_GLASS_PANE.cyan()));});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-ultrasequencer-memory"));
+			ctx.setScreen(() -> {
+				var mc=Minecraft.getInstance();var menu=ChestMenu.sixRows(21,mc.player.getInventory());
+				menu.getSlot(49).set(order(Items.GLOWSTONE,"Remember the pattern!"));
+				var flash=new ItemStack(Items.DYED_TERRACOTTA.red());flash.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE,true);menu.getSlot(21).set(flash);
+				return new ContainerScreen(menu,mc.player.getInventory(),Component.literal("Chronomatron (Grand)"));
+			});
+			ctx.waitTicks(3);
+			ctx.runOnClient(mc->{var s=(ContainerScreen)mc.gui.screen();check(ScreenOverlays.experimentsOf(s).memory().sequence().equals(List.of(21)),"flash recorded once");s.getMenu().getSlot(49).set(order(Items.CLOCK,"Timer: 5"));});
+			ctx.waitTicks(3);
+			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-chronomatron-memory"));
 			// a Bedrock reward chest: contents value, cost and profit
 			ctx.setScreen(() -> {
 				Minecraft mc = Minecraft.getInstance();

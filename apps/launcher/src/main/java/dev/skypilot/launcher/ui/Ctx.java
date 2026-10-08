@@ -47,6 +47,20 @@ final class Ctx {
 		return l.t(en, ja);
 	}
 
+	void openWeb() {
+		openWeb("");
+	}
+
+	void openWeb(String path) {
+		try {
+			if (!java.util.Set.of("", "/guides", "/help/api", "/money", "/networth").contains(path)) throw new IllegalArgumentException("Unknown web page");
+			String url = ApiClient.validateBaseUrl(Instance.config(settings.instance()).apiBaseUrl).toString() + path;
+			if (!Ui.browse(url)) toast("alert", Theme.BAD, t("Could not open the browser", "ブラウザを開けませんでした"), url);
+		} catch (IllegalArgumentException e) {
+			fail(t("Could not open SkyPilot Web", "SkyPilot Web を開けませんでした"), e);
+		}
+	}
+
 	/** SkyPilot server client for public data (no token: the launcher never reads the mod's link token). */
 	synchronized ApiClient api() {
 		String url = Instance.config(settings.instance()).apiBaseUrl;

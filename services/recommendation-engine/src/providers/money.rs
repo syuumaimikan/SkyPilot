@@ -25,6 +25,9 @@ pub fn rank(ctx: &Ctx) -> Vec<MoneyMethodEstimate> {
     for m in &ctx.registry.curated.money_methods {
         let mut missing = Vec::new();
         let mut unknown_req = false;
+        if ctx.analysis.game_mode.as_deref().is_some_and(|mode| matches!(mode.to_ascii_lowercase().as_str(), "ironman" | "bingo" | "stranded")) && m.category == "Market" {
+            missing.push(ctx.t("Market trading is unavailable for this profile mode", "このプロフィールモードでは市場取引を利用できません"));
+        }
         for r in &m.requirements {
             match ctx.check(r) {
                 Some(true) => {}
@@ -32,7 +35,7 @@ pub fn rank(ctx: &Ctx) -> Vec<MoneyMethodEstimate> {
                 None => unknown_req = true,
             }
         }
-        let (range, variable, setup, capital, why, conf): (Option<Range>, bool, Option<f64>, Option<f64>, String, f64) = match m.estimator.as_str() {
+        let (mut range, variable, setup, capital, mut why, mut conf): (Option<Range>, bool, Option<f64>, Option<f64>, String, f64) = match m.estimator.as_str() {
             "farming" => match super::farming::best_crop(ctx) {
                 Some(c) => {
                     let v = c.bazaar_coins_per_hour.unwrap_or(0.0).max(c.npc_coins_per_hour);
@@ -116,10 +119,15 @@ pub fn rank(ctx: &Ctx) -> Vec<MoneyMethodEstimate> {
             }
             _ => (None, true, None, None, String::new(), 0.1),
         };
+        if ctx.analysis.game_mode.as_deref().is_some_and(|mode| matches!(mode.to_ascii_lowercase().as_str(), "ironman" | "bingo" | "stranded")) {
+            range = None;
+            conf = 0.1;
+            why = ctx.t("Market resale prices cannot be used for this profile mode. NPC-only proceeds and costs need a separate calculation.", "このプロフィールモードには市場売却価格を使えません。NPC 売却のみの収入・費用を別に計算する必要があります。");
+        }
         let risk = risk_of(&m.risk);
         let met = missing.is_empty();
         let mid = range.map(|r| (r.low + r.high) / 2.0).unwrap_or(0.0);
-        let score = if met { mid * conf / risk.weight() } else { 0.0 };
+        let score = if met && !unknown_req { mid * conf / risk.weight() } else { 0.0 };
         out.push(MoneyMethodEstimate {
             id: m.id.clone(),
             name: m.name.clone(),

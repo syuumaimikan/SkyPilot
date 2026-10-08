@@ -106,6 +106,7 @@ final class ItemBrowser {
 		if (w <= 0 || w > avail) w = avail;
 		x0 = x1 - Math.max(MIN_W, w);
 		layoutChips(Minecraft.getInstance().font, SkyPilot.get().lang());
+		if(SkyPilot.get().config().compactInfo)y1=Math.min(y1,gridTop+12*CELL+FOOTER_H);
 		cols = (x1 - x0 - 6) / CELL;
 		rows = Math.max(0, (y1 - FOOTER_H - gridTop) / CELL);
 		return cols >= 2 && rows >= 1;

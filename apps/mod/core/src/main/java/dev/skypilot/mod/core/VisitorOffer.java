@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * A Garden visitor's offer as shown in the lore of the offer item: the lines under
  * "Items Required:" ("Enchanted Hay Bale x2") and the copper under "Rewards:" ("+12 Copper").
  */
-public record VisitorOffer(List<Need> needs, OptionalDouble copper) {
+public record VisitorOffer(List<Need> needs, OptionalDouble copper, List<Need> rewards) {
 	public record Need(String name, int amount) {
 	}
 
@@ -20,6 +20,7 @@ public record VisitorOffer(List<Need> needs, OptionalDouble copper) {
 	/** Null when the lore has no "Items Required:" section. */
 	public static VisitorOffer parse(List<String> lore) {
 		List<Need> needs = new ArrayList<>();
+		List<Need> rewards = new ArrayList<>();
 		OptionalDouble copper = OptionalDouble.empty();
 		boolean inNeeds = false;
 		boolean inRewards = false;
@@ -51,8 +52,12 @@ public record VisitorOffer(List<Need> needs, OptionalDouble copper) {
 			} else if (inRewards) {
 				Matcher m = COPPER.matcher(line);
 				if (m.matches()) copper = OptionalDouble.of(Double.parseDouble(m.group(1).replace(",", "")));
+				else if (!line.contains(" XP") && !line.contains("Copper") && !line.contains("Garden Experience") && !line.contains("Bits") && !line.contains("Sowdust")) {
+					Matcher reward=Pattern.compile("^\\+([\\d,]+) (.+)$").matcher(line);
+					if(reward.matches())try{rewards.add(new Need(reward.group(2).strip(),Integer.parseInt(reward.group(1).replace(",",""))));}catch(NumberFormatException ignored){}
+				}
 			}
 		}
-		return found && !needs.isEmpty() ? new VisitorOffer(needs, copper) : null;
+		return found && !needs.isEmpty() ? new VisitorOffer(needs, copper, List.copyOf(rewards)) : null;
 	}
 }

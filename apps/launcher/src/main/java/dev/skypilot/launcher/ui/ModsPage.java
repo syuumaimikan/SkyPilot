@@ -85,9 +85,11 @@ final class ModsPage {
 		JButton add = Widgets.primary(c.t("Add mods", "MODを追加"), "plus");
 		add.addActionListener(e -> pickFiles());
 		JButton folder = Widgets.button(c.t("Folder", "フォルダ"), "folder");
+		JButton packs = Widgets.button(c.t("Expansion packs", "拡張パック"), "archive");
+		packs.addActionListener(e -> companionPack(packs));
 		folder.addActionListener(e -> Ui.openFolder(c.settings.mods()));
-		page.add(Ui.header(c.t("Mods", "MOD"), c.t("Mods in the SkyPilot game folder. Switching off renames the file - nothing is deleted. Drop .jar files here to add them.",
-				"SkyPilot用ゲームフォルダのMODです。オフにするとファイル名を変えるだけで、削除はしません。.jarファイルをここにドロップすると追加できます。"), updatesBtn, folder, add), BorderLayout.NORTH);
+		page.add(Ui.header(c.t("Mods", "MOD"), c.t("Drop .jar files here to add them. Switching off keeps the file; select a mod to delete it.",
+				".jarファイルをドロップすると追加できます。オフはファイルを残します。削除する場合はMODを選択してください。"), updatesBtn, packs, folder, add), BorderLayout.NORTH);
 
 		JPanel toolbar = new JPanel(new BorderLayout(12, 0));
 		toolbar.setOpaque(false);
@@ -204,6 +206,22 @@ final class ModsPage {
 			}
 			render();
 		}, e -> c.fail(c.t("Could not read the mods", "MODを読めませんでした"), e));
+	}
+
+	private void companionPack(JButton button) {
+		String[] choices = {c.t("Performance", "軽量化"), c.t("Performance + shaders", "軽量化＋シェーダー"), c.t("SkyBlock helpers", "SkyBlock補助"), c.t("All", "すべて"), c.t("Cancel", "キャンセル")};
+		int choice = JOptionPane.showOptionDialog(root,
+				c.t("Performance: Sodium, FerriteCore, Lithium. Shaders adds Iris.\nSkyBlock helpers: Skyblocker + Fabric Language Kotlin.\nPinned Fabric 26.2 releases, verified with SHA-512. Close Minecraft first.\nExisting different versions are kept; manage them before installing.\nShader packs are selected separately in Iris video settings.\nRun Repair on Home first to install SkyPilot / Fabric API.\nSkyblocker may duplicate SkyPilot overlays; configure its features separately.",
+						"軽量化: Sodium・FerriteCore・Lithium。シェーダー版はIrisも追加。\nSkyBlock補助: Skyblocker＋Fabric Language Kotlin。\nFabric 26.2対応の固定版をSHA-512で検証します。先にMinecraftを閉じてください。\n別バージョンがある場合は上書きせず停止します。\nシェーダーパックはIrisのビデオ設定から別途選択してください。\n先にホームの「修復」でSkyPilot・Fabric APIを導入してください。\nSkyblockerと重複するHUDはそれぞれの設定で調整できます。"),
+				c.t("Expansion packs", "拡張パック"), JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, choices, choices[0]);
+		if (choice < 0 || choice > 3) return;
+		var entries = choice == 2 ? dev.skypilot.launcher.CompanionMods.skyblockPack() : choice == 3 ? dev.skypilot.launcher.CompanionMods.catalog().mods() : dev.skypilot.launcher.CompanionMods.pack(choice == 1);
+		button.setEnabled(false);
+		c.async(() -> dev.skypilot.launcher.CompanionMods.install(c.settings.mods(), entries,
+				ModCheck.builtins(c.pins, c.settings.minecraft()), Net::download), n -> {
+			button.setEnabled(true); reload();
+			c.ok(c.t("Pack ready", "拡張パックを導入しました"), c.t(n + " mods added. Start Minecraft to use them.", n + " 個追加しました。Minecraftの起動後に使えます。"));
+		}, e -> {button.setEnabled(true); c.fail(c.t("Pack could not be installed", "拡張パックを導入できませんでした"), e);});
 	}
 
 	private static String baseOf(Path p) {
@@ -464,6 +482,15 @@ final class ModsPage {
 		show.addActionListener(e -> Ui.openFolder(m.file().getParent()));
 		actions.add(show);
 		card.add(actions);
+		card.add(Box.createVerticalStrut(8));
+		JPanel removal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+		removal.setOpaque(false);
+		removal.setAlignmentX(0);
+		JButton delete = Widgets.button(c.t("Delete…", "削除…"), "x");
+		delete.setForeground(Theme.BAD);
+		delete.addActionListener(e -> deleteMod(m));
+		removal.add(delete);
+		card.add(removal);
 		JPanel wrap = new Ui.ScrollBody(new BorderLayout());
 		wrap.add(card, BorderLayout.NORTH);
 		return wrap;
@@ -477,6 +504,30 @@ final class ModsPage {
 	}
 
 	// ---------------------------------------------------------------- actions
+
+	private void deleteMod(ModScan.Meta m) {
+		String message = c.t("Permanently delete this mod file? This cannot be undone.\nClose Minecraft first.\n\n", "このMODファイルを完全に削除しますか？ 元に戻せません。\n先にMinecraftを終了してください。\n\n")
+				+ m.name() + " " + m.version() + "\n" + m.file().getFileName() + "\n" + m.file().getParent();
+		if (m.id().equals("skypilot") || m.id().equals("fabric-api")) {
+			message += c.t("\n\nSkyPilot and Fabric API are installed again by Repair or Play.", "\n\nSkyPilot・Fabric APIは「修復」または「プレイ」で再導入されます。");
+		}
+		var dependents = mods.stream().filter(o -> o.enabled() && !o.file().equals(m.file())
+				&& o.depends().keySet().stream().anyMatch(m.provides()::containsKey)).map(ModScan.Meta::name).distinct().toList();
+		if (m.enabled() && !dependents.isEmpty()) message += c.t("\n\nRequired by: ", "\n\nこのMODが必要なもの: ") + String.join(", ", dependents);
+		String[] choices = {c.t("Cancel", "キャンセル"), c.t("Delete", "削除")};
+		int choice = JOptionPane.showOptionDialog(root, message, c.t("Delete mod", "MODを削除"),
+				JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, choices, choices[0]);
+		if (choice != 1) return;
+		try {
+			Mods.delete(c.settings.mods(), m.file());
+			updates = new HashMap<>(updates); updates.remove(m.file());
+			selected = null;
+			c.ok(c.t("Mod deleted", "MODを削除しました"), m.file().getFileName().toString());
+		} catch (Exception e) {
+			c.fail(c.t("Could not delete; close Minecraft and try again", "削除できませんでした。Minecraftを終了して再試行してください"), e);
+		}
+		reload();
+	}
 
 	private void pickFiles() {
 		JFileChooser ch = new JFileChooser();
