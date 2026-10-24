@@ -9,6 +9,7 @@ build/
 apps/mod/platform/*/run/
 apps/mod/build/
 *.tsbuildinfo
+.runtime/
 apps/media-bridge/bin/
 apps/media-bridge/obj/
 apps/media-bridge/publish/

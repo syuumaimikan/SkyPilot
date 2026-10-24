@@ -233,17 +233,20 @@ export function ErrorView({ error, retry }: { error: unknown; retry?: () => void
   const { t } = useI18n();
   const e = error instanceof ApiError ? error : null;
   if (e?.code === "NO_ANALYSIS") return <NeedsAnalysis />;
+  const keyError = e?.code === "HYPIXEL_KEY_MISSING" || e?.code === "HYPIXEL_KEY_INVALID";
   let msg = e?.message ?? String(error);
   if (e?.code === "NETWORK") msg = t("The SkyPilot API is unreachable. Is the server running?", "SkyPilot API に接続できません。サーバーは起動していますか？");
   if (e?.code === "RATE_LIMITED") msg = t("Too many requests - please wait a moment.", "リクエストが多すぎます。少し待ってください。");
   if (e?.code === "HYPIXEL_KEY_MISSING") msg = t("The server has no Hypixel API key. Its owner must create an application on developer.hypixel.net and configure HYPIXEL_API_KEY, then restart the API server. Your in-game API switches cannot fix this.", "サーバーに Hypixel API キーが設定されていません。管理者が developer.hypixel.net でアプリを登録し、HYPIXEL_API_KEY を設定して API サーバーを再起動してください。ゲーム内の API 設定では解消できません。");
+  if (e?.code === "HYPIXEL_KEY_INVALID") msg = t("Hypixel rejected the server's API key. The server owner needs to replace HYPIXEL_API_KEY with a valid key and restart the API server. SkyPilot is connected; changing Wi-Fi or your username will not fix this.", "サーバーの Hypixel API キーが拒否されました。PC 側で有効なキーに更新し、API サーバーを再起動してください。SkyPilot への接続はできています。Wi-Fi やユーザー名の変更は不要です。");
   return (
-    <Alert tone={e?.code === "HYPIXEL_UNAVAILABLE" || e?.code === "HYPIXEL_KEY_MISSING" ? "warn" : "bad"} className="flex flex-wrap items-center justify-between gap-3">
-      <span>
-        {msg}
+    <Alert tone={e?.code === "HYPIXEL_UNAVAILABLE" || keyError ? "warn" : "bad"} className="flex flex-wrap items-center justify-between gap-3">
+      <span className="min-w-0 flex-1">
+        <span>{msg}</span>
         {e?.lastValidSnapshotAgeSeconds != null ? ` (${t("last valid snapshot", "最後の有効なスナップショット")}: ${Math.round(e.lastValidSnapshotAgeSeconds)}s)` : null}
+        {keyError ? <span className="mt-2 block text-xs">{t("Market pages remain available. Update the key on the PC; do not enter it on this phone.", "相場・バザーなどのマーケット機能は引き続き使えます。キーの更新は PC 側で行います。スマホへの入力は不要です。")}</span> : null}
       </span>
-      {retry ? (
+      {retry && !keyError ? (
         <Button size="sm" variant="outline" onClick={retry}>
           {t("Retry", "再試行")}
         </Button>

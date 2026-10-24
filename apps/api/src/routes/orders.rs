@@ -36,6 +36,28 @@ fn valid(s: &Snapshot) -> bool {
                 && ["ACTIVE", "FILLED", "SOLD", "EXPIRED", "UNKNOWN"].contains(&o.status.as_str())
         })
 }
+fn auction_order(a: &serde_json::Value, now: i64) -> serde_json::Value {
+    let end = a["end"].as_i64();
+    let bid = a["highest_bid_amount"].as_f64().unwrap_or(0.0);
+    let claimed = a["claimed"].as_bool().unwrap_or(false);
+    let bin = a["bin"].as_bool().unwrap_or(false);
+    let status = if claimed {
+        "CLAIMED"
+    } else if bin && bid > 0.0 {
+        "SOLD"
+    } else if let Some(end) = end {
+        if end <= now {
+            if bid > 0.0 { "SOLD" } else { "EXPIRED" }
+        } else {
+            "ACTIVE"
+        }
+    } else {
+        "UNKNOWN"
+    };
+    json!({"name":a["item_name"].as_str().unwrap_or("Unknown"), "side":"SELL",
+        "price":a["starting_bid"].as_f64().unwrap_or(0.0), "status":status,
+        "auctionId":a["uuid"].as_str(), "endsAtMs":end, "highestBid":bid, "bin":bin, "claimed":claimed})
+}
 /// Only a linked device can upload observations; identity always comes from its token.
 pub async fn save(
     State(state): State<Arc<AppState>>,
@@ -76,12 +98,13 @@ pub async fn get(
         {
             match state.hypixel.player_auctions(uuid).await {
                 Ok(v) => {
-                    let rows:Vec<_>=v["auctions"].as_array().into_iter().flatten().take(100).map(|a|{
-                        let end=a["end"].as_i64().unwrap_or(i64::MAX);
-                        let bid=a["highest_bid_amount"].as_f64().unwrap_or(0.0);
-                        let status=if end<=now {if bid>0.0 {"SOLD"}else{"EXPIRED"}}else{"ACTIVE"};
-                        json!({"name":a["item_name"].as_str().unwrap_or("Unknown"),"side":"SELL","price":a["starting_bid"].as_f64().unwrap_or(0.0),"status":status})
-                    }).collect();
+                    let rows: Vec<_> = v["auctions"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .take(100)
+                        .map(|a| auction_order(a, now))
+                        .collect();
                     let snapshot = json!({"orders":rows,"observedAtMs":now,"source":"HYPIXEL_API"});
                     state.store.save_orders(user.id, "ah", &snapshot).await?;
                     ah = Some(snapshot);
@@ -98,6 +121,29 @@ pub async fn get(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn auction_status_preserves_claims_and_distinguishes_bin_from_bids() {
+        let now = 1000;
+        let mut a = json!({"end":2000,"highest_bid_amount":10,"bin":false,"claimed":false,"item_name":"Test","starting_bid":5,"uuid":"abc"});
+        assert_eq!(auction_order(&a, now)["status"], "ACTIVE");
+        a["bin"] = json!(true);
+        assert_eq!(auction_order(&a, now)["status"], "SOLD");
+        a["claimed"] = json!(true);
+        assert_eq!(auction_order(&a, now)["status"], "CLAIMED");
+        a["claimed"] = json!(false);
+        a["highest_bid_amount"] = json!(0);
+        a["end"] = json!(500);
+        let row = auction_order(&a, now);
+        assert_eq!(row["status"], "EXPIRED");
+        assert_eq!(row["endsAtMs"], 500);
+        assert_eq!(row["auctionId"], "abc");
+        assert_eq!(row["price"], 5.0);
+        a["highest_bid_amount"] = json!(10);
+        assert_eq!(auction_order(&a, now)["status"], "SOLD");
+        a["end"] = json!(null);
+        a["bin"] = json!(false);
+        assert_eq!(auction_order(&a, now)["status"], "UNKNOWN");
+    }
     #[test]
     fn rejects_invalid_prices_and_status() {
         let mut s = Snapshot {

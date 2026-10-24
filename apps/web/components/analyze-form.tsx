@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
 import type { PlayStyle, ProfileListEntry, WorkspaceState } from "@skypilot/protocol";
-import { Alert, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, NativeSelect, Textarea } from "@skypilot/ui";
-import { api, ApiError } from "@/lib/api";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, NativeSelect, Textarea } from "@skypilot/ui";
+import { api } from "@/lib/api";
 import { useAnalyze } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 import { ErrorView } from "./common";
@@ -180,11 +180,6 @@ export function AnalyzeForm({ ws, onDone, compact = false }: { ws?: WorkspaceSta
           </div>
 
           {analyze.error ? <ErrorView error={analyze.error} /> : null}
-          {analyze.error instanceof ApiError && analyze.error.code === "HYPIXEL_KEY_MISSING" ? (
-            <Alert tone="info">
-              {t("Market pages (flips, bazaar, prices, farm builder) work without a Hypixel API key.", "マーケット機能（フリップ・バザー・価格・ファームビルダー）は Hypixel API キーなしでも使えます。")}
-            </Alert>
-          ) : null}
 
           <div className="flex items-center gap-3">
             <Button type="submit" disabled={!canSubmit}>

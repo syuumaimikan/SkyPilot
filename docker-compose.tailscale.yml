@@ -1,0 +1,22 @@
+# Used by scripts/tailscale.ps1 after deriving the PC owner's Tailscale identity.
+services:
+  proxy:
+    ports: !override
+      - "127.0.0.1:${SKYPILOT_PORT:-3000}:80"
+
+  api:
+    environment:
+      PUBLIC_WEB_URL: ${SKYPILOT_TAILSCALE_URL:?Run scripts/tailscale.ps1 first}
+      COOKIE_SECURE: "1"
+
+  tailscale-gateway:
+    image: caddy:2.11-alpine
+    environment:
+      SKYPILOT_TAILSCALE_LOGIN: ${SKYPILOT_TAILSCALE_LOGIN:?Run scripts/tailscale.ps1 first}
+    ports:
+      - "127.0.0.1:${SKYPILOT_TAILSCALE_PORT:-3001}:80"
+    volumes:
+      - ./docker/Caddyfile.tailscale:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - proxy
+    restart: unless-stopped

@@ -2,3 +2,117 @@
 @import "@skypilot/ui/styles.css";
 
 @source "../../../packages/ui/src";
+
+:root {
+  --radius: 1rem;
+  --background: #f3f5fc;
+  --card: #ffffff;
+  --border: #dfe4f2;
+  --sidebar: #edf0fa;
+}
+
+.dark {
+  --background: #0d1225;
+  --foreground: #edf1fc;
+  --card: #161f35;
+  --card-foreground: #edf1fc;
+  --popover: #1b2540;
+  --popover-foreground: #edf1fc;
+  --muted: #1d2842;
+  --muted-foreground: #9eaeca;
+  --border: #2a3652;
+  --input: #364462;
+  --secondary: #202d48;
+  --secondary-foreground: #e2eafd;
+  --accent: #293554;
+  --accent-foreground: #f0f2ff;
+  --sidebar: #10182c;
+}
+
+.sp-shell {
+  background: radial-gradient(ellipse at 85% 0%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 45%), var(--background);
+}
+.sp-sidebar {
+  background: linear-gradient(165deg, color-mix(in srgb, var(--primary) 6%, var(--sidebar)), var(--sidebar) 50%);
+}
+.sp-brand-mark {
+  background: linear-gradient(135deg, #b5a4ff, #78dbe9);
+  box-shadow: 0 6px 24px #9280ff30;
+  color: #172039;
+}
+.sp-topbar, .sp-mobile-dock {
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  backdrop-filter: blur(24px);
+}
+.sp-mobile-dock {
+  box-shadow: 0 12px 38px #00000035, inset 0 1px 0 #ffffff0a;
+}
+.sp-nav-link[aria-current="page"] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 20%, transparent), color-mix(in srgb, var(--primary) 6%, transparent));
+  color: var(--primary);
+  box-shadow: inset 2px 0 var(--primary);
+}
+.sp-content [data-slot="card"] {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 3%, var(--card)), var(--card));
+  box-shadow: 0 8px 24px #00000009, inset 0 1px 0 #ffffff04;
+  overflow-wrap: anywhere;
+}
+.sp-content [data-featured="true"] {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: 0 8px 32px #9280ff12, inset 0 1px 0 #b5a4ff15;
+}
+.sp-content [data-slot="button"].bg-primary {
+  background: linear-gradient(120deg, #b5a4ff, #86d9ec);
+  color: #172039;
+  box-shadow: 0 4px 16px #9280ff25;
+}
+.sp-content input, .sp-content textarea, .sp-content select {
+  background-color: color-mix(in srgb, var(--background) 65%, var(--card));
+  border-radius: 0.85rem;
+}
+.sp-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1.75rem;
+  background: radial-gradient(ellipse at 95% 20%, #8074e62b, transparent 55%), linear-gradient(125deg, var(--card), color-mix(in srgb, var(--primary) 8%, var(--card)));
+  box-shadow: 0 16px 48px #00000012;
+}
+.sp-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.2;
+  background-image: radial-gradient(var(--muted-foreground) 0.7px, transparent 0.7px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(90deg, transparent, #000);
+}
+.sp-feature-link {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  transition: border-color 180ms, transform 180ms, background-color 180ms;
+}
+.sp-feature-link:hover {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  transform: translateY(-2px);
+}
+.sp-orbit-plane { animation: sp-float 8s ease-in-out infinite alternate; }
+@keyframes sp-float { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .sp-orbit-plane { animation: none; }
+  .sp-feature-link { transition: none; }
+  .sp-feature-link:hover { transform: none; }
+}
+
+/* Keep mobile text entry readable without browser zoom, with room for touch. */
+@media (max-width: 767px) {
+  .sp-content [data-slot="button"] { min-height: 44px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}

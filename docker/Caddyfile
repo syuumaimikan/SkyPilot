@@ -3,6 +3,13 @@
 :80 {
 	encode zstd gzip
 
+	# Native Android updates share the same private HTTPS origin as the app.
+	handle_path /api/android/* {
+		root * /srv/android
+		header Cache-Control "no-store"
+		file_server
+	}
+
 	handle /api/* {
 		reverse_proxy api:8080
 	}

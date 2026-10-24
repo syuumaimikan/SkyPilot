@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { MoneyMethodEstimate } from "@skypilot/protocol";
-import { Badge, Card, CardContent, Switch, Table, TBody, TD, TH, THead, TR } from "@skypilot/ui";
+import { Badge, Button, Card, CardContent, Switch, Table, TBody, TD, TH, THead, TR } from "@skypilot/ui";
 import { ConfidenceBadge, ErrorView, Loading, PageHeader, RiskBadge, Section } from "@/components/common";
 import { EmbeddedReport } from "@/components/report";
 import { fmtCoins } from "@/lib/format";
@@ -22,6 +22,7 @@ export function MoneyView() {
     <div className="flex flex-col gap-8">
       <PageHeader
         title={t("Money Making", "金策")}
+        actions={<Button asChild><Link href="/money/workbench">{t("Open 16 money tools", "16の金策ツールを開く")}</Link></Button>}
         description={t(
           "Methods ranked for your profile with live market prices. Rates are estimates with a range, never fixed numbers - check the assumptions.",
           "あなたのプロフィールと最新の市場価格で順位付けした金策です。収益は幅のある推定値で、固定値ではありません。前提条件を確認してください。",

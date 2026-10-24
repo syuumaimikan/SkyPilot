@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/common";
 import { EventScheduleCard, ServerStatusCard } from "@/components/hypixel-status";
 import { EmbeddedReport } from "@/components/report";
 import { useI18n } from "@/lib/i18n";
+import Link from "next/link";
+import { Button } from "@skypilot/ui";
 
 export function DailyView() {
   const { t } = useI18n();
@@ -12,6 +14,7 @@ export function DailyView() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={t("Daily & Events", "デイリー・イベント")}
+        actions={<Button asChild variant="outline"><Link href="/planner">{t("Open adventure notebook", "冒険ノートを開く")}</Link></Button>}
         description={t(
           "Hypixel's server status and maintenance, the SkyBlock event schedule, daily tasks worth doing for your profile and the current mayor's perks.",
           "Hypixel のサーバー状態とメンテナンス、SkyBlock のイベント予定、あなたのプロフィールで毎日やる価値のあること、現在の市長の特典です。",

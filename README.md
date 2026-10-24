@@ -14,6 +14,7 @@ Minecraft ユーザー名と目標（日本語・英語の自然文）を入力�
 - [開発環境での起動](#開発環境での起動)
 - [Minecraft MOD](#minecraft-mod)
 - [ランチャー](#ランチャー)
+- [Android アプリ](#android-アプリ)
 - [テストとビルド確認](#テストとビルド確認)
 - [リポジトリ構成](#リポジトリ構成)
 - [安全方針（Hypixel ルール）](#安全方針hypixel-ルール)
@@ -40,6 +41,14 @@ MODページ → 拡張パックから導入できます。自動粒子予算・
 
 ## クイックスタート（Docker）
 
+金策の追加ツールは[金策ワークベンチ](docs/money-workbench.md)を参照してください。Androidの[自動更新設定・APK配信手順](docs/android.md#アプリの自動更新)も用意しています。
+
+スマホからPCを操作する[RustDesk連携](docs/rustdesk.md)は、Tailscaleで自分の端末に限定した接続に対応しています。
+
+日課・プレイ収支・育成・装備・メモを保存する20のツールは[冒険ノート](docs/adventure.md)にまとめています。自分の出品画面では、AHの終了時刻・売却／未回収状態・出品を開くコマンドも確認できます。
+
+[プレイラボ](docs/play-lab.md)には実測戦闘・周回・パーティ分配・持ち物と補給・装備比較の16ツールを追加しました。[スマホでプレイ](docs/phone-play.md)から、既存のRustDeskとTailscaleでPCのMinecraft Java版へ接続できます。
+
 必要なもの: Docker（Compose v2）
 
 ```bash
@@ -47,6 +56,8 @@ cp .env.example .env
 ```
 
 `.env` に自分の Hypixel API キー（`HYPIXEL_API_KEY`）を設定するとプロフィール分析が使えます（マーケット・ファームビルダーなどはキーなしで動作します）。
+
+キーが拒否される場合は[Hypixel キーの更新手順](docs/hypixel-key.md)を参照してください。Windowsでは`./scripts/hypixel-key.ps1`で有効性を確認してから保存・API再起動できます。Tailscaleの接続設定も維持します。
 
 ```bash
 docker compose up --build
@@ -93,6 +104,17 @@ cargo run --release -p skypilot-collector -- --once
 開発用サンプル: `SKYPILOT_DEV_SAMPLE_PROFILE=1` で起動すると、ユーザー名 `SampleUser` で匿名化済みテスト用プロフィール（`fixtures/`）を分析できます（API キーなしで UI を確認するため。初期値 OFF、画面に「開発用サンプル」と表示）。
 
 環境変数の一覧は [.env.example](.env.example) を参照してください。
+
+## Android アプリ
+
+Android 8.0以上でSkyPilotのプロフィール分析・ロードマップ・相場・アドバイザーを使えるアプリを `apps/android` に用意しています。初回起動時に稼働中のSkyPilot WebサーバーのURLを入力して接続します。スマホには独立したワークスペースが作成されます。
+
+```powershell
+cd apps/android
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+```
+
+JDK 17とAndroid SDK 36が必要です。インストール用APKは `apps/android/app/build/outputs/apk/debug/app-debug.apk`。別のWi-Fiやモバイル回線から自分の端末だけで利用する場合は、PC・Androidを同じTailscaleアカウントで接続し、リポジトリ直下で `.\scripts\tailscale.ps1` を実行します。接続方法、開発用HTTP接続、対応範囲は [docs/android.md](docs/android.md) を参照してください。
 
 ## Minecraft MOD
 

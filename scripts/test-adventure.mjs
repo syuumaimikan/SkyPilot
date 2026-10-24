@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { blankAdventure, decodeAdventure, validateAdventure, periodKey, isDone, taskPlan, focusRemaining, milestoneProgress, sessionSummary, categorySummary, wishTotal } from "../apps/web/lib/adventure.ts";
+
+const now = new Date(2026, 9, 9, 15, 0).getTime();
+const task = (id, minutes, priority = 2, repeat = "daily") => ({ id, title: id, minutes, priority, repeat, completed: null });
+assert.equal(periodKey("daily", now), "daily:2026-10-09");
+assert.equal(periodKey("weekly", now), "weekly:2026-10-05");
+assert.equal(periodKey("weekly", new Date(2027, 0, 1, 12).getTime()), "weekly:2026-12-28");
+assert.equal(periodKey("weekly", new Date(2026, 9, 11, 12).getTime()), "weekly:2026-10-05");
+const completed = { ...task("done", 10), completed: periodKey("daily", now) };
+assert.ok(isDone(completed, now));
+assert.ok(!isDone(completed, new Date(2026, 9, 10, 0).getTime()));
+assert.ok(isDone({ ...completed, repeat: "once", completed: "once" }, now + 86400000 * 30));
+const plan = taskPlan([task("long", 80, 3), task("medium", 20, 2), task("short", 5, 2), completed, task("low", 30, 1)], 30, now);
+assert.deepEqual(plan.selected.map(t => t.id), ["short", "medium"]);
+assert.equal(plan.used, 25); assert.equal(plan.remaining, 5);
+assert.equal(taskPlan([task("a", 5)], -10, now).used, 0);
+const timer = { title: "focus", total: 60000, remaining: 60000, end: now + 60000 };
+assert.equal(focusRemaining(timer, now + 10000), 50000);
+assert.equal(focusRemaining(timer, now + 70000), 0);
+assert.equal(focusRemaining(timer, now - 10000), 60000);
+assert.equal(focusRemaining({ ...timer, end: null, remaining: 32000 }, now + 100000), 32000);
+assert.deepEqual(milestoneProgress({ id: "g", title: "XP", unit: "XP", current: 200, target: 1000, rate: 400 }), { remaining: 800, fraction: 0.2, hours: 2 });
+assert.equal(milestoneProgress({ current: 100, target: 1000, rate: 0 }).hours, null);
+assert.equal(milestoneProgress({ current: 1100, target: 1000, rate: 0 }).hours, 0);
+const sessions = [{ id: "s1", title: "Mining", category: "Mining", minutes: 30, income: 1000, cost: 100, at: now, note: "" }, { id: "s2", title: "Dungeon", category: "Dungeon", minutes: 60, income: 100, cost: 300, at: now - 100, note: "" }];
+const summary = sessionSummary(sessions, now - 1000, now);
+assert.equal(summary.net, 700); assert.equal(summary.minutes, 90); assert.equal(summary.perHour, 700 * 60 / 90);
+assert.equal(sessionSummary(sessions, now + 1, now + 100).perHour, null);
+assert.equal(categorySummary(sessions)[0].category, "Mining");
+assert.equal(categorySummary(sessions)[1].perHour, -200);
+assert.equal(wishTotal([{ bought: false, price: 100, quantity: 2 }, { bought: true, price: 10000, quantity: 1 }]), 200);
+const data = { ...blankAdventure(), tasks: [completed], sessions, focus: timer };
+assert.deepEqual(decodeAdventure(JSON.stringify(data)), data);
+assert.deepEqual(decodeAdventure(""), blankAdventure());
+for (const value of [null, [], { ...data, version: 2 }, { ...data, tasks: [completed, completed] }, { ...data, tasks: Array.from({ length: 101 }, (_, i) => task(`t${i}`, 5)) }, { ...data, sessions: [{ ...sessions[0], minutes: 0 }] }, { ...data, focus: { ...timer, remaining: 60001 } }, { ...data, milestones: [{ id: "g", title: "XP", unit: "XP", current: Infinity, target: 10, rate: 0 }] }, { ...data, wishes: [{ id: "w", title: "item", price: 10, quantity: 1.2, bought: false }] }]) {
+  assert.throws(() => validateAdventure(value));
+}
+assert.throws(() => decodeAdventure("{")); assert.throws(() => decodeAdventure(" ".repeat(2000001)));
+const sanitized = validateAdventure({ ...blankAdventure(), unknown: "ignored", notes: [{ id: "n", title: "<script>alert(1)</script>", body: "text", tags: "", pinned: false, unexpected: "removed" }] });
+assert.equal(sanitized.notes[0].unexpected, undefined);
+assert.equal(sanitized.unknown, undefined);
+console.log("Adventure calendar, budgets, timers, income and backup validation passed.");

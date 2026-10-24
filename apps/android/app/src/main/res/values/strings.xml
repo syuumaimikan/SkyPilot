@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">SkyPilot</string>
+    <string name="welcome">次の冒険を、\nここから。</string>
+    <string name="intro">プロフィールを分析して目標を立て、ロードマップや相場をいつでも確認できます。</string>
+    <string name="features">プロフィール分析　・　ロードマップ\nマーケット　・　金策　・　MOD連携</string>
+    <string name="server_label">SkyPilotサーバーのURL</string>
+    <string name="server_hint">例: https://my-pc.my-tailnet.ts.net:9443</string>
+    <string name="server_help">PCとスマホのTailscaleを同じアカウントで接続すると、別のWi-Fiやモバイル回線でも使えます。PCのSkyPilotとTailscaleは起動しておいてください。</string>
+    <string name="companion">YOUR SKYBLOCK COMPANION</string>
+    <string name="connect_title">あなたのSkyPilotへ</string>
+    <string name="tailscale_mode">Tailscale</string>
+    <string name="local_mode">同じWi-Fi</string>
+    <string name="local_help">PCのローカルIPで接続する場合は、同じWi-Fiが必要です。別のネットワークではTailscaleのURLに切り替えてください。</string>
+    <string name="tailscale_required">PCの設定で表示される https://…ts.net のURLを入力してください。ローカルIPを使う場合は「同じWi-Fi」に切り替えてください。</string>
+    <string name="tailscale_guide">Tailscaleの接続ガイド　↗</string>
+    <string name="private_connection">自分のネットワークで、どこからでも。</string>
+    <string name="saved_connection">保存済みの接続先</string>
+    <string name="connecting">接続中…</string>
+    <string name="connected">接続済み</string>
+    <string name="offline">再接続を待っています</string>
+    <string name="debug_help">開発用APKでは同じWi-FiのPCのIPアドレスも使用できます（例: http://192.168.1.10:3000）。Androidエミュレーターは http://10.0.2.2:3000。スマホのlocalhostはPCを指しません。</string>
+    <string name="connect">SkyPilotを開く　→</string>
+    <string name="cancel">戻る</string>
+    <string name="invalid_server">https://から始まるURLを入力してください。パス・ログイン情報・クエリは指定できません。</string>
+    <string name="invalid_server_debug">HTTPSのURL、または開発用のローカルIPのHTTP URLを入力してください。パス・ログイン情報・クエリは指定できません。</string>
+    <string name="refresh">再読み込み</string>
+    <string name="connection_settings">接続先の設定</string>
+    <string name="open_browser">ブラウザで開く</string>
+    <string name="connection_failed">接続できませんでした</string>
+    <string name="connection_failed_help">PCとスマホのTailscaleが接続中か確認してください。PCのSkyPilotが起動していれば、別のWi-Fiからもアクセスできます。ネットワークが復帰すると自動で再接続します。</string>
+    <string name="retry">もう一度接続する</string>
+    <string name="no_browser">リンクを開けるブラウザがありません。</string>
+</resources>

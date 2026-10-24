@@ -12,6 +12,7 @@ import { fmtCoins, fmtHours, fmtNum } from "@/lib/format";
 import { useAnalyze, useWorkspace } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 import { localizeWarning } from "@/lib/warnings";
+import { DashboardHero, QuickAccess } from "@/components/dashboard-hero";
 
 const STAGES: Record<GameStage, [string, string]> = {
   EARLY_GAME: ["Early game", "序盤"],
@@ -41,6 +42,8 @@ function Overview({ r, ws }: { r: AnalyzeResponse; ws: WorkspaceState }) {
 
   return (
     <div className="flex flex-col gap-8">
+      <DashboardHero username={a.player.username} goals={r.goals.length} actions={r.actions.length} />
+      <QuickAccess />
       <PageHeader
         title={`${a.player.username} · ${a.cuteName}`}
         description={
@@ -165,22 +168,16 @@ function Overview({ r, ws }: { r: AnalyzeResponse; ws: WorkspaceState }) {
 }
 
 export function Dashboard() {
-  const { t } = useI18n();
   const ws = useWorkspace();
   if (ws.isLoading) return <Loading rows={4} />;
   if (ws.error) return <ErrorView error={ws.error} retry={() => ws.refetch()} />;
   const data = ws.data!;
   if (!data.lastAnalysis) {
     return (
-      <div className="mx-auto flex max-w-3xl flex-col gap-6">
-        <PageHeader
-          title={t("Your SkyBlock co-pilot", "あなたのSkyBlockコパイロット")}
-          description={t(
-            "Tell SkyPilot who you are and what you want. It analyses your profile, builds the full requirement graph and a roadmap, and tells you exactly what to do next.",
-            "ユーザー名と目標を入力すると、プロフィールを分析して必要条件のグラフとロードマップを作り、次にやるべきことを具体的に提示します。",
-          )}
-        />
-        <AnalyzeForm ws={data} />
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        <DashboardHero />
+        <QuickAccess />
+        <div id="profile-analysis" className="scroll-mt-24"><AnalyzeForm ws={data} /></div>
       </div>
     );
   }

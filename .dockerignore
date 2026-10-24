@@ -10,3 +10,5 @@ fixtures
 .env
 *.log
 .claude
+.runtime
+.codex-remote-attachments

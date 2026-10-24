@@ -68,6 +68,7 @@ services:
       - "${SKYPILOT_PORT:-3000}:80"
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./.runtime/android-releases:/srv/android:ro
     depends_on:
       - web
       - api

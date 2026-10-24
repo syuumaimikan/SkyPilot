@@ -1,0 +1,11 @@
+# Only the account that owns the PC may reach this gateway.
+# Serve authenticates these headers and the gateway listens on loopback only.
+:80 {
+    @owner header Tailscale-User-Login {$SKYPILOT_TAILSCALE_LOGIN}
+    handle @owner {
+        reverse_proxy proxy:80
+    }
+    handle {
+        respond "Connect with the owner's Tailscale account." 403
+    }
+}

@@ -11,10 +11,10 @@ export function ActionCard({ a, rank }: { a: RecommendedAction; rank?: number })
   const { t, lang } = useI18n();
   const s = a.score;
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col" data-featured={rank === 1 ? "true" : undefined}>
       <CardHeader className="gap-2">
         <div className="flex items-start gap-3">
-          {rank !== undefined ? <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">{rank}</span> : null}
+          {rank !== undefined ? <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-sm font-semibold text-primary">{String(rank).padStart(2, "0")}</span> : null}
           <div className="min-w-0 flex-1">
             <CardTitle className="text-[15px]">{a.title}</CardTitle>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
