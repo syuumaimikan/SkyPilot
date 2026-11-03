@@ -12,6 +12,7 @@ final class PuzzleGuides {
     private static Vec3 boardCenter,boardRight;private static Object boardWorld;
     static void calibrateBoard(){var mc=Minecraft.getInstance();if(mc.player==null||!(mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult hit)||hit.getDirection().getAxis().isVertical())return;boardCenter=Vec3.atCenterOf(hit.getBlockPos());var normal=hit.getDirection();boardRight=new Vec3(normal.getStepZ(),0,-normal.getStepX());boardWorld=mc.level;mc.gui.hud.setOverlayMessage(net.minecraft.network.chat.Component.literal("三目並べ: 盤面中央を記録しました"),false);}
     static void mazeRoute(String solution){var mc=Minecraft.getInstance();if(mc.player==null||solution.startsWith("No"))return;var points=new ArrayList<Vec3>();Vec3 pos=mc.player.position().add(0,.2,0);points.add(pos);for(String s:solution.split("\\s+")){pos=switch(s){case "↑"->pos.add(0,0,-1);case "→"->pos.add(1,0,0);case "↓"->pos.add(0,0,1);case "←"->pos.add(-1,0,0);default->pos;};if(!points.getLast().equals(pos))points.add(pos);}route=List.copyOf(points);routeWorld=mc.level;}
+    @SuppressWarnings("try")
     static void render(){
         if(DungeonSolver.available() && DungeonMap.inDungeon())return;
         var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)return;
@@ -45,7 +46,7 @@ final class PuzzleGuides {
             if(!(entity instanceof net.minecraft.world.entity.monster.Creeper)||entity.distanceToSqr(mc.player)>400||!mc.player.hasLineOfSight(entity))continue;
             boolean puzzleBase=false;for(int below=1;below<=4;below++)if(mc.level.getBlockState(entity.blockPosition().below(below)).is(net.minecraft.world.level.block.Blocks.SEA_LANTERN))puzzleBase=true;if(!puzzleBase)continue;
             var center=entity.getBoundingBox().getCenter();var blocks=new ArrayList<Vec3>();var base=entity.blockPosition();
-            for(int x=-12;x<=12;x++)for(int z=-12;z<=12;z++)for(int y=-7;y<=8;y++){var pos=base.offset(x,y,z);if(!mc.level.hasChunkAt(pos))continue;var state=mc.level.getBlockState(pos);if(state.is(net.minecraft.world.level.block.Blocks.SEA_LANTERN)||state.is(net.minecraft.world.level.block.Blocks.PRISMARINE)){var point=Vec3.atCenterOf(pos);if(point.distanceToSqr(center)>4)blocks.add(point);}}
+            for(int x=-12;x<=12;x++)for(int z=-12;z<=12;z++)for(int y=-7;y<=8;y++){var pos=base.offset(x,y,z);if(!mc.level.isLoaded(pos))continue;var state=mc.level.getBlockState(pos);if(state.is(net.minecraft.world.level.block.Blocks.SEA_LANTERN)||state.is(net.minecraft.world.level.block.Blocks.PRISMARINE)){var point=Vec3.atCenterOf(pos);if(point.distanceToSqr(center)>4)blocks.add(point);}}
             if(blocks.size()>24||blocks.size()<4)continue;var candidates=new ArrayList<Vec3[]>();var used=new HashSet<Integer>();
             for(int i=0;i<blocks.size();i++)for(int j=i+1;j<blocks.size();j++){if(used.contains(i)||used.contains(j))continue;var a=blocks.get(i);var b=blocks.get(j);var ab=b.subtract(a);double t=center.subtract(a).dot(ab)/ab.lengthSqr();if(t<=0||t>=1||a.add(ab.scale(t)).distanceToSqr(center)>.5)continue;candidates.add(new Vec3[]{a,b});used.add(i);used.add(j);}
             if(candidates.size()>=2&&candidates.size()<=5){beams=List.copyOf(candidates);break;}

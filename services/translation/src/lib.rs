@@ -198,7 +198,7 @@ pub enum ProviderChoice<'a> {
 pub struct Translator {
     dict: Arc<Dictionary>,
     cache: Cache<String, String>,
-    provider: Option<Arc<dyn Provider>>,
+    provider: Arc<std::sync::RwLock<Option<Arc<dyn Provider>>>>,
     breaker: CircuitBreaker,
     timeout: Duration,
 }
@@ -208,7 +208,7 @@ impl Translator {
         Translator {
             dict: Arc::new(dict),
             cache: Cache::builder().max_capacity(20_000).time_to_live(Duration::from_secs(6 * 3600)).build(),
-            provider,
+            provider: Arc::new(std::sync::RwLock::new(provider)),
             breaker: CircuitBreaker::new(4, Duration::from_secs(60)),
             timeout: Duration::from_millis(3500),
         }
@@ -218,10 +218,15 @@ impl Translator {
         &self.dict
     }
 
+    pub fn set_provider(&self, provider: Option<Arc<dyn Provider>>) {
+        *self.provider.write().unwrap() = provider;
+    }
+
     pub fn status(&self) -> TranslationStatus {
+        let p = self.provider.read().unwrap();
         TranslationStatus {
-            external_provider: self.provider.as_ref().map(|p| p.name().to_string()),
-            external_enabled: self.provider.is_some(),
+            external_provider: p.as_ref().map(|p| p.name().to_string()),
+            external_enabled: p.is_some(),
             circuit: self.breaker.state().as_str().to_string(),
             privacy_notice: "SkyPilot does not store chat. Dictionary/cached translations stay on the server in memory; messages are sent to the configured external provider only when no dictionary match exists.".into(),
         }
@@ -259,12 +264,15 @@ impl Translator {
             return TranslateResponse { translated: unprotect(&hit, &map), provider: "cache".into(), cached: true, unchanged: false };
         }
         let (provider, shared) = match choice {
-            ProviderChoice::Server => match &self.provider {
-                Some(p) => (p, true),
-                None => return unchanged("passthrough"),
-            },
+            ProviderChoice::Server => {
+                let p = self.provider.read().unwrap().clone();
+                match p {
+                    Some(p) => (p, true),
+                    None => return unchanged("passthrough"),
+                }
+            }
             ProviderChoice::DictionaryOnly => return unchanged("passthrough"),
-            ProviderChoice::Own(p) => (p, false),
+            ProviderChoice::Own(p) => (p.clone(), false),
         };
         if shared && self.breaker.allow().is_err() {
             return unchanged("circuit-open");

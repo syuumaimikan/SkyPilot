@@ -255,4 +255,123 @@ final class ModManager {
 	static boolean hasConfig(String modId) {
 		return configFactories().containsKey(modId.toLowerCase(Locale.ROOT)) || configFactories().containsKey(modId);
 	}
+
+	/**
+	 * Updates a mod jar file by downloading from the update's downloadUrl, verifying targetSha1,
+	 * staging to a .tmp file, removing old file, and renaming to new file.
+	 */
+	static void updateMod(Entry e, dev.skypilot.mod.network.Dto.ModUpdate u, java.util.function.Consumer<String> callback) {
+		Thread.ofVirtual().start(() -> {
+			try {
+				if (u.downloadUrl() == null || u.downloadUrl().isBlank()) {
+					callback.accept("ダウンロードURLがありません。");
+					return;
+				}
+				Path dir = modsDir();
+				Files.createDirectories(dir);
+				String fileName = u.filename() != null && !u.filename().isBlank()
+						? Path.of(u.filename()).getFileName().toString()
+						: (e != null && e.file() != null ? e.file().getFileName().toString() : "mod.jar");
+				var client = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(15)).build();
+				var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(u.downloadUrl()))
+						.header("User-Agent", "SkyPilot-Mod/0.1.0")
+						.build();
+				byte[] bytes = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+				if (u.targetSha1() != null && !u.targetSha1().isBlank()) {
+					MessageDigest md = MessageDigest.getInstance("SHA-1");
+					String actualSha1 = HexFormat.of().formatHex(md.digest(bytes));
+					if (!u.targetSha1().equalsIgnoreCase(actualSha1)) {
+						callback.accept("ハッシュ不一致のため更新を中止しました。");
+						return;
+					}
+				}
+				Path target = dir.resolve(fileName);
+				Path temp = dir.resolve(fileName + ".tmp");
+				Files.write(temp, bytes);
+				if (e != null && e.file() != null && !e.file().equals(target)) {
+					Files.deleteIfExists(e.file());
+				}
+				Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				String name = e != null ? e.name() : (u.name() != null ? u.name() : fileName);
+				callback.accept(name + " を更新しました（" + u.versionNumber() + "）。再起動後に反映されます。");
+			} catch (Exception ex) {
+				callback.accept("更新に失敗しました: " + ex.getMessage());
+			}
+		});
+	}
+
+	/**
+	 * Updates all outdated mods in the list that have download URLs.
+	 */
+	static void updateAllMods(List<Entry> entries, Map<String, dev.skypilot.mod.network.Dto.ModUpdate> updates, java.util.function.Consumer<String> callback) {
+		Thread.ofVirtual().start(() -> {
+			int count = 0;
+			int failed = 0;
+			for (Entry e : entries) {
+				if (e.file() == null) continue;
+				String h = sha1(e.file());
+				if (h == null) continue;
+				dev.skypilot.mod.network.Dto.ModUpdate u = updates.get(h);
+				if (u != null && !u.upToDate() && u.downloadUrl() != null && !u.downloadUrl().isBlank()) {
+					try {
+						Path dir = modsDir();
+						Files.createDirectories(dir);
+						String fileName = u.filename() != null && !u.filename().isBlank()
+								? Path.of(u.filename()).getFileName().toString()
+								: e.file().getFileName().toString();
+						var client = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(15)).build();
+						var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(u.downloadUrl()))
+								.header("User-Agent", "SkyPilot-Mod/0.1.0")
+								.build();
+						byte[] bytes = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+						if (u.targetSha1() != null && !u.targetSha1().isBlank()) {
+							MessageDigest md = MessageDigest.getInstance("SHA-1");
+							String actualSha1 = HexFormat.of().formatHex(md.digest(bytes));
+							if (!u.targetSha1().equalsIgnoreCase(actualSha1)) {
+								failed++;
+								continue;
+							}
+						}
+						Path target = dir.resolve(fileName);
+						Path temp = dir.resolve(fileName + ".tmp");
+						Files.write(temp, bytes);
+						if (!e.file().equals(target)) {
+							Files.deleteIfExists(e.file());
+						}
+						Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+						count++;
+					} catch (Exception ex) {
+						failed++;
+					}
+				}
+			}
+			callback.accept("MOD自動更新完了: " + count + " 件更新成功" + (failed > 0 ? " (" + failed + " 件失敗)" : "") + "。再起動後に反映されます。");
+		});
+	}
+
+	static void updateSkyblocker(java.util.function.Consumer<String> callback) {
+		Thread.ofVirtual().start(() -> {
+			try {
+				Path dir = modsDir();
+				Files.createDirectories(dir);
+				String url = "https://cdn.modrinth.com/data/y6DuFGwJ/versions/Kegf578l/skyblocker-6.10.4%2B26.2.jar";
+				String fileName = "skyblocker-6.10.4+26.2.jar";
+				var client = java.net.http.HttpClient.newHttpClient();
+				var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).build();
+				byte[] bytes = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
+				Path target = dir.resolve(fileName);
+				Path temp = dir.resolve(fileName + ".tmp");
+				Files.write(temp, bytes);
+				try (var stream = Files.list(dir)) {
+					for (Path p : stream.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).startsWith("skyblocker") && !f.equals(target)).toList()) {
+						Files.deleteIfExists(p);
+					}
+				}
+				Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+				callback.accept("Skyblocker を最新版に更新しました。反映するには Minecraft を再起動してください。");
+			} catch (Exception ex) {
+				callback.accept("更新に失敗しました: " + ex.getMessage());
+			}
+		});
+	}
 }

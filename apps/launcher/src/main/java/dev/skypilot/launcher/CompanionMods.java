@@ -90,4 +90,53 @@ public final class CompanionMods {
             Files.deleteIfExists(stage);
         }
     }
+
+    /**
+     * Updates or reinstalls a companion mod (such as "skyblocker"), replacing any outdated or disabled copy.
+     */
+    public static synchronized boolean updateCompanion(Path modsDir, String modId, Download download) throws IOException {
+        Entry target = catalog().mods().stream().filter(e -> e.id().equals(modId)).findFirst().orElse(null);
+        if (target == null) throw new IOException("Unknown companion: " + modId);
+        Files.createDirectories(modsDir);
+        List<ModScan.Meta> existing = ModScan.scan(modsDir);
+        List<Path> toDelete = new ArrayList<>();
+        for (ModScan.Meta m : existing) {
+            if (!m.id().equals("skypilot") && (m.id().equals(modId) || m.file().getFileName().toString().toLowerCase(java.util.Locale.ROOT).contains(modId))) {
+                toDelete.add(m.file());
+            }
+        }
+        byte[] bytes = download.get(target.url(), target.size());
+        if (bytes.length != target.size() || !Net.sha512(bytes).equals(target.sha512())) {
+            throw new IOException(target.name() + " failed SHA-512 verification");
+        }
+        Path finalFile = modsDir.resolve(target.file());
+        Path tempFile = modsDir.resolve(target.file() + ".tmp");
+        Files.write(tempFile, bytes);
+        for (Path oldFile : toDelete) {
+            if (!oldFile.equals(finalFile)) {
+                Files.deleteIfExists(oldFile);
+            }
+        }
+        Files.move(tempFile, finalFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return true;
+    }
+
+    /**
+     * If a companion mod is installed and outdated (file name / version differs from catalog), updates it.
+     */
+    public static synchronized boolean updateIfInstalled(Path modsDir, String modId, Download download) {
+        Entry target = catalog().mods().stream().filter(e -> e.id().equals(modId)).findFirst().orElse(null);
+        if (target == null) return false;
+        List<ModScan.Meta> existing = ModScan.scan(modsDir);
+        boolean installed = existing.stream().anyMatch(m -> !m.id().equals("skypilot") && (m.provides().containsKey(modId) || m.id().equals(modId)));
+        if (!installed) return false;
+        boolean upToDate = existing.stream().anyMatch(m -> !m.id().equals("skypilot") && (m.provides().containsKey(modId) || m.id().equals(modId))
+                && m.file().getFileName().toString().equals(target.file()));
+        if (upToDate) return false;
+        try {
+            return updateCompanion(modsDir, modId, download);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

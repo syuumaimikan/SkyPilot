@@ -49,6 +49,7 @@ final class PestTracker {
     private static boolean visible(Minecraft mc,Pest p) {
         return !p.entity.isRemoved() && p.entity.isAlive() && !p.entity.isInvisible() && mc.player.hasLineOfSight(p.entity);
     }
+    @SuppressWarnings("try")
     static void world() {
         var mc = Minecraft.getInstance(); if (!available(mc)) return;
         try (var ignored=mc.levelRenderer.collectPerFrameRenderThreadGizmos()) {

@@ -68,6 +68,17 @@ pub async fn analyze_handler(
     if state.limiters.analyze.check_key(&auth::client_ip(&state, &headers, peer)).is_err() {
         return Err(AppError::too_many());
     }
+    let lang = Lang::parse(q.lang.as_deref().or(Some(s.user.lang.as_str())));
+    let resp = perform_analysis(&state, s.user.id, &req, lang).await?;
+    Ok(Json(resp))
+}
+
+pub async fn perform_analysis(
+    state: &AppState,
+    user_id: uuid::Uuid,
+    req: &AnalyzeRequest,
+    lang: Lang,
+) -> ApiResult<AnalyzeResponse> {
     let goal = req.goal.trim();
     if goal.is_empty() || goal.chars().count() > 300 || req.secondary_goals.len() > 5 || req.secondary_goals.iter().any(|g| g.chars().count() > 300) {
         return Err(AppError::bad_request("goal must be 1-300 characters (max 5 secondary goals)"));
@@ -75,11 +86,9 @@ pub async fn analyze_handler(
     if req.budget.is_some_and(|b| !b.is_finite() || b < 0.0) {
         return Err(AppError::bad_request("budget must be a positive number"));
     }
-    let lang = Lang::parse(q.lang.as_deref().or(Some(s.user.lang.as_str())));
-    let user_id = s.user.id;
     let sample = state.config.dev_sample_profile && req.username.eq_ignore_ascii_case(SAMPLE_USER);
     let (uuid, canonical, profiles, profile_id, museum, garden) = if sample {
-        load_sample_profile(&state, req.profile_id.as_deref())?
+        load_sample_profile(state, req.profile_id.as_deref())?
     } else {
         let (uuid, canonical) = state.hypixel.resolve_username(&req.username).await?;
         // Fetch (user-initiated only - SkyPilot never polls player data in the background).
@@ -96,7 +105,7 @@ pub async fn analyze_handler(
                     if prev.analysis.player.uuid == uuid {
                         let age = AppState::last_response_age(&prev);
                         prev.warnings.insert(0, format!("Hypixel API temporarily unavailable. Last valid snapshot: {}m {}s ago", age / 60, age % 60));
-                        return Ok(Json(prev));
+                        return Ok(prev);
                     }
                 }
                 return Err(AppError::from(e));
@@ -159,7 +168,7 @@ pub async fn analyze_handler(
     };
     state.store.save_raw_profile(user_id, &raw).await?;
     state.players.insert(user_id, Arc::new(loaded)).await;
-    Ok(Json(resp))
+    Ok(resp)
 }
 
 pub async fn workspace(State(state): State<Arc<AppState>>, jar: CookieJar) -> ApiResult<(CookieJar, Json<WorkspaceState>)> {

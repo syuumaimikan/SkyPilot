@@ -52,7 +52,8 @@ final class AppearanceScreen extends Screen {
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta){
         ClientStyle.backdrop(g,width,height);var sp=SkyPilot.get();var l=sp.lang();
-        g.text(font,l.t("YOUR WARDROBE","ワードローブ"),left,13,Ui.WHITE,false);g.text(font,l.t("13 original designs · always free","13 種類のオリジナル · すべて無料"),left,24,Ui.GRAY,false);
+        g.text(font,l.t("YOUR WARDROBE","ワードローブ"),left,13,Ui.WHITE,false);
+        g.text(font,CosmeticCatalog.ITEMS.size() + " " + l.t("original designs · always free", "種類のオリジナル · すべて無料"),left,24,Ui.GRAY,false);
         ClientStyle.panel(g,studioX,34,studioWidth,height-114);
         g.text(font,"STUDIO / 3D",studioX+8,42,Ui.PURPLE,false);
         int y0=58,y1=height-104;

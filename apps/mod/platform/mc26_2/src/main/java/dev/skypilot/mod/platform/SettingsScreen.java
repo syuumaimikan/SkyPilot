@@ -64,6 +64,10 @@ final class SettingsScreen extends Screen {
 	private String urlDraft;
 	private String urlMessage;
 	private boolean urlError;
+	private String hypixelKeyDraft = "";
+	private String hypixelHint;
+	private String hypixelMessage;
+	private boolean hypixelError;
 
 	// Translation page: the server-side settings, loaded when the page opens.
 	private Dto.TranslationSettings remote;
@@ -406,6 +410,49 @@ final class SettingsScreen extends Screen {
 		}
 		labels.add(new Label(l.t("https only (http is allowed for localhost). Changing the server deletes this client's link so the token is never sent elsewhere.",
 				"https のみ（localhost は http 可）。サーバーを変更すると、トークンが他のサーバーへ送られないよう連携が解除されます。"), x, y, 0xFF888888, false, pw));
+		y += 24;
+		labels.add(new Label(l.t("Hypixel API key (for profile analysis)", "Hypixel APIキー（プロフィール分析用）"), x, y, 0xFFAAAAAA, false, 0));
+		y += 12;
+		EditBox hypixelBox = new EditBox(font, x, y, pw - 64, 20, Component.literal("Hypixel API Key"));
+		hypixelBox.setMaxLength(64);
+		hypixelBox.setValue(hypixelKeyDraft);
+		hypixelBox.setResponder(v -> hypixelKeyDraft = v);
+		hypixelBox.addFormatter((s, start) -> FormattedCharSequence.forward("*".repeat(s.length()), Style.EMPTY));
+		hypixelBox.setHint(Component.literal(hypixelHint != null ? hypixelHint : l.t("paste Hypixel API key", "Hypixel APIキーを貼り付け")));
+		addRenderableWidget(hypixelBox);
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Save", "保存")), b -> {
+			if (sp.api() == null || !sp.linked()) {
+				hypixelMessage = l.t("Link SkyPilot first", "先にSkyPilotと連携してください");
+				hypixelError = true;
+				rebuildWidgets();
+				return;
+			}
+			sp.api().saveHypixelKey(hypixelKeyDraft).whenComplete((res, err) -> minecraft.execute(() -> {
+				if (res != null && res.ok()) {
+					hypixelMessage = l.t("Key saved & verified!", "キーを検証・保存しました！");
+					hypixelError = false;
+					hypixelHint = "…saved";
+					hypixelKeyDraft = "";
+				} else {
+					hypixelMessage = err != null ? SkyPilot.shortError(err) : "Error saving key";
+					hypixelError = true;
+				}
+				rebuildWidgets();
+			}));
+		}).bounds(x + pw - 60, y, 60, 20).build());
+		y += 24;
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Apply for Persistent Key (Hypixel Dashboard)", "永続APIキー申請 (Hypixelダッシュボード)")), b -> {
+			String desc = "SkyPilot is an open-source Fabric client mod and self-hosted server companion for Hypixel SkyBlock. It displays in-game information (market values, wardrobe previews, puzzle directions, and progression roadmaps) without automating player actions. Hypixel API policy compliance: strictly read-only, aggressive caching (120s+ for player profiles, 30s+ for bazaar/auctions), RateLimit-* headers honored with automatic exponential backoff.";
+			minecraft.keyboardHandler.setClipboard(desc);
+			net.minecraft.util.Util.getPlatform().openUri("https://developer.hypixel.net/dashboard");
+			hypixelMessage = l.t("Description copied! Create an app in the browser, then paste the key above.", "説明文をコピーしました！ ブラウザで作成後、上の枠にキーを貼り付けて「保存」を押してください。");
+			hypixelError = false;
+			rebuildWidgets();
+		}).bounds(x, y, pw, 20).build());
+		y += 24;
+		if (hypixelMessage != null) {
+			labels.add(new Label(hypixelMessage, x, y, hypixelError ? 0xFFFF5555 : 0xFF55FF55, false, pw));
+		}
 	}
 
 	private void hud(SkyPilotConfig c, Lang l, int x) {

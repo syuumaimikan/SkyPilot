@@ -164,6 +164,27 @@ public final class ApiClient {
 		return getCached("/api/mod/plan?lang=" + enc(lang), Dto.Plan.class, 30_000);
 	}
 
+	public CompletableFuture<Dto.Plan> analyzeProfile(String username, String profileId, String goal, String lang) {
+		JsonObject body = new JsonObject();
+		if (username != null) body.addProperty("username", username);
+		if (profileId != null) body.addProperty("profileId", profileId);
+		if (goal != null) body.addProperty("goal", goal);
+		return request("POST", "/api/mod/analyze?lang=" + enc(lang), GSON.toJson(body), true).thenApply(r -> {
+			clearCache();
+			return parse(r, Dto.Plan.class);
+		});
+	}
+
+	public CompletableFuture<Dto.HypixelStatus> hypixelStatus() {
+		return request("GET", "/api/settings/hypixel", null, true).thenApply(r -> parse(r, Dto.HypixelStatus.class));
+	}
+
+	public CompletableFuture<Dto.SimpleOk> saveHypixelKey(String key) {
+		JsonObject body = new JsonObject();
+		body.addProperty("key", key == null ? "" : key.trim());
+		return request("POST", "/api/settings/hypixel-key", GSON.toJson(body), true).thenApply(r -> parse(r, Dto.SimpleOk.class));
+	}
+
 	/** Advisor report, e.g. {@code mining}, {@code slayer}, {@code farming} (same as the web). */
 	public CompletableFuture<Dto.Report> report(String domain, String lang) {
 		return getCached("/api/advisor/report/" + enc(domain) + "?lang=" + enc(lang), Dto.Report.class, 60_000);

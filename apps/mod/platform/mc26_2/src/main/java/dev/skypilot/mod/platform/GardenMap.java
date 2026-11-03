@@ -3,6 +3,7 @@ import dev.skypilot.mod.core.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 final class GardenMap {
+    @SuppressWarnings("try")
     static void world(){var mc=Minecraft.getInstance();if(!Feat.on(Features.GARDEN_MAP)||mc.player==null||!SkyPilot.get().context().islandId().equals("GARDEN"))return;try(var ignored=mc.levelRenderer.collectPerFrameRenderThreadGizmos()){for(int plot:GardenPlots.pests(Activity.tab)){int cell=GardenPlots.cell(plot);var target=new net.minecraft.world.phys.Vec3((cell%5-2)*96,mc.player.getY()+2,(cell/5-2)*96);net.minecraft.gizmos.Gizmos.billboardText("Pests · Plot "+plot,target,net.minecraft.gizmos.TextGizmo.Style.forColorAndCentered(0xFFFF7777)).setAlwaysOnTop();net.minecraft.gizmos.Gizmos.line(mc.player.getEyePosition().add(0,-.6,0),target,0xAAFF7777,2f);}}}
     static void render(GuiGraphicsExtractor g,boolean preview){
         var mc=Minecraft.getInstance();if(mc.player==null||!preview&&(!Feat.on(Features.GARDEN_MAP)||mc.gui.screen()!=null))return;

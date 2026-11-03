@@ -47,7 +47,13 @@ public final class SkyPilotConfig {
 	public boolean compactInfo = true;
 	public boolean hudInContainers = false;
 	public boolean blazeDescending = false;
-	public static final class UiPosition { public int dx,dy; public double scale=1; }
+	public static final class UiPosition { public int dx,dy; public double scale=1.0; public boolean hidden=false; }
+	public static final java.util.Set<String> VALID_UI_ELEMENTS = java.util.Set.of(
+			"scoreboard", "actionbar", "bossbar", "hotbar", "effects",
+			"media", "garden", "dungeon", "solver",
+			"skypilot_hud", "info_hud", "utility_hud",
+			"skyblocker_solver", "skyblocker_dungeon", "skyblocker_puzzle", "skyblocker_hud", "skyblocker_party"
+	);
 
 	public static final class Appearance {
 		public boolean richMenus = true;
@@ -233,7 +239,7 @@ public final class SkyPilotConfig {
 		features.values().removeIf(v -> v == null || !v);
 		if (infoHud == null) infoHud = new InfoHud();
 		if(uiPositions==null)uiPositions=new java.util.LinkedHashMap<>();
-		uiPositions.entrySet().removeIf(e->e.getValue()==null||!java.util.Set.of("scoreboard","actionbar","bossbar","hotbar","effects","media","garden","dungeon").contains(e.getKey()));
+		uiPositions.entrySet().removeIf(e->e.getValue()==null||(!VALID_UI_ELEMENTS.contains(e.getKey())&&!e.getKey().startsWith("mod_")));
 		for(var p:uiPositions.values()){p.dx=(int)clamp(p.dx,-10000,10000);p.dy=(int)clamp(p.dy,-10000,10000);p.scale=Double.isFinite(p.scale)?clamp(p.scale,.5,2):1;}
 		infoHud.scale = clamp(infoHud.scale, 0.5, 2.5);
 		infoHud.opacity = clamp(infoHud.opacity, 0.0, 1.0);

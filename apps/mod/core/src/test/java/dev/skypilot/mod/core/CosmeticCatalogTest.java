@@ -7,11 +7,18 @@ import static org.junit.jupiter.api.Assertions.*;
 class CosmeticCatalogTest {
     @Test void collectionHasUniqueIdsAndBoundedFiniteGeometry(){
         var ids=new HashSet<String>();
+        var colors=new HashSet<Integer>();
         for(var item:CosmeticCatalog.ITEMS){
             assertTrue(ids.add(item.id()));var a=new SkyPilotConfig.Appearance();item.equip(a);assertTrue(item.equipped(a));
             var voxels=CosmeticMesh.build(a);assertFalse(voxels.isEmpty());assertTrue(voxels.size()<800);
-            for(var v:voxels){assertTrue(Double.isFinite(v.x()+v.y()+v.z()));assertTrue(v.size()>0&&v.size()<.2);assertTrue(Math.abs(v.x())<1.5&&v.y()>0&&v.y()<2.5);}
+            for(var v:voxels){
+                assertTrue(Double.isFinite(v.x()+v.y()+v.z()));
+                assertTrue(v.size()>0&&v.size()<.2);
+                assertTrue(Math.abs(v.x())<1.5&&v.y()>0&&v.y()<2.5);
+                colors.add(v.color());
+            }
         }
+        assertTrue(colors.size() < 240, "Total palette colors should fit within 256 texture slots (found: " + colors.size() + ")");
     }
     @Test void slotsCombineAndLegacySettingsMigrateWithoutReplacingNewSlots(){
         var c=new SkyPilotConfig();c.appearance.cape="eclipse";c.appearance.hat="horns";c.appearance.accessory="crown";c.appearance.back="dragon";

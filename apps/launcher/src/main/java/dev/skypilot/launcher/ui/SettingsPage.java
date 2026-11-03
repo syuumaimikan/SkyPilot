@@ -53,6 +53,12 @@ final class SettingsPage {
 	private final JLabel clientHint = Ui.muted(" ");
 	private final JLabel repairHint = Ui.muted(" ");
 	private final Widgets.Toggle autoUpdate;
+	private final Widgets.Toggle autostartServer;
+	private final Widgets.Toggle autoUpdateMods;
+	private final JTextField hypixelKeyField = new JTextField();
+	private final JTextField deeplKeyField = new JTextField();
+	private final JTextField anthropicKeyField = new JTextField();
+	private final JTextField openaiKeyField = new JTextField();
 	private final JLabel updateHint = Ui.muted(" ");
 	private final long totalMb = SystemInfo.totalMemoryMb();
 
@@ -60,6 +66,8 @@ final class SettingsPage {
 		this.c = c;
 		closeAfter = new Widgets.Toggle(c.settings.closeAfterPlay);
 		autoUpdate = new Widgets.Toggle(c.settings.autoUpdateCheck);
+		autostartServer = new Widgets.Toggle(isAutoStartEnabled());
+		autoUpdateMods = new Widgets.Toggle(c.settings.autoUpdateMods);
 		memory = new JSlider(2, 16, Math.max(2, Math.min(16, c.settings.memoryMb / 1024)));
 		root = build();
 	}
@@ -174,7 +182,56 @@ final class SettingsPage {
 		srv.add(server, BorderLayout.CENTER);
 		srv.add(test, BorderLayout.EAST);
 		srv.add(serverHint, BorderLayout.SOUTH);
-		body.add(section("server", c.t("SkyPilot server", "SkyPilotサーバー"), form(row(c.t("Address", "アドレス"), srv))));
+
+		JButton startServer = Widgets.button(c.t("Start local server", "サーバーを起動"), "play");
+		JButton stopServer = Widgets.button(c.t("Stop", "停止"), "square");
+		JLabel localServerHint = Ui.muted(c.t("Run SkyPilot natively on Windows without Docker.", "Docker Desktop不要でネイティブ起動できます。"));
+		startServer.addActionListener(e -> {
+			localServerHint.setText(c.t("Starting local server…", "サーバーを起動中…"));
+			localServerHint.setForeground(Theme.MUTED);
+			c.async(() -> {
+				runServerScript("start");
+				for (int i = 0; i < 15; i++) {
+					Thread.sleep(500);
+					if (Net.healthy(server.getText().strip())) return true;
+				}
+				return Net.healthy(server.getText().strip());
+			}, ok -> {
+				localServerHint.setText(ok ? c.t("Server is running.", "サーバーが起動しました。") : c.t("Server started, waiting for health check…", "サーバー起動処理を開始しました。"));
+				localServerHint.setForeground(ok ? Theme.OK : Theme.WARN);
+			}, ex -> {
+				localServerHint.setText(c.t("Failed to start server: ", "サーバー起動失敗: ") + ex.getMessage());
+				localServerHint.setForeground(Theme.BAD);
+			});
+		});
+		stopServer.addActionListener(e -> {
+			localServerHint.setText(c.t("Stopping server…", "サーバーを停止中…"));
+			c.async(() -> {
+				runServerScript("stop");
+				Thread.sleep(800);
+				return !Net.healthy(server.getText().strip());
+			}, stopped -> {
+				localServerHint.setText(stopped ? c.t("Server stopped.", "サーバーを停止しました。") : c.t("Stop signal sent.", "停止シグナルを送信しました。"));
+				localServerHint.setForeground(Theme.MUTED);
+			}, ex -> {
+				localServerHint.setText(c.t("Error stopping server: ", "サーバー停止エラー: ") + ex.getMessage());
+				localServerHint.setForeground(Theme.BAD);
+			});
+		});
+
+		JPanel serverBtns = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+		serverBtns.setOpaque(false);
+		serverBtns.add(startServer);
+		serverBtns.add(stopServer);
+		JPanel localServerPanel = new JPanel(new BorderLayout(0, 4));
+		localServerPanel.setOpaque(false);
+		localServerPanel.add(serverBtns, BorderLayout.CENTER);
+		localServerPanel.add(localServerHint, BorderLayout.SOUTH);
+
+		body.add(section("server", c.t("SkyPilot server", "SkyPilotサーバー"), form(
+				row(c.t("Address", "アドレス"), srv),
+				row(c.t("Local server (Docker-free)", "ローカルサーバー (Docker不要)"), localServerPanel),
+				row(c.t("Start with Windows", "Windows起動時に自動起動"), autostartServer))));
 		JButton checkUpdate = Widgets.button(c.t("Check now", "今すぐ確認"), "refresh");
 		checkUpdate.addActionListener(e -> UpdateUi.checkNow(c, t -> updateHint.setText(t)));
 		JPanel upd = new JPanel(new BorderLayout(8, 4));
@@ -186,7 +243,35 @@ final class SettingsPage {
 				"更新はSkyPilotサーバーから取得し、署名を確認できたものだけをインストールします。"));
 		body.add(section("download", c.t("Updates", "アップデート"), form(
 				row(c.t("This launcher", "このランチャー"), upd),
-				row(c.t("Check when the launcher starts", "起動時に確認する"), autoUpdate))));
+				row(c.t("Check when the launcher starts", "起動時に確認する"), autoUpdate),
+				row(c.t("Auto-update mods on launch", "ゲーム起動時にMODを自動更新"), autoUpdateMods))));
+
+		hypixelKeyField.putClientProperty("JTextField.placeholderText", c.t("Hypixel Persistent API Key (UUID)", "Hypixel 永続APIキー (UUID)"));
+		JButton applyHypixel = Widgets.primary(c.t("Apply on Dashboard", "永続APIキー申請"), "external");
+		applyHypixel.addActionListener(e -> {
+			String desc = "SkyPilot is an open-source Fabric client mod and self-hosted server companion for Hypixel SkyBlock. It displays in-game information (market values, wardrobe previews, puzzle directions, and progression roadmaps) without automating player actions. Hypixel API policy compliance: strictly read-only, aggressive caching (120s+ for player profiles, 30s+ for bazaar/auctions), RateLimit-* headers honored with automatic exponential backoff.";
+			try {
+				java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(desc), null);
+			} catch (Exception ignored) {}
+			Ui.browse("https://developer.hypixel.net/dashboard");
+			c.ok(c.t("Description copied", "申請用説明文をコピーしました"),
+					c.t("Dashboard opened in browser. Create an application and paste the description, then enter your key here.",
+							"ブラウザで申請ダッシュボードを開きました。説明文を貼り付けて作成し、発行されたキーをここに入力してください。"));
+		});
+		JPanel hypixelRow = new JPanel(new BorderLayout(8, 0));
+		hypixelRow.setOpaque(false);
+		hypixelRow.add(hypixelKeyField, BorderLayout.CENTER);
+		hypixelRow.add(applyHypixel, BorderLayout.EAST);
+
+		deeplKeyField.putClientProperty("JTextField.placeholderText", c.t("DeepL API Key (for chat translation)", "DeepL APIキー (チャット翻訳用)"));
+		anthropicKeyField.putClientProperty("JTextField.placeholderText", c.t("Anthropic API Key (Claude)", "Anthropic APIキー (Claude)"));
+		openaiKeyField.putClientProperty("JTextField.placeholderText", c.t("OpenAI API Key (ChatGPT / Custom)", "OpenAI APIキー (ChatGPT / 互換)"));
+
+		body.add(section("key", c.t("External APIs", "外部API設定"), form(
+				row(c.t("Hypixel API", "Hypixel API"), hypixelRow),
+				row(c.t("DeepL API", "DeepL翻訳"), deeplKeyField),
+				row(c.t("Anthropic API", "Anthropic Claude"), anthropicKeyField),
+				row(c.t("OpenAI API", "OpenAI / 互換"), openaiKeyField))));
 		body.add(Box.createVerticalStrut(10));
 		page.add(Ui.scroll(body), BorderLayout.CENTER);
 		return page;
@@ -383,6 +468,8 @@ final class SettingsPage {
 		c.settings.theme = theme.getSelectedIndex() == 1 ? "light" : "dark";
 		c.settings.closeAfterPlay = closeAfter.isOn();
 		c.settings.autoUpdateCheck = autoUpdate.isOn();
+		c.settings.autoUpdateMods = autoUpdateMods.isOn();
+		saveExternalApis();
 		String id = clientId.getText().strip();
 		if (!id.isEmpty() && !dev.skypilot.launcher.MicrosoftAuth.validClientId(id)) {
 			c.toast("alert", Theme.BAD, c.t("Not saved", "保存していません"), c.t("The client ID looks like 00000000-0000-0000-0000-000000000000.", "クライアントIDは 00000000-0000-0000-0000-000000000000 の形式です。"));
@@ -400,6 +487,9 @@ final class SettingsPage {
 		c.settings.instanceDir = instDir.getText().strip().equals(Env.defaultInstanceDir(c.settings.minecraft()).toString()) ? null : instDir.getText().strip();
 		try {
 			c.settings.save(c.launcherDir);
+			if (autostartServer.isOn() != isAutoStartEnabled()) {
+				setAutoStart(autostartServer.isOn());
+			}
 			String url = server.getText().strip();
 			if (!url.equals(Instance.config(c.settings.instance()).apiBaseUrl)) Instance.setServer(c.settings.instance(), url);
 			int updated = 0;
@@ -410,5 +500,85 @@ final class SettingsPage {
 			return;
 		}
 		if (!oldLang.equals(c.settings.language) || !oldTheme.equals(c.settings.theme) || accountChanged) c.rebuild.run();
+	}
+
+	private static boolean isAutoStartEnabled() {
+		if (Env.os() != Env.Os.WINDOWS) return false;
+		try {
+			Process p = new ProcessBuilder("reg", "query", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "/v", "SkyPilotServer").start();
+			return p.waitFor() == 0;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private static void setAutoStart(boolean enable) {
+		if (Env.os() != Env.Os.WINDOWS) return;
+		try {
+			if (enable) {
+				Path script = findServerScript();
+				if (script != null) {
+					String cmd = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File \"" + script.toAbsolutePath() + "\" start";
+					new ProcessBuilder("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "/v", "SkyPilotServer", "/t", "REG_SZ", "/d", cmd, "/f").start().waitFor();
+				}
+			} else {
+				new ProcessBuilder("reg", "delete", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", "/v", "SkyPilotServer", "/f").start().waitFor();
+			}
+		} catch (Exception ignored) {}
+	}
+
+	private static Path findServerScript() {
+		Path p = Path.of("scripts/server.ps1").toAbsolutePath();
+		if (java.nio.file.Files.exists(p)) return p;
+		Path cur = Path.of("").toAbsolutePath();
+		for (int i = 0; i < 4; i++) {
+			Path check = cur.resolve("scripts/server.ps1");
+			if (java.nio.file.Files.exists(check)) return check;
+			if (cur.getParent() != null) cur = cur.getParent();
+		}
+		return null;
+	}
+
+	private static void runServerScript(String action) throws Exception {
+		Path script = findServerScript();
+		if (script == null) {
+			throw new IllegalStateException("scripts/server.ps1 not found");
+		}
+		ProcessBuilder pb = new ProcessBuilder(
+				"powershell.exe",
+				"-ExecutionPolicy", "Bypass",
+				"-File", script.toAbsolutePath().toString(),
+				action
+		);
+		pb.start().waitFor();
+	}
+
+	private void saveExternalApis() {
+		String hypixel = hypixelKeyField.getText().strip();
+		String deepl = deeplKeyField.getText().strip();
+		String anthropic = anthropicKeyField.getText().strip();
+		String openai = openaiKeyField.getText().strip();
+		if (hypixel.isEmpty() && deepl.isEmpty() && anthropic.isEmpty() && openai.isEmpty()) return;
+
+		java.util.Map<String, String> body = new java.util.HashMap<>();
+		if (!hypixel.isEmpty()) body.put("hypixelKey", hypixel);
+		if (!deepl.isEmpty()) body.put("deeplKey", deepl);
+		if (!anthropic.isEmpty()) body.put("anthropicKey", anthropic);
+		if (!openai.isEmpty()) body.put("openaiKey", openai);
+
+		c.async(() -> {
+			String url = server.getText().strip().replaceAll("/+$", "") + "/api/settings/apis";
+			return Net.postInfo(url, new com.google.gson.Gson().toJson(body), 1 << 20);
+		}, ok -> {
+			if (ok != null) {
+				c.ok(c.t("API settings saved", "外部API設定を保存しました"), c.t("API keys updated on SkyPilot server.", "SkyPilotサーバーのAPIキーを更新しました。"));
+				hypixelKeyField.setText("");
+				deeplKeyField.setText("");
+				anthropicKeyField.setText("");
+				openaiKeyField.setText("");
+			}
+		}, ex -> {
+			// server might not be up; keys will be used next time
+		});
 	}
 }

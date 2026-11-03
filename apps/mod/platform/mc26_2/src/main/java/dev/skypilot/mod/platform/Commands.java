@@ -142,6 +142,20 @@ final class Commands {
 				.executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), false))
 				.then(literal("ok").executes(c -> ClickTranslate.click(IntegerArgumentType.getInteger(c, "id"), true)))));
 		root.then(literal("server").then(argument("url", StringArgumentType.greedyString()).executes(c -> setServer(StringArgumentType.getString(c, "url")))));
+		root.then(literal("analyze")
+				.executes(c -> analyze(null))
+				.then(argument("username", StringArgumentType.word())
+						.executes(c -> analyze(StringArgumentType.getString(c, "username")))));
+		root.then(literal("apikey")
+				.executes(c -> hypixelKeyStatus())
+				.then(argument("key", StringArgumentType.greedyString())
+						.executes(c -> setHypixelKey(StringArgumentType.getString(c, "key").strip()))));
+		root.then(literal("hypixelkey")
+				.executes(c -> hypixelKeyStatus())
+				.then(argument("key", StringArgumentType.greedyString())
+						.executes(c -> setHypixelKey(StringArgumentType.getString(c, "key").strip()))));
+		root.then(literal("update")
+				.then(literal("skyblocker").executes(c -> updateSkyblocker())));
 		ToolCommands.register(root);
 		d.register(root);
 	}
@@ -208,6 +222,9 @@ final class Commands {
 				{"/skypilot pests", l.t("toggle following visible pest bodies", "ペスト個体の位置追従を切り替え")},
 				{"/skypilot font", l.t("change the game font using a local TTF", "手持ちの TTF でゲームのフォントを変更")},
 				{"/skypilot moneytools", l.t("target, payback and income tools", "目標額・投資回収・実測時給のツール")},
+				{"/skypilot analyze [username]", l.t("analyze SkyBlock profile and suggest next actions", "SkyBlockプロフィールを分析して今やるべきことを提案")},
+				{"/skypilot apikey [key]", l.t("view or set persistent Hypixel API key", "恒常的なHypixel APIキーの確認・設定")},
+				{"/skypilot update skyblocker", l.t("download and update embedded Skyblocker companion mod", "内蔵Skyblockerの更新・ダウンロード")},
 		};
 		for (String[] r : rows) {
 			McText.chat(Component.literal("  " + r[0]).withStyle(ChatFormatting.AQUA).append(Component.literal(" - " + r[1]).withStyle(ChatFormatting.GRAY)));
@@ -448,6 +465,120 @@ final class Commands {
 			return 0;
 		}
 		MccLang.info("Server set to " + sp.api().base() + ". Run /skypilot link to link this client.", "サーバーを " + sp.api().base() + " に設定しました。/skypilot link で連携してください。");
+		return 1;
+	}
+
+	private static int analyze(String username) {
+		SkyPilot sp = SkyPilot.get();
+		ApiClient api = sp.api();
+		if (api == null || !sp.linked()) {
+			MccLang.error("Not linked - /skypilot link", "未連携です - /skypilot link");
+			return 0;
+		}
+		String name = (username != null && !username.isBlank())
+				? username.trim()
+				: Minecraft.getInstance().getUser().getName();
+		Lang l = lang();
+		MccLang.info("Analyzing SkyBlock profile for " + name + "...", name + " のSkyBlockプロフィールを分析中...");
+		api.analyzeProfile(name, null, null, l.code()).whenComplete((res, err) -> {
+			if (err != null) {
+				McText.error(SkyPilot.shortError(err));
+				return;
+			}
+			if (res == null) {
+				MccLang.error("No analysis results returned.", "分析結果を取得できませんでした。");
+				return;
+			}
+			MutableComponent header = McText.prefix().append(Component.literal(name + (res.profile() != null ? " (" + res.profile() + ")" : "") + " " + l.t("Analysis Results", "分析結果")).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+			McText.chat(header);
+			if (res.actions() != null && !res.actions().isEmpty()) {
+				McText.chat(Component.literal(l.t("Recommended Next Actions:", "【今やるべきこと / おすすめのアクション】:")).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+				int count = 0;
+				for (Dto.PlanAction act : res.actions()) {
+					if (++count > 5) break;
+					String cat = act.category() != null ? "[" + act.category() + "] " : "";
+					String title = act.title() != null ? act.title() : "";
+					String why = act.why() != null && !act.why().isBlank() ? " - " + act.why() : "";
+					McText.chat(Component.literal("  " + count + ". ").withStyle(ChatFormatting.AQUA)
+							.append(Component.literal(cat).withStyle(ChatFormatting.DARK_AQUA))
+							.append(Component.literal(title).withStyle(ChatFormatting.WHITE))
+							.append(Component.literal(why).withStyle(ChatFormatting.GRAY)));
+				}
+			}
+			if (res.goals() != null && !res.goals().isEmpty()) {
+				McText.chat(Component.literal(l.t("Active Roadmap Goals:", "【現在の目標 / ロードマップ】:")).withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+				for (Dto.PlanGoal goal : res.goals()) {
+					int pct = (int) Math.round(goal.progress() * 100);
+					McText.chat(Component.literal("  • " + goal.title() + " (" + pct + "%)").withStyle(ChatFormatting.WHITE));
+				}
+			}
+			if (res.warnings() != null && !res.warnings().isEmpty()) {
+				for (String w : res.warnings()) {
+					McText.chat(Component.literal("  ! " + w).withStyle(ChatFormatting.RED));
+				}
+			}
+			MccLang.info("Profile analysis complete. Open /skypilot menu to view details.", "プロフィール分析が完了しました。/skypilot menu の「今」タブでも確認できます。");
+		});
+		return 1;
+	}
+
+	private static int hypixelKeyStatus() {
+		SkyPilot sp = SkyPilot.get();
+		ApiClient api = sp.api();
+		if (api == null || !sp.linked()) {
+			MccLang.error("Not linked - /skypilot link", "未連携です - /skypilot link");
+			return 0;
+		}
+		Lang l = lang();
+		MccLang.info("Checking Hypixel API key status...", "Hypixel APIキーの状態を確認中...");
+		api.hypixelStatus().whenComplete((s, err) -> {
+			if (err != null) {
+				McText.error(SkyPilot.shortError(err));
+				return;
+			}
+			if (s == null) {
+				MccLang.error("Could not fetch status.", "状態を取得できませんでした。");
+				return;
+			}
+			if (!s.configured()) {
+				MccLang.info("Hypixel API key: not configured. Run /skypilot apikey <key> to register.", "Hypixel APIキー: 未設定。/skypilot apikey <key> で登録できます。");
+			} else {
+				String validStr = s.valid() ? l.t("valid", "有効") : l.t("invalid / rate-limited", "無効または制限中");
+				String hintStr = s.hint() != null ? " (" + s.hint() + ")" : "";
+				McText.info(l.t("Hypixel API key: configured", "Hypixel APIキー: 設定済み") + hintStr + " · " + validStr);
+			}
+		});
+		return 1;
+	}
+
+	private static int setHypixelKey(String key) {
+		SkyPilot sp = SkyPilot.get();
+		ApiClient api = sp.api();
+		if (api == null || !sp.linked()) {
+			MccLang.error("Not linked - /skypilot link", "未連携です - /skypilot link");
+			return 0;
+		}
+		Lang l = lang();
+		MccLang.info("Saving and verifying Hypixel API key...", "Hypixel APIキーを保存・検証中...");
+		api.saveHypixelKey(key).whenComplete((res, err) -> {
+			if (err != null) {
+				McText.error(SkyPilot.shortError(err));
+				return;
+			}
+			if (res != null && res.ok()) {
+				MccLang.info("Hypixel API key saved and verified successfully!", "Hypixel APIキーが正常に保存・検証されました！");
+			} else {
+				String msg = res != null ? res.message() : "Verification failed";
+				MccLang.error("Failed to save Hypixel API key: " + msg, "Hypixel APIキーの保存に失敗しました: " + msg);
+			}
+		});
+		return 1;
+	}
+
+	private static int updateSkyblocker() {
+		Lang l = lang();
+		MccLang.info("Checking and downloading Skyblocker update...", "Skyblockerの更新を確認・ダウンロード中...");
+		ModManager.updateSkyblocker(msg -> McText.chat(McText.prefix().append(Component.literal(msg).withStyle(ChatFormatting.AQUA))));
 		return 1;
 	}
 

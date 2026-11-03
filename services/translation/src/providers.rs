@@ -111,18 +111,125 @@ impl Provider for Claude {
     }
 }
 
+/// OpenAI-compatible chat completion provider (works with OpenAI, OpenRouter, LiteLLM, vLLM).
+pub struct OpenAi {
+    http: reqwest::Client,
+    url: String,
+    key: String,
+    model: String,
+}
+
+impl OpenAi {
+    pub fn new(url: String, key: String, model: String) -> Self {
+        OpenAi {
+            http: reqwest::Client::new(),
+            url: url.trim_end_matches('/').to_string(),
+            key,
+            model,
+        }
+    }
+}
+
+#[async_trait]
+impl Provider for OpenAi {
+    fn name(&self) -> &'static str {
+        "openai"
+    }
+    async fn translate(&self, text: &str, _source: &str, target: &str) -> Result<String, String> {
+        let system = if target == "en" { SYSTEM_TO_ENGLISH } else { SYSTEM };
+        let endpoint = if self.url.ends_with("/chat/completions") {
+            self.url.clone()
+        } else {
+            format!("{}/chat/completions", self.url)
+        };
+        let body = json!({
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text}
+            ],
+            "temperature": 0.2,
+            "max_tokens": 1024
+        });
+        let mut req = self.http.post(&endpoint).json(&body);
+        if !self.key.is_empty() {
+            req = req.header("Authorization", format!("Bearer {}", self.key));
+        }
+        let resp = req.send().await.map_err(|e| e.to_string())?;
+        if !resp.status().is_success() {
+            return Err(format!("openai HTTP {}", resp.status()));
+        }
+        let v: Value = resp.json().await.map_err(|e| e.to_string())?;
+        v.pointer("/choices/0/message/content")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| "openai: no content in response".into())
+    }
+}
+
+/// Local Ollama provider.
+pub struct Ollama {
+    http: reqwest::Client,
+    url: String,
+    model: String,
+}
+
+impl Ollama {
+    pub fn new(url: String, model: String) -> Self {
+        Ollama {
+            http: reqwest::Client::new(),
+            url: url.trim_end_matches('/').to_string(),
+            model,
+        }
+    }
+}
+
+#[async_trait]
+impl Provider for Ollama {
+    fn name(&self) -> &'static str {
+        "ollama"
+    }
+    async fn translate(&self, text: &str, _source: &str, target: &str) -> Result<String, String> {
+        let system = if target == "en" { SYSTEM_TO_ENGLISH } else { SYSTEM };
+        let body = json!({
+            "model": self.model,
+            "prompt": format!("{system}\n\nMessage to translate: {text}"),
+            "stream": false
+        });
+        let endpoint = format!("{}/api/generate", self.url);
+        let resp = self.http.post(&endpoint).json(&body).send().await.map_err(|e| e.to_string())?;
+        if !resp.status().is_success() {
+            return Err(format!("ollama HTTP {}", resp.status()));
+        }
+        let v: Value = resp.json().await.map_err(|e| e.to_string())?;
+        v.get("response")
+            .and_then(Value::as_str)
+            .map(|s| s.trim().to_string())
+            .ok_or_else(|| "ollama: no response".into())
+    }
+}
+
 /// Pick a provider from environment configuration (first match wins).
 pub fn from_env() -> Option<std::sync::Arc<dyn Provider>> {
     let provider = std::env::var("TRANSLATION_PROVIDER").unwrap_or_default().to_lowercase();
     let deepl = std::env::var("DEEPL_API_KEY").ok().filter(|k| !k.is_empty());
     let libre = std::env::var("LIBRETRANSLATE_URL").ok().filter(|k| !k.is_empty());
+    let openai_key = std::env::var("OPENAI_API_KEY").ok().filter(|k| !k.is_empty());
+    let openai_url = std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".into());
+    let openai_model = std::env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-4o-mini".into());
+    let ollama_url = std::env::var("OLLAMA_URL").ok().filter(|u| !u.is_empty());
+    let ollama_model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama3.2".into());
+
     match provider.as_str() {
         "none" | "off" => None,
         "deepl" => deepl.map(|k| std::sync::Arc::new(DeepL::new(k)) as _),
         "libretranslate" => libre.map(|u| std::sync::Arc::new(LibreTranslate::new(u, std::env::var("LIBRETRANSLATE_API_KEY").ok())) as _),
         "claude" => AnthropicClient::from_env().map(|c| std::sync::Arc::new(Claude::new(c)) as _),
+        "openai" => openai_key.map(|k| std::sync::Arc::new(OpenAi::new(openai_url, k, openai_model)) as _),
+        "ollama" => ollama_url.map(|u| std::sync::Arc::new(Ollama::new(u, ollama_model)) as _),
         _ => deepl
             .map(|k| std::sync::Arc::new(DeepL::new(k)) as std::sync::Arc<dyn Provider>)
-            .or_else(|| libre.map(|u| std::sync::Arc::new(LibreTranslate::new(u, std::env::var("LIBRETRANSLATE_API_KEY").ok())) as _)),
+            .or_else(|| libre.map(|u| std::sync::Arc::new(LibreTranslate::new(u, std::env::var("LIBRETRANSLATE_API_KEY").ok())) as _))
+            .or_else(|| openai_key.map(|k| std::sync::Arc::new(OpenAi::new(openai_url, k, openai_model)) as _)),
     }
 }

@@ -3,6 +3,7 @@ package dev.skypilot.launcher.ui;
 import dev.skypilot.launcher.Instance;
 import dev.skypilot.launcher.LauncherSettings;
 import dev.skypilot.launcher.Pins;
+import dev.skypilot.mod.core.CosmeticCatalog;
 import dev.skypilot.mod.core.Lang;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -32,7 +33,7 @@ class WardrobePageTest {
             var page=new WardrobePage(new Ctx(settings,pins,Lang.JA,dir));equip(page.view(),"aurora");
             var search=findSearch(page.view());assertNotNull(search);search.setText("EcLiPsE");
             assertEquals(java.util.List.of("eclipse"),itemIds(page.view()));search.setText("no matching design");assertTrue(itemIds(page.view()).isEmpty());
-            search.setText("");assertEquals(13,itemIds(page.view()).size());click(page.view(),"スタイルを保存");assertEquals("aurora",Instance.config(settings.instance()).appearance.cape);
+            search.setText("");assertEquals(CosmeticCatalog.ITEMS.size(),itemIds(page.view()).size());click(page.view(),"スタイルを保存");assertEquals("aurora",Instance.config(settings.instance()).appearance.cape);
             click(page.view(),"装備を外す");click(page.view(),"スタイルを保存");assertEquals("none",Instance.config(settings.instance()).appearance.cape);
             try {
                 var image=LauncherFrame.paint(page.view(),760,620);var out=dir.resolve("wardrobe-compact.png");javax.imageio.ImageIO.write(image,"png",out.toFile());assertTrue(Files.size(out)>8000);

@@ -116,6 +116,7 @@ final class DungeonSolver {
         }
         targets=List.copyOf(guides);if(steps.isEmpty())instruction="レバー操作済み · 水の到達待ち";
     }
+    @SuppressWarnings("try")
     static void world(){var mc=Minecraft.getInstance();if(!SkyPilot.get().config().dungeonSolver||mc.player==null||mc.level==null||!DungeonMap.inDungeon())return;
         try(var ignored=mc.levelRenderer.collectPerFrameRenderThreadGizmos()){Vec3 previous=mc.player.getEyePosition().add(0,-.3,0);int i=0;for(Target target:targets){int color=i++==0?0xFF55FF99:0xAA55DDFF;Gizmos.line(previous,target.pos(),color,2f);Gizmos.cuboid(new AABB(target.pos().add(-.2,-.2,-.2),target.pos().add(.2,.2,.2)),GizmoStyle.stroke(color,2f));Gizmos.billboardText(target.text(),target.pos().add(0,.5,0),TextGizmo.Style.forColorAndCentered(color));previous=target.pos();}}
     }

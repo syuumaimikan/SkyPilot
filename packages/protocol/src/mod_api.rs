@@ -567,6 +567,12 @@ pub struct ModUpdate {
     pub up_to_date: bool,
     /// Modrinth page of the latest version.
     pub url: String,
+    #[serde(default)]
+    pub download_url: Option<String>,
+    #[serde(default)]
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub target_sha1: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

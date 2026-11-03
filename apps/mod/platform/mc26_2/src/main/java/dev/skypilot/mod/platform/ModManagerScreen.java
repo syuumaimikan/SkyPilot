@@ -96,7 +96,8 @@ final class ModManagerScreen extends Screen {
 			scroll = 0;
 			rebuildWidgets();
 		}).bounds(listX + listW - 72, 21, 72, 20).build());
-		int bw = (detailW - 4) / 2;
+		boolean hasUpdates = updates.values().stream().anyMatch(u -> !u.upToDate() && u.downloadUrl() != null && !u.downloadUrl().isBlank());
+		int bw = hasUpdates ? (detailW - 8) / 3 : (detailW - 4) / 2;
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Open mods folder", "modsフォルダを開く")), b -> {
 			try {
 				Files.createDirectories(ModManager.modsDir());
@@ -109,6 +110,17 @@ final class ModManagerScreen extends Screen {
 				.build();
 		check.active = !checking;
 		addRenderableWidget(check);
+		if (hasUpdates) {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Update all", "すべて自動更新")), b -> {
+				b.active = false;
+				setMessage(l.t("Auto-updating all mods…", "すべてのMODを自動更新中…"), false);
+				ModManager.updateAllMods(all, updates, msg -> minecraft.execute(() -> {
+					setMessage(msg, false);
+					all = ModManager.scan();
+					rebuildWidgets();
+				}));
+			}).bounds(detailX + (bw + 4) * 2, 21, bw, 20).build());
+		}
 		if (selected != null) detailButtons(l);
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Done", "完了")), b -> onClose()).bounds(px, height - 26, pw, 20).build());
 	}
@@ -145,7 +157,31 @@ final class ModManagerScreen extends Screen {
 		}
 		Dto.ModUpdate u = updateOf(e);
 		if (u != null && !u.upToDate()) {
-			addRenderableWidget(ClientButton.create(Component.literal(l.t("Open update page", "更新ページを開く")), b -> openLink(u.url())).bounds(detailX, y - 22, detailW, 20).build());
+			if (u.downloadUrl() != null && !u.downloadUrl().isBlank()) {
+				int half = (detailW - 4) / 2;
+				addRenderableWidget(ClientButton.create(Component.literal(l.t("Auto update", "自動更新")), b -> {
+					b.active = false;
+					setMessage(l.t("Updating " + e.name() + "…", e.name() + " を更新中…"), false);
+					ModManager.updateMod(e, u, msg -> minecraft.execute(() -> {
+						setMessage(msg, false);
+						all = ModManager.scan();
+						rebuildWidgets();
+					}));
+				}).bounds(detailX, y - 22, half, 20).build());
+				addRenderableWidget(ClientButton.create(Component.literal(l.t("Open page", "ページを開く")), b -> openLink(u.url())).bounds(detailX + half + 4, y - 22, half, 20).build());
+			} else {
+				addRenderableWidget(ClientButton.create(Component.literal(l.t("Open update page", "更新ページを開く")), b -> openLink(u.url())).bounds(detailX, y - 22, detailW, 20).build());
+			}
+		} else if (e.id().equals("skyblocker")) {
+			addRenderableWidget(ClientButton.create(Component.literal(l.t("Update Skyblocker", "Skyblockerを更新 / 導入")), b -> {
+				b.active = false;
+				setMessage(l.t("Updating Skyblocker…", "Skyblockerを更新中…"), false);
+				ModManager.updateSkyblocker(msg -> minecraft.execute(() -> {
+					setMessage(msg, false);
+					all = ModManager.scan();
+					rebuildWidgets();
+				}));
+			}).bounds(detailX, y - 22, detailW, 20).build());
 		}
 	}
 
@@ -215,7 +251,16 @@ final class ModManagerScreen extends Screen {
 				for (Dto.ModUpdate u : r.updates()) m.put(u.hash(), u);
 				updates = m;
 				long n = r.updates().stream().filter(u -> !u.upToDate()).count();
-				setMessage(l.t(n + " update(s) on Modrinth. Updating is up to you - SkyPilot does not download mods.", "Modrinthに " + n + " 件の更新があります。更新はご自身で行ってください（SkyPilotはダウンロードしません）。"), false);
+				if (n > 0 && sp.config().on(Features.TOOLS_AUTO_UPDATE_MODS)) {
+					setMessage(l.t("Auto-updating " + n + " mod(s)…", n + " 件のMODを自動更新中…"), false);
+					ModManager.updateAllMods(all, m, msg -> minecraft.execute(() -> {
+						setMessage(msg, false);
+						all = ModManager.scan();
+						rebuildWidgets();
+					}));
+				} else {
+					setMessage(l.t(n + " update(s) on Modrinth.", "Modrinthに " + n + " 件の更新があります。「自動更新」または「すべて自動更新」で反映できます。"), false);
+				}
 			}
 			if (minecraft.gui.screen() == this) rebuildWidgets();
 		}));

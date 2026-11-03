@@ -1,6 +1,7 @@
 //! In-process store (used when DATABASE_URL is not set). Bounded so it cannot grow forever.
 
 use std::collections::{HashMap, VecDeque};
+use std::path::PathBuf;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -38,15 +39,108 @@ struct Inner {
     raw: HashMap<Uuid, RawProfile>,
 }
 
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct DiskState {
+    #[serde(default)]
+    users: Vec<UserRow>,
+    #[serde(default)]
+    sessions: Vec<(String, SessionRow)>,
+    #[serde(default)]
+    goals: Vec<(Uuid, Vec<SavedGoal>)>,
+    #[serde(default)]
+    user_settings: Vec<(Uuid, serde_json::Value)>,
+    #[serde(default)]
+    device_codes: Vec<(String, DeviceCodeRow)>,
+    #[serde(default)]
+    tokens: Vec<(String, String, DeviceTokenRow)>,
+    #[serde(default)]
+    rules: Vec<(Uuid, Vec<NotificationRule>)>,
+    #[serde(default)]
+    orders: Vec<(Uuid, String, serde_json::Value)>,
+}
+
 #[derive(Default)]
 pub struct MemoryStore {
     inner: RwLock<Inner>,
+    persist_path: Option<PathBuf>,
+}
+
+impl MemoryStore {
+    pub fn with_file_persistence(path: PathBuf) -> Self {
+        let mut inner = Inner::default();
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(disk) = serde_json::from_str::<DiskState>(&content) {
+                    for u in disk.users {
+                        inner.users.insert(u.id, u);
+                    }
+                    for (k, s) in disk.sessions {
+                        inner.sessions.insert(k, s);
+                    }
+                    for (u, gs) in disk.goals {
+                        inner.goals.insert(u, gs);
+                    }
+                    for (u, val) in disk.user_settings {
+                        inner.user_settings.insert(u, val);
+                    }
+                    for (k, code) in disk.device_codes {
+                        inner.device_codes.insert(k, code);
+                    }
+                    for (h, dev_id, tok) in disk.tokens {
+                        inner.tokens.insert(h, (dev_id, tok));
+                    }
+                    for (u, rs) in disk.rules {
+                        inner.rules.insert(u, rs);
+                    }
+                    for (u, src, ord) in disk.orders {
+                        inner.orders.insert((u, src), ord);
+                    }
+                    tracing::info!(path = %path.display(), users = inner.users.len(), "loaded store data from file");
+                } else {
+                    tracing::warn!(path = %path.display(), "failed to parse persistent store file; starting fresh");
+                }
+            }
+        }
+        Self {
+            inner: RwLock::new(inner),
+            persist_path: Some(path),
+        }
+    }
+
+    fn save_if_persistent(&self) {
+        let Some(ref path) = self.persist_path else {
+            return;
+        };
+        let g = self.inner.read();
+        let state = DiskState {
+            users: g.users.values().cloned().collect(),
+            sessions: g.sessions.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+            goals: g.goals.iter().map(|(k, v)| (*k, v.clone())).collect(),
+            user_settings: g.user_settings.iter().map(|(k, v)| (*k, v.clone())).collect(),
+            device_codes: g.device_codes.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+            tokens: g.tokens.iter().map(|(k, (d, v))| (k.clone(), d.clone(), v.clone())).collect(),
+            rules: g.rules.iter().map(|(k, v)| (*k, v.clone())).collect(),
+            orders: g.orders.iter().map(|((u, s), v)| (*u, s.clone(), v.clone())).collect(),
+        };
+        drop(g);
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(&state) {
+            let tmp = path.with_extension("tmp");
+            if std::fs::write(&tmp, json.as_bytes()).is_ok() {
+                let _ = std::fs::rename(&tmp, path);
+            }
+        }
+    }
 }
 
 #[async_trait]
 impl Store for MemoryStore {
     async fn save_orders(&self, user_id: Uuid, source: &str, snapshot: &serde_json::Value) -> StoreResult<()> {
-        self.inner.write().orders.insert((user_id, source.into()), snapshot.clone()); Ok(())
+        self.inner.write().orders.insert((user_id, source.into()), snapshot.clone());
+        self.save_if_persistent();
+        Ok(())
     }
     async fn orders(&self, user_id: Uuid, source: &str) -> StoreResult<Option<serde_json::Value>> {
         Ok(self.inner.read().orders.get(&(user_id, source.into())).cloned())
@@ -61,6 +155,7 @@ impl Store for MemoryStore {
             id,
             UserRow { id, login: None, password_hash: None, minecraft_uuid: None, minecraft_name: None, profile_id: None, play_style: PlayStyle::Fastest, budget: None, lang: "ja".into() },
         );
+        self.save_if_persistent();
         Ok(id)
     }
 
@@ -81,6 +176,8 @@ impl Store for MemoryStore {
             u.login = Some(login.to_string());
             u.password_hash = Some(password_hash.to_string());
         }
+        drop(g);
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -95,11 +192,13 @@ impl Store for MemoryStore {
             u.budget = budget;
             u.lang = lang.to_string();
         }
+        self.save_if_persistent();
         Ok(())
     }
 
     async fn create_session(&self, id_hash: &str, user_id: Uuid, csrf: &str, expires_at: DateTime<Utc>) -> StoreResult<()> {
         self.inner.write().sessions.insert(id_hash.to_string(), SessionRow { user_id, csrf_token: csrf.to_string(), expires_at });
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -109,11 +208,13 @@ impl Store for MemoryStore {
 
     async fn delete_session(&self, id_hash: &str) -> StoreResult<()> {
         self.inner.write().sessions.remove(id_hash);
+        self.save_if_persistent();
         Ok(())
     }
 
     async fn save_goals(&self, user_id: Uuid, goals: &[SavedGoal]) -> StoreResult<()> {
         self.inner.write().goals.insert(user_id, goals.to_vec());
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -152,6 +253,7 @@ impl Store for MemoryStore {
 
     async fn create_device_code(&self, row: &DeviceCodeRow) -> StoreResult<()> {
         self.inner.write().device_codes.insert(row.device_code_hash.clone(), row.clone());
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -168,6 +270,7 @@ impl Store for MemoryStore {
             d.approved_user_id = user_id;
             d.denied = denied;
         }
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -180,6 +283,7 @@ impl Store for MemoryStore {
 
     async fn delete_device_code(&self, hash: &str) -> StoreResult<()> {
         self.inner.write().device_codes.remove(hash);
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -188,6 +292,7 @@ impl Store for MemoryStore {
             token_hash.to_string(),
             (token_hash.to_string(), DeviceTokenRow { id: id.to_string(), user_id, name: name.to_string(), created_at: Utc::now(), last_used_at: None, revoked: false }),
         );
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -208,13 +313,18 @@ impl Store for MemoryStore {
 
     async fn revoke_device(&self, user_id: Uuid, id: &str) -> StoreResult<bool> {
         let mut g = self.inner.write();
-        match g.tokens.values_mut().find(|(_, r)| r.id == id && r.user_id == user_id) {
+        let res = match g.tokens.values_mut().find(|(_, r)| r.id == id && r.user_id == user_id) {
             Some((_, r)) => {
                 r.revoked = true;
-                Ok(true)
+                true
             }
-            None => Ok(false),
+            None => false,
+        };
+        drop(g);
+        if res {
+            self.save_if_persistent();
         }
+        Ok(res)
     }
 
     async fn store_sales(&self, sales: &[Sale]) -> StoreResult<()> {
@@ -287,6 +397,8 @@ impl Store for MemoryStore {
         let rs = g.rules.entry(user_id).or_default();
         rs.retain(|r| r.id != rule.id);
         rs.push(rule.clone());
+        drop(g);
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -294,6 +406,7 @@ impl Store for MemoryStore {
         if let Some(rs) = self.inner.write().rules.get_mut(&user_id) {
             rs.retain(|r| r.id != id);
         }
+        self.save_if_persistent();
         Ok(())
     }
 
@@ -326,6 +439,7 @@ impl Store for MemoryStore {
 
     async fn save_user_settings(&self, user_id: Uuid, settings: &serde_json::Value) -> StoreResult<()> {
         self.inner.write().user_settings.insert(user_id, settings.clone());
+        self.save_if_persistent();
         Ok(())
     }
 }

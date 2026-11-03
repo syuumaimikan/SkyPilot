@@ -481,6 +481,37 @@ final class ModsPage {
 		JButton show = Widgets.button(c.t("Show file", "ファイルを表示"), "folder");
 		show.addActionListener(e -> Ui.openFolder(m.file().getParent()));
 		actions.add(show);
+		if (u != null && !u.upToDate() && u.downloadUrl() != null && !u.downloadUrl().isBlank()) {
+			actions.add(Box.createHorizontalStrut(8));
+			JButton updateBtn = Widgets.primary(c.t("Update to ", "更新: ") + u.versionNumber(), "refresh");
+			updateBtn.addActionListener(e -> {
+				updateBtn.setEnabled(false);
+				c.async(() -> ModrinthUpdates.installUpdate(c.settings.mods(), m.file(), u, Net::download), ok -> {
+					updateBtn.setEnabled(true);
+					reload();
+					c.ok(c.t("Mod updated", "MODを更新しました"), m.name() + " " + u.versionNumber() + "\n" + c.t("Start Minecraft to use it.", "Minecraft起動後に反映されます。"));
+				}, ex -> {
+					updateBtn.setEnabled(true);
+					c.fail(c.t("Update failed", "更新に失敗しました"), ex);
+				});
+			});
+			actions.add(updateBtn);
+		} else if (m.id().equals("skyblocker") || m.provides().containsKey("skyblocker")) {
+			actions.add(Box.createHorizontalStrut(8));
+			JButton updateSkyblocker = Widgets.primary(c.t("Update Skyblocker", "Skyblockerを更新"), "refresh");
+			updateSkyblocker.addActionListener(e -> {
+				updateSkyblocker.setEnabled(false);
+				c.async(() -> dev.skypilot.launcher.CompanionMods.updateCompanion(c.settings.mods(), "skyblocker", Net::download), ok -> {
+					updateSkyblocker.setEnabled(true);
+					reload();
+					c.ok(c.t("Skyblocker updated", "Skyblockerを更新しました"), c.t("Latest release installed. Start Minecraft to use it.", "最新版を導入しました。Minecraft起動後に反映されます。"));
+				}, ex -> {
+					updateSkyblocker.setEnabled(true);
+					c.fail(c.t("Update failed", "更新に失敗しました"), ex);
+				});
+			});
+			actions.add(updateSkyblocker);
+		}
 		card.add(actions);
 		card.add(Box.createVerticalStrut(8));
 		JPanel removal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -560,11 +591,23 @@ final class ModsPage {
 			btn.setEnabled(true);
 			updates = r;
 			long n = r.values().stream().filter(u -> !u.upToDate()).count();
-			c.toast("refresh", Theme.ACCENT_2, n == 0 ? c.t("Everything is up to date", "すべて最新です") : c.t(n + " update(s) on Modrinth", "Modrinthに " + n + " 件の更新"),
-					c.t("Checked " + r.size() + " of " + files.size() + " mods known to Modrinth. Links only; nothing is downloaded.",
-							files.size() + " 個中 " + r.size() + " 個がModrinthで見つかりました。リンク表示のみで、ダウンロードはしません。"));
-			if (n > 0) filter = Filter.UPDATES;
-			render();
+			if (n > 0 && c.settings.autoUpdateMods) {
+				c.toast("refresh", Theme.ACCENT_2, c.t("Updating " + n + " mod(s)…", n + " 件のMODを自動更新中…"),
+						c.t("Downloading and installing latest releases from Modrinth…", "Modrinthから最新版をダウンロードして導入中…"));
+				c.async(() -> ModrinthUpdates.updateAll(c.settings.mods(), r, Net::download), updated -> {
+					reload();
+					c.toast("refresh", Theme.OK, c.t("Updated " + updated + " mod(s)", updated + " 個のMODを自動更新しました"),
+							c.t("New versions installed. Start Minecraft to apply.", "最新版を導入しました。Minecraft起動後に反映されます。"));
+				}, ex -> {
+					render();
+				});
+			} else {
+				c.toast("refresh", Theme.ACCENT_2, n == 0 ? c.t("Everything is up to date", "すべて最新です") : c.t(n + " update(s) on Modrinth", "Modrinthに " + n + " 件の更新"),
+						c.t("Checked " + r.size() + " of " + files.size() + " mods known to Modrinth.",
+								files.size() + " 個中 " + r.size() + " 個がModrinthで見つかりました。"));
+				if (n > 0) filter = Filter.UPDATES;
+				render();
+			}
 		}, e -> {
 			btn.setEnabled(true);
 			c.fail(c.t("Update check failed", "更新確認に失敗しました"), e);

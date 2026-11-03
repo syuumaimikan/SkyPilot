@@ -44,11 +44,22 @@ pub fn parse_modrinth(v: &Value) -> Vec<ModUpdate> {
         .filter_map(|(hash, ver)| {
             let project = ver.get("project_id")?.as_str()?.to_string();
             let id = ver.get("id")?.as_str()?.to_string();
-            let latest_hashes: Vec<String> = ver
-                .get("files")
-                .and_then(Value::as_array)
+            let files = ver.get("files").and_then(Value::as_array);
+            let latest_hashes: Vec<String> = files
                 .map(|fs| fs.iter().filter_map(|f| f.pointer("/hashes/sha1").and_then(Value::as_str).map(str::to_lowercase)).collect())
                 .unwrap_or_default();
+            let primary_file = files.and_then(|fs| {
+                fs.iter()
+                    .find(|f| f.get("primary").and_then(Value::as_bool).unwrap_or(false))
+                    .or_else(|| fs.first())
+            });
+            let download_url = primary_file.and_then(|f| f.get("url")).and_then(Value::as_str).map(str::to_string);
+            let filename = primary_file.and_then(|f| f.get("filename")).and_then(Value::as_str).map(str::to_string);
+            let target_sha1 = primary_file
+                .and_then(|f| f.pointer("/hashes/sha1"))
+                .and_then(Value::as_str)
+                .map(|s| s.to_lowercase());
+
             Some(ModUpdate {
                 hash: hash.to_lowercase(),
                 up_to_date: latest_hashes.contains(&hash.to_lowercase()),
@@ -58,6 +69,9 @@ pub fn parse_modrinth(v: &Value) -> Vec<ModUpdate> {
                 version_number: ver.get("version_number").and_then(Value::as_str).unwrap_or("").to_string(),
                 name: ver.get("name").and_then(Value::as_str).unwrap_or("").to_string(),
                 published: ver.get("date_published").and_then(Value::as_str).map(str::to_string),
+                download_url,
+                filename,
+                target_sha1,
             })
         })
         .collect();

@@ -23,7 +23,7 @@ import java.util.Map;
 public final class ModrinthUpdates {
 	static final String URL = "https://api.modrinth.com/v2/version_files/update";
 
-	public record Update(String sha1, boolean upToDate, String versionNumber, String name, String url, String published) {
+	public record Update(String sha1, boolean upToDate, String versionNumber, String name, String url, String published, String downloadUrl, String filename, String targetSha1) {
 	}
 
 	@FunctionalInterface
@@ -86,14 +86,75 @@ public final class ModrinthUpdates {
 			if (project.isEmpty() || id.isEmpty() || !project.matches("[A-Za-z0-9]+") || !id.matches("[A-Za-z0-9]+")) continue;
 			String hash = e.getKey().toLowerCase(Locale.ROOT);
 			boolean same = false;
+			String downloadUrl = null;
+			String filename = null;
+			String targetSha1 = null;
 			if (v.has("files") && v.get("files").isJsonArray()) {
 				for (JsonElement f : v.getAsJsonArray("files")) {
-					if (f.isJsonObject() && f.getAsJsonObject().has("hashes") && hash.equalsIgnoreCase(str(f.getAsJsonObject().getAsJsonObject("hashes"), "sha1"))) same = true;
+					if (f.isJsonObject()) {
+						JsonObject fo = f.getAsJsonObject();
+						if (fo.has("hashes") && hash.equalsIgnoreCase(str(fo.getAsJsonObject("hashes"), "sha1"))) same = true;
+						boolean primary = fo.has("primary") && fo.get("primary").getAsBoolean();
+						if (downloadUrl == null || primary) {
+							downloadUrl = str(fo, "url");
+							filename = str(fo, "filename");
+							if (fo.has("hashes") && fo.get("hashes").isJsonObject()) {
+								targetSha1 = str(fo.getAsJsonObject("hashes"), "sha1");
+							}
+						}
+					}
 				}
 			}
-			out.put(hash, new Update(hash, same, str(v, "version_number"), str(v, "name"), "https://modrinth.com/project/" + project + "/version/" + id, str(v, "date_published")));
+			out.put(hash, new Update(hash, same, str(v, "version_number"), str(v, "name"), "https://modrinth.com/project/" + project + "/version/" + id, str(v, "date_published"), downloadUrl, filename, targetSha1));
 		}
 		return out;
+	}
+
+	/**
+	 * Downloads and safely replaces an outdated mod file with the newer release from Modrinth.
+	 */
+	public static synchronized boolean installUpdate(Path modsDir, Path oldFile, Update update, CompanionMods.Download download) throws IOException {
+		if (update.downloadUrl() == null || update.downloadUrl().isEmpty()) {
+			throw new IOException("No download URL available for " + update.name());
+		}
+		java.nio.file.Files.createDirectories(modsDir);
+		String targetName = update.filename() != null && !update.filename().isBlank()
+				? Path.of(update.filename()).getFileName().toString()
+				: (oldFile != null ? oldFile.getFileName().toString() : "mod.jar");
+		byte[] bytes = download.get(update.downloadUrl(), 200L << 20);
+		if (update.targetSha1() != null && !update.targetSha1().isBlank()) {
+			String actualSha1 = Net.sha1(bytes);
+			if (!update.targetSha1().equalsIgnoreCase(actualSha1)) {
+				throw new IOException(targetName + " failed SHA-1 verification");
+			}
+		}
+		Path finalTarget = modsDir.resolve(targetName);
+		Path tmpTarget = modsDir.resolve(targetName + ".tmp");
+		java.nio.file.Files.write(tmpTarget, bytes);
+		if (oldFile != null && !oldFile.equals(finalTarget)) {
+			java.nio.file.Files.deleteIfExists(oldFile);
+		}
+		java.nio.file.Files.move(tmpTarget, finalTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		return true;
+	}
+
+	/**
+	 * Updates all outdated mods that have download URLs.
+	 */
+	public static synchronized int updateAll(Path modsDir, Map<Path, Update> updates, CompanionMods.Download download) {
+		int count = 0;
+		for (Map.Entry<Path, Update> entry : updates.entrySet()) {
+			Update u = entry.getValue();
+			if (u != null && !u.upToDate() && u.downloadUrl() != null && !u.downloadUrl().isBlank()) {
+				try {
+					if (installUpdate(modsDir, entry.getKey(), u, download)) {
+						count++;
+					}
+				} catch (Exception ignored) {
+				}
+			}
+		}
+		return count;
 	}
 
 	private static String str(JsonObject o, String key) {

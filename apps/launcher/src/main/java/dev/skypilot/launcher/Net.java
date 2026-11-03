@@ -122,6 +122,10 @@ public final class Net {
 		return hex("SHA-256", data);
 	}
 
+	public static String sha1(byte[] data) {
+		return hex("SHA-1", data);
+	}
+
 	public static String sha1(Path file) throws IOException {
 		try (InputStream in = Files.newInputStream(file)) {
 			MessageDigest md = MessageDigest.getInstance("SHA-1");

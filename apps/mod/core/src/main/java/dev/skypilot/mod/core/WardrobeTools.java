@@ -24,7 +24,7 @@ public final class WardrobeTools {
         a.outfits.removeIf(o->o.name.equals(label));if(a.outfits.size()>=8)throw new IllegalArgumentException("Eight outfits maximum. Remove one before saving another.");a.outfits.add(capture(label,a));
     }
     public static void sanitize(SkyPilotConfig.Appearance a){
-        if(a.favorites==null)a.favorites=new ArrayList<>();a.favorites=new ArrayList<>(a.favorites.stream().filter(Objects::nonNull).filter(id->CosmeticCatalog.ITEMS.stream().anyMatch(i->i.id().equals(id))).distinct().limit(13).toList());
+        if(a.favorites==null)a.favorites=new ArrayList<>();a.favorites=new ArrayList<>(a.favorites.stream().filter(Objects::nonNull).filter(id->CosmeticCatalog.ITEMS.stream().anyMatch(i->i.id().equals(id))).distinct().limit(CosmeticCatalog.ITEMS.size()).toList());
         if(a.outfits==null)a.outfits=new ArrayList<>();
         Map<String,Outfit> unique=new LinkedHashMap<>();
         for(var o:a.outfits){

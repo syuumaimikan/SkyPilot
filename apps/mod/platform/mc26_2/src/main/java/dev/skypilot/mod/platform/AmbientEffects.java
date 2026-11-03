@@ -31,7 +31,7 @@ final class AmbientEffects {
         for (int i = 0; i < a.ambientDensity; i++) {
             double x=p.getX()+(random.nextDouble()-.5)*10, z=p.getZ()+(random.nextDouble()-.5)*10, y=p.getY()+random.nextDouble()*3;
             BlockPos pos=BlockPos.containing(x,y,z);
-            if (!mc.level.hasChunkAt(pos)) continue;
+            if (!mc.level.isLoaded(pos)) continue;
             if (a.underwaterBubbles && p.isUnderWater() && mc.level.getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER))
                 mc.level.addParticle(ParticleTypes.BUBBLE,x,y,z,0,.015,0);
             if (a.caveDust && !p.isInWater() && !mc.level.canSeeSky(pos) && mc.level.getBlockState(pos).isAir())

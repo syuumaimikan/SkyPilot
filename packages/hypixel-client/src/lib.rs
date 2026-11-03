@@ -120,6 +120,8 @@ pub struct HypixelClient {
 struct Inner {
     http: reqwest::Client,
     config: ClientConfig,
+    api_key: std::sync::RwLock<Option<String>>,
+    hypixel_base: std::sync::RwLock<String>,
     cache: Cache<String, Bytes>,
     budget: Mutex<KeyBudget>,
     pub metrics: Metrics,
@@ -158,9 +160,13 @@ impl HypixelClient {
             .gzip(true)
             .build()
             .map_err(|e| HypixelError::Network(e.to_string()))?;
+        let api_key = std::sync::RwLock::new(config.api_key.clone());
+        let hypixel_base = std::sync::RwLock::new(config.hypixel_base.clone());
         Ok(HypixelClient {
             inner: Arc::new(Inner {
                 http,
+                api_key,
+                hypixel_base,
                 cache: Cache::builder()
                     .max_capacity(256 * 1024 * 1024)
                     .weigher(|_k: &String, v: &Bytes| v.len().min(u32::MAX as usize) as u32)
@@ -175,7 +181,45 @@ impl HypixelClient {
     }
 
     pub fn has_key(&self) -> bool {
-        self.inner.config.api_key.as_deref().is_some_and(|k| !k.trim().is_empty())
+        self.inner.api_key.read().unwrap().as_deref().is_some_and(|k| !k.trim().is_empty())
+    }
+
+    pub fn set_api_key(&self, key: Option<String>) {
+        let clean = key.and_then(|k| {
+            let s = k.trim().to_string();
+            if s.is_empty() { None } else { Some(s) }
+        });
+        *self.inner.api_key.write().unwrap() = clean;
+    }
+
+    pub fn get_api_key(&self) -> Option<String> {
+        self.inner.api_key.read().unwrap().clone()
+    }
+
+    pub fn get_base_url(&self) -> String {
+        self.inner.hypixel_base.read().unwrap().clone()
+    }
+
+    pub fn set_base_url(&self, url: String) {
+        let clean = url.trim().trim_end_matches('/').to_string();
+        if !clean.is_empty() {
+            *self.inner.hypixel_base.write().unwrap() = clean;
+        }
+    }
+
+    pub async fn verify_key(&self, key: &str) -> Result<bool, HypixelError> {
+        let trimmed = key.trim();
+        if !is_valid_uuid(trimmed) {
+            return Ok(false);
+        }
+        let base = self.get_base_url();
+        let url = format!("{}/skyblock/profiles?uuid=00000000000000000000000000000000", base.trim_end_matches('/'));
+        let resp = self.inner.http.get(&url).header("API-Key", trimmed).send().await
+            .map_err(|e| HypixelError::Network(e.to_string()))?;
+        if resp.status() == reqwest::StatusCode::FORBIDDEN {
+            return Ok(false);
+        }
+        Ok(resp.status().is_success())
     }
 
     pub fn metrics(&self) -> &Metrics {
@@ -243,11 +287,12 @@ impl HypixelClient {
         let url = if let Some(mojang) = path.strip_prefix("mojang:") {
             format!("{}/{}", self.inner.config.mojang_base, mojang)
         } else {
-            format!("{}/{}", self.inner.config.hypixel_base, path)
+            let base = self.get_base_url();
+            format!("{}/{}", base.trim_end_matches('/'), path.trim_start_matches('/'))
         };
         let mut req = self.inner.http.get(&url);
         if keyed {
-            let key = self.inner.config.api_key.clone().filter(|k| !k.trim().is_empty()).ok_or(HypixelError::MissingKey)?;
+            let key = self.inner.api_key.read().unwrap().clone().filter(|k| !k.trim().is_empty()).ok_or(HypixelError::MissingKey)?;
             // politeness + respect previous throttling
             let wait = {
                 let mut b = self.inner.budget.lock();

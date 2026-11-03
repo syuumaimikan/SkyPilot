@@ -45,6 +45,8 @@ public final class LauncherSettings {
 	public boolean joinHypixel = true;
 	/** Check for launcher updates on start. */
 	public boolean autoUpdateCheck = true;
+	/** Automatically update mods before starting the game. */
+	public boolean autoUpdateMods = true;
 
 	/** True when the next Play starts the game here (signed in, direct mode). */
 	public boolean direct(boolean signedIn) {

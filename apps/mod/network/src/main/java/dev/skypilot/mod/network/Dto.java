@@ -162,8 +162,8 @@ public final class Dto {
 	public record SkyblockNow(Mayor mayor, Mayor minister, Integer year, List<FireSale> fireSales) {
 	}
 
-	/** Latest Modrinth version of one mod file (by SHA-1); information only. */
-	public record ModUpdate(String hash, String projectId, String versionId, String versionNumber, String name, String published, boolean upToDate, String url) {
+	/** Latest Modrinth version of one mod file (by SHA-1). */
+	public record ModUpdate(String hash, String projectId, String versionId, String versionNumber, String name, String published, boolean upToDate, String url, String downloadUrl, String filename, String targetSha1) {
 	}
 
 	public record ModUpdates(List<ModUpdate> updates, long checkedAtMs, String source) {
@@ -276,5 +276,11 @@ public final class Dto {
 	public record FarmDesign(FarmSummary summary, List<FarmBlock> blocks, java.util.Map<String, Integer> blockCounts, List<Integer> layers, List<String> movement,
 			String harvestDirection, List<String> waterNotes, List<String> lightingNotes, List<FarmStep> buildSteps, double estimatedBuildMinutes,
 			Double estimatedMaterialCost) {
+	}
+
+	public record HypixelStatus(boolean configured, boolean valid, Long rateLimitRemaining, Long rateLimitLimit, String hint) {
+	}
+
+	public record SimpleOk(boolean ok, String message) {
 	}
 }

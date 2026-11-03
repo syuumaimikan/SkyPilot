@@ -359,8 +359,11 @@ public final class Features {
 	public static final Feature TOOLS_LOOKUP = f("tools.lookup", Category.TOOLS, "Item lookup", "アイテム検索",
 			"/skypilot lookup <name> opens the item's page (value, recipes, drops).", "/skypilot lookup <名前> でアイテムのページ（価値・レシピ・ドロップ）を開く。", "nr");
 	public static final Feature TOOLS_MOD_UPDATES = f("tools.mod_updates", Category.TOOLS, "Mod update check", "MODの更新確認",
-			"In the mod manager (/skypilot mods), \"Check updates\" sends the SHA-1 of your mod files to your SkyPilot server, which asks Modrinth for newer versions. Shows a link only; nothing is downloaded.",
-			"MOD管理画面（/skypilot mods）の「更新確認」で、MODファイルのSHA-1をSkyPilotサーバーへ送り、Modrinthに新しい版を問い合わせます。リンク表示のみで、ダウンロードはしません。", "n");
+			"In the mod manager (/skypilot mods), \"Check updates\" sends the SHA-1 of your mod files to your SkyPilot server, which asks Modrinth for newer versions.",
+			"MOD管理画面（/skypilot mods）の「更新確認」で、MODファイルのSHA-1をSkyPilotサーバーへ送り、Modrinthに新しい版を問い合わせます。", "nr");
+	public static final Feature TOOLS_AUTO_UPDATE_MODS = f("tools.auto_update_mods", Category.TOOLS, "Mod auto update", "MODの自動更新",
+			"Automatically downloads and applies newer mod versions from Modrinth when available.",
+			"Modrinthで新しいバージョンのMODが見つかった場合、自動的にダウンロードして更新します。", "n");
 	public static final Feature TOOLS_SESSION = f("tools.session_tracking", Category.TOOLS, "Session tracking", "セッション記録",
 			"Coins and XP gained this session (kept on this computer).", "このセッションのコインとXPを記録（このPCのみ）。", "");
 	public static final Feature TOOLS_SESSION_UPLOAD = f("tools.session_upload", Category.TOOLS, "Upload sessions", "セッション送信",

@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 pub type StoreResult<T> = anyhow::Result<T>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserRow {
     pub id: Uuid,
     pub login: Option<String>,
@@ -30,14 +30,14 @@ pub struct UserRow {
     pub lang: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SessionRow {
     pub user_id: Uuid,
     pub csrf_token: String,
     pub expires_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DeviceCodeRow {
     pub device_code_hash: String,
     pub user_code: String,
@@ -48,7 +48,7 @@ pub struct DeviceCodeRow {
     pub last_poll_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DeviceTokenRow {
     pub id: String,
     pub user_id: Uuid,
@@ -58,7 +58,7 @@ pub struct DeviceTokenRow {
     pub revoked: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PushSubscription {
     pub endpoint: String,
     pub p256dh: String,
@@ -66,7 +66,7 @@ pub struct PushSubscription {
 }
 
 /// Raw Hypixel payloads of the last analysed profile (gzip-compressed JSON).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RawProfile {
     pub minecraft_uuid: String,
     pub username: String,

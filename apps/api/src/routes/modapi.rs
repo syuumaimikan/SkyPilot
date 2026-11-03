@@ -509,6 +509,81 @@ pub async fn plan(State(state): State<Arc<AppState>>, jar: CookieJar, headers: H
     }))
 }
 
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ModAnalyzeRequest {
+    pub username: Option<String>,
+    pub profile_id: Option<String>,
+    pub goal: Option<String>,
+}
+
+pub async fn analyze_mod(
+    State(state): State<Arc<AppState>>,
+    jar: CookieJar,
+    headers: HeaderMap,
+    Query(q): Query<HudQuery>,
+    Json(body): Json<Option<ModAnalyzeRequest>>,
+) -> ApiResult<Json<ModPlan>> {
+    let user = auth::any_user(&state, &jar, &headers).await?;
+    let lang = AppState::lang_of(&user, q.lang.as_deref());
+    let req = body.unwrap_or_default();
+    let username = req
+        .username
+        .as_deref()
+        .or(user.minecraft_name.as_deref())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| AppError::bad_request("username is required"))?;
+
+    let goal_text = req.goal.as_deref().unwrap_or("Overall Progression").trim();
+    let goal_text = if goal_text.is_empty() { "Overall Progression" } else { goal_text };
+
+    let analyze_req = skypilot_protocol::goals::AnalyzeRequest {
+        username: username.to_string(),
+        goal: goal_text.to_string(),
+        secondary_goals: Vec::new(),
+        play_style: user.play_style,
+        profile_id: req.profile_id.clone(),
+        budget: user.budget,
+    };
+
+    let resp = crate::routes::analyze::perform_analysis(&state, user.id, &analyze_req, lang).await?;
+    let registry = state.registry();
+    let at = AppState::now_ms();
+    let goals = resp
+        .goals
+        .iter()
+        .map(|g| ModPlanGoal {
+            title: g.roadmap.title.clone(),
+            progress: g.roadmap.overall_progress,
+            remaining_cost: g.roadmap.remaining_cost,
+            remaining_hours: g.roadmap.remaining_hours,
+            steps: g
+                .roadmap
+                .steps
+                .iter()
+                .map(|s| ModPlanStep {
+                    title: s.title.clone(),
+                    detail: s.detail.clone(),
+                    status: enum_name(&s.status),
+                    progress: s.progress,
+                    cost: s.estimated_cost,
+                    hours: s.estimated_hours,
+                })
+                .collect(),
+        })
+        .collect();
+    let actions = resp.actions.iter().take(10).map(|a| plan_action(&registry, a, lang)).collect();
+    Ok(Json(ModPlan {
+        profile: Some(format!("{} · {}", resp.analysis.player.username, resp.analysis.cute_name)),
+        analyzed_at_ms: at,
+        goals,
+        actions,
+        warnings: resp.warnings,
+        message: None,
+    }))
+}
+
 #[derive(Deserialize)]
 pub struct IconQuery {
     pub ids: String,

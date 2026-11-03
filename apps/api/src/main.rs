@@ -7,6 +7,7 @@
 //!   skypilot-api healthcheck  exit 0 when the local server answers /api/health (containers)
 
 mod auth;
+mod autostart;
 mod bus;
 mod config;
 mod error;
@@ -49,8 +50,9 @@ async fn open_store(config: &Config) -> anyhow::Result<Arc<dyn Store>> {
             Ok(Arc::new(pg))
         }
         None => {
-            tracing::warn!("DATABASE_URL not set: using in-memory store (data is lost on restart)");
-            Ok(Arc::new(store::memory::MemoryStore::default()))
+            let persist_path = config.root.join("data").join("cache").join("store.json");
+            tracing::info!(path = %persist_path.display(), "DATABASE_URL not set: using persistent file-backed memory store");
+            Ok(Arc::new(store::memory::MemoryStore::with_file_persistence(persist_path)))
         }
     }
 }
@@ -77,15 +79,44 @@ fn load_dotenv() {
     }
 }
 
+#[cfg(windows)]
+unsafe extern "system" {
+    fn FreeConsole() -> i32;
+}
+
 fn main() -> anyhow::Result<()> {
     load_dotenv();
     tokio::runtime::Builder::new_multi_thread().enable_all().build()?.block_on(run())
 }
 
 async fn run() -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=warn,sqlx=warn".into()))
-        .init();
+    #[cfg(windows)]
+    if std::env::var_os("SKYPILOT_DETACH").is_some() {
+        unsafe {
+            FreeConsole();
+        }
+    }
+
+    let log_file = std::env::var_os("SKYPILOT_LOG_FILE").map(std::path::PathBuf::from);
+    if let Some(path) = log_file {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(file) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+            tracing_subscriber::fmt()
+                .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=warn,sqlx=warn".into()))
+                .with_writer(file)
+                .init();
+        } else {
+            tracing_subscriber::fmt()
+                .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=warn,sqlx=warn".into()))
+                .init();
+        }
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=warn,sqlx=warn".into()))
+            .init();
+    }
     if std::env::args().nth(1).as_deref() == Some("healthcheck") {
         let bind = std::env::var("API_BIND").unwrap_or_else(|_| "0.0.0.0:8080".into());
         let port = bind.rsplit(':').next().unwrap_or("8080");
@@ -95,6 +126,42 @@ async fn run() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     let paths = DataPaths::from_root(&config.root);
     let cmd = std::env::args().nth(1).unwrap_or_else(|| "serve".into());
+
+    if cmd == "autostart" {
+        let sub = std::env::args().nth(2).unwrap_or_else(|| "status".into());
+        match sub.as_str() {
+            "enable" => {
+                let status = autostart::set_enabled(true, &config.root)?;
+                println!("{}", serde_json::to_string_pretty(&status)?);
+            }
+            "disable" => {
+                let status = autostart::set_enabled(false, &config.root)?;
+                println!("{}", serde_json::to_string_pretty(&status)?);
+            }
+            _ => {
+                let status = autostart::status();
+                println!("{}", serde_json::to_string_pretty(&status)?);
+            }
+        }
+        return Ok(());
+    }
+
+    if cmd == "apis" {
+        let sub = std::env::args().nth(2).unwrap_or_else(|| "list".into());
+        match sub.as_str() {
+            "guide" | "hypixel-app" => {
+                let guide = routes::settings::get_hypixel_app_guide().await.map_err(|e| anyhow::anyhow!(e.message))?;
+                println!("{}", serde_json::to_string_pretty(&guide.0)?);
+            }
+            _ => {
+                println!("SkyPilot APIs CLI: configure individual keys via .env or GUI /api/settings/apis");
+                println!("Usage:");
+                println!("  skypilot-api apis guide               - Hypixel Persistent Key application package & instructions");
+                println!("  skypilot-api apis list                - Show available API integrations");
+            }
+        }
+        return Ok(());
+    }
 
     if cmd == "sync-data" {
         skypilot_data::sync::sync_hypixel_resources(&paths).await?;
@@ -188,12 +255,18 @@ async fn run() -> anyhow::Result<()> {
     }
     jobs::spawn_data_refresh(state.clone(), paths);
 
+    let pid_path = config.root.join("data").join("server.pid");
+    let _ = std::fs::create_dir_all(config.root.join("data"));
+    let _ = std::fs::write(&pid_path, std::process::id().to_string());
+
     let app = routes::router(state.clone());
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!(addr = %config.bind, "SkyPilot API listening");
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async {
+    let res = axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async {
         let _ = tokio::signal::ctrl_c().await;
     })
-    .await?;
+    .await;
+    let _ = std::fs::remove_file(&pid_path);
+    res?;
     Ok(())
 }

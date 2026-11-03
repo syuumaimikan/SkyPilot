@@ -411,13 +411,43 @@ final class MenuScreen extends Screen {
 		}
 	}
 
+	private void analyzeProfile(Lang l) {
+		SkyPilot sp = SkyPilot.get();
+		ApiClient api = sp.api();
+		if (api == null || !sp.linked()) {
+			planError = l.t("Link SkyPilot first: /skypilot link", "先にSkyPilotと連携してください: /skypilot link");
+			dataVersion++;
+			return;
+		}
+		String username = minecraft.player != null ? minecraft.player.getScoreboardName() : null;
+		planError = l.t("Analyzing profile from Hypixel…", "Hypixelからプロフィールを分析中…");
+		dataVersion++;
+		api.analyzeProfile(username, null, null, l.code()).whenComplete((p, err) -> minecraft.execute(() -> {
+			if (p != null) {
+				plan = p;
+				planError = null;
+			} else {
+				planError = errorText(err);
+			}
+			dataVersion++;
+		}));
+	}
+
 	private void buildNow(Lang l) {
 		if (plan == null) {
 			notLinkedOrError(l, planError);
+			if (SkyPilot.get().linked()) {
+				gap(4);
+				link("▶ " + l.t("Analyze Profile Now", "プロフィールを今すぐ分析"), Ui.GREEN, () -> analyzeProfile(l), l.t("Fetch live Hypixel SkyBlock data and generate recommendations", "Hypixel SkyBlockのデータを取得して今やるべきことを計算"));
+			}
 			return;
 		}
+		link("🔄 " + l.t("Re-analyze / Refresh Profile", "プロフィールを再分析 / 最新状態に更新"), Ui.AQUA, () -> analyzeProfile(l), l.t("Re-fetch profile from Hypixel", "Hypixelからプロフィールを再取得"));
+		gap(2);
 		if (plan.message() != null) {
 			para(plan.message(), Ui.YELLOW, 0);
+			gap(4);
+			link("▶ " + l.t("Analyze Profile Now", "プロフィールを今すぐ分析"), Ui.GREEN, () -> analyzeProfile(l), l.t("Fetch live Hypixel SkyBlock data and generate recommendations", "Hypixel SkyBlockのデータを取得して今やるべきことを計算"));
 			return;
 		}
 		if (plan.profile() != null) para(plan.profile() + " · " + l.t("analysed ", "分析 ") + Text.duration(Math.max(0, System.currentTimeMillis() - plan.analyzedAtMs())) + l.t(" ago", "前"), Ui.GRAY, 0);

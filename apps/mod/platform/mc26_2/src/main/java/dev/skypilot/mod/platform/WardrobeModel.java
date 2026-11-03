@@ -39,7 +39,7 @@ final class WardrobeModel {
         box(cubes,0,1.27,.13,.10,.12,.015,0x55D6D2);
         for(var v:CosmeticMesh.build(a))box(cubes,v.x(),v.y(),v.z(),v.size(),v.size(),v.size(),v.color());
         Model.Simple model=new Model.Simple(new ModelPart(cubes,Map.of()),RenderTypes::entityCutout);
-        if(CACHE.size()>=32)CACHE.remove(CACHE.keySet().iterator().next());CACHE.put(key,model);return model;
+        if(CACHE.size()>=128)CACHE.remove(CACHE.keySet().iterator().next());CACHE.put(key,model);return model;
     }
     private static void uploadPalette(){
             NativeImage image=new NativeImage(16,16,false);

@@ -44,7 +44,7 @@ pub async fn status(State(state): State<Arc<AppState>>) -> Json<Value> {
             "loadedAtMs": reg.meta.loaded_at_ms,
         },
         "translation": state.translator.status(),
-        "llm": {"enabled": state.llm.is_some(), "model": state.llm.as_ref().map(|c| c.model.clone())},
+        "llm": {"enabled": state.llm.read().unwrap().is_some(), "model": state.llm.read().unwrap().as_ref().map(|c| c.model.clone())},
         "store": state.store.kind(),
         "eventBus": state.bus.kind(),
         "webPush": state.push.is_some(),
@@ -95,7 +95,8 @@ pub async fn chat(State(state): State<Arc<AppState>>, ConnectInfo(peer): Connect
     let ans = tokio::task::block_in_place(|| assistant::answer(&msg, last.as_ref().map(|l| &l.0), lang, &price_lookup, &req_lookup));
     let mut text = ans.text.clone();
     let mut llm_used = false;
-    if let (Some(llm), true) = (&state.llm, ans.grounded) {
+    let llm_opt = state.llm.read().unwrap().clone();
+    if let (Some(ref llm), true) = (llm_opt.as_ref(), ans.grounded) {
         let system = format!(
             "You are SkyPilot, a Hypixel SkyBlock progression assistant. Rewrite the DRAFT answer to the user's question as a short, friendly reply in {}. Use ONLY the facts in DRAFT and FACTS: do not add or change any number, price, requirement, recipe, drop rate or XP value, and do not add advice that is not in them. If they do not answer the question, reply exactly with \"{}\".",
             if lang == Lang::Ja { "Japanese" } else { "English" },
