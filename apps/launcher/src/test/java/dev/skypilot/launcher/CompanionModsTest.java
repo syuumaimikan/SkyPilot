@@ -40,6 +40,20 @@ class CompanionModsTest {
         for(var e:catalog.mods()){assertTrue(e.size()>0);assertTrue(e.sha512().matches("[a-f0-9]{128}"));assertTrue(e.file().endsWith(".jar"));assertFalse(e.file().contains("/"));assertFalse(e.file().contains("\\"));assertNotNull(e.version());assertNotNull(e.license());assertTrue(e.url().startsWith("https://cdn.modrinth.com/"));}
         var iris=catalog.mods().stream().filter(e->e.id().equals("iris")).findFirst().orElseThrow();assertEquals(List.of("sodium"),iris.requires());
     }
+    @Test void modPinnedSkyblockerMatchesTheLauncherCatalog() {
+        var pin=dev.skypilot.mod.core.Companions.SKYBLOCKER;
+        var e=CompanionMods.catalog().mods().stream().filter(m->m.id().equals("skyblocker")).findFirst().orElseThrow();
+        assertEquals(e.version(),pin.version());assertEquals(e.file(),pin.file());assertEquals(e.url(),pin.url());assertEquals(e.sha512(),pin.sha512());assertEquals(e.size(),pin.size());
+        assertFalse(dev.skypilot.mod.core.Companions.verified(pin,new byte[]{1,2,3}));
+    }
+    @Test void skyblockerAutoUpdateSwitchIsSharedWithTheModAndDefaultsOn() throws Exception {
+        assertTrue(Instance.skyblockerAutoUpdate(temp));
+        Instance.setSkyblockerAutoUpdate(temp,false);
+        assertFalse(Instance.skyblockerAutoUpdate(temp));
+        assertFalse(Instance.config(temp).skyblockerAutoUpdate);
+        Instance.setSkyblockerAutoUpdate(temp,true);
+        assertTrue(Instance.config(temp).skyblockerAutoUpdate);
+    }
     @Test void installsOnceAndDoesNotOverwriteDisabledOrDifferentCopies() throws Exception {
         byte[] bytes=jar("testmod","26.2");var e=entry("testmod",bytes);var cat=new CompanionMods.Catalog("26.2",List.of(e));
         assertEquals(1,CompanionMods.install(cat,temp,List.of(e),Map.of("minecraft","26.2"),(u,m)->bytes));

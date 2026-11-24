@@ -3,7 +3,6 @@
 
 use skypilot_protocol::advisor::{AdvisorReport, MoneyMethodEstimate, Tone};
 use skypilot_protocol::common::{Confidence, DataSource, Metric, Range, RiskLevel};
-use skypilot_protocol::market::FlipQuery;
 
 use super::*;
 use crate::ctx::{Ctx, fmt_coins};
@@ -18,6 +17,9 @@ fn risk_of(s: &str) -> RiskLevel {
         _ => RiskLevel::Medium,
     }
 }
+
+/// Play time per day assumed for AH flipping estimates (buying and relisting need you online).
+pub const FLIP_HOURS_PER_DAY: f64 = 2.0;
 
 pub fn rank(ctx: &Ctx) -> Vec<MoneyMethodEstimate> {
     let mut out = Vec::new();
@@ -74,10 +76,27 @@ pub fn rank(ctx: &Ctx) -> Vec<MoneyMethodEstimate> {
             "dungeons" => (None, true, None, None, ctx.t("Chest profit depends on RNG and chest purchases; not modelled.", "チェスト利益はRNGと購入判断に依存するため未モデル化。"), 0.2),
             "ah_flip" => match ctx.market {
                 Some(mk) => {
-                    let list = mk.flips(&FlipQuery { max_budget: Some(liquid.max(1.0)), min_profit: None, min_roi: None, min_confidence: Some(0.6), max_risk: Some(RiskLevel::Medium), search: None, limit: Some(30) }, true);
-                    let n = list.flips.len();
-                    let profit: f64 = list.flips.iter().take(5).map(|f| f.expected_net_profit * f.probability_of_sale).sum();
-                    (None, true, None, Some(liquid), ctx.t(format!("{n} live opportunities within your purse; top-5 expected profit {}", fmt_coins(profit)), format!("所持金内のライブ機会{n}件、上位5件の期待利益{}", fmt_coins(profit))), if n > 0 { 0.5 } else { 0.2 })
+                    // the snowball basket: diversified, calibrated on SkyPilot's own flip record
+                    let plan = mk.snowball(liquid.max(1.0), FLIP_HOURS_PER_DAY, 7);
+                    let n = plan.picks.len();
+                    if n == 0 || plan.cycles_per_day <= 0.0 || plan.expected_profit_per_cycle <= 0.0 {
+                        (None, true, None, Some(liquid), ctx.t("No flip fits your coins right now", "今の所持金に合うフリップはありません"), 0.2)
+                    } else {
+                        // coins per hour you play: the day's cycles (incl. one overnight) over the hours played
+                        let v = plan.expected_profit_per_cycle * plan.cycles_per_day / FLIP_HOURS_PER_DAY;
+                        let calibrated = plan.calibration_trials > 0;
+                        (
+                            Some(Range { low: v * 0.5, high: v }),
+                            true,
+                            None,
+                            Some(plan.deployed),
+                            ctx.t(
+                                format!("Basket of {n} flips, {} expected per cycle, {:.1} cycles a day at {FLIP_HOURS_PER_DAY:.0}h play{}", fmt_coins(plan.expected_profit_per_cycle), plan.cycles_per_day, if calibrated { format!(" (calibrated on {} past flips)", plan.calibration_trials) } else { String::new() }),
+                                format!("{n}件のバスケット、1サイクル期待値{}、1日{FLIP_HOURS_PER_DAY:.0}時間で{:.1}サイクル{}", fmt_coins(plan.expected_profit_per_cycle), plan.cycles_per_day, if calibrated { format!("（過去{}件の実績で補正）", plan.calibration_trials) } else { String::new() }),
+                            ),
+                            if calibrated { 0.55 } else { 0.4 },
+                        )
+                    }
                 }
                 None => (None, true, None, None, ctx.t("Market collector not running", "マーケット収集が停止中"), 0.1),
             },

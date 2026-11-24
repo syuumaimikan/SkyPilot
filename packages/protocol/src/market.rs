@@ -86,6 +86,100 @@ pub struct FlipOpportunity {
     pub comparables: u32,
     /// "/viewauction <uuid>" helper for copy-paste (SkyPilot never executes it).
     pub view_command: String,
+    /// How flips like this one (same comparable key) actually did in SkyPilot's own record.
+    #[serde(default)]
+    pub track_record: Option<FlipTrackRecord>,
+}
+
+/// One flip in a snowball basket.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SnowballPick {
+    pub auction_id: String,
+    pub item_id: String,
+    pub item_name: String,
+    pub price_key: String,
+    pub buy_price: f64,
+    pub recommended_sell: f64,
+    pub expected_net_profit: f64,
+    pub probability_of_sale: f64,
+    /// p(sale) x profit minus (1 - p) x the cost of a miss (fees + a 3% markdown to relist).
+    pub expected_value: f64,
+    /// Expected hours until it sells (upper end of the sell-time range).
+    pub sell_hours: f64,
+    pub view_command: String,
+    pub track_record: Option<FlipTrackRecord>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SnowballDay {
+    pub day: u32,
+    pub capital: f64,
+    pub profit: f64,
+    /// Coins that could be put to work that day (capped by what the market offers).
+    pub deployed: f64,
+}
+
+/// A capital level and what it opens up in today's market.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SnowballMilestone {
+    pub capital: f64,
+    /// Projected day the capital is reached (None = not within the projection).
+    pub day: Option<u32>,
+    /// Current flips affordable at this capital (one per comparable key, at most half of it each).
+    pub affordable_flips: u32,
+    pub best_expected_value: f64,
+}
+
+/// Compounding plan for AH flipping: a diversified basket for the current capital and a
+/// projection of reinvesting the expected value. A model, not a promise.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SnowballPlan {
+    pub capital: f64,
+    pub hours_per_day: f64,
+    pub days: u32,
+    pub picks: Vec<SnowballPick>,
+    /// Coins spent on the basket and kept back for listing fees.
+    pub deployed: f64,
+    pub reserve: f64,
+    pub expected_profit_per_cycle: f64,
+    /// expected_profit_per_cycle / deployed
+    pub return_per_cycle: f64,
+    pub cycle_hours: f64,
+    pub cycles_per_day: f64,
+    /// Total buy value of all qualifying flips listed right now (one per key): how much the
+    /// market can absorb per cycle.
+    pub market_capacity: f64,
+    pub projection: Vec<SnowballDay>,
+    pub milestones: Vec<SnowballMilestone>,
+    /// SkyPilot's record of past candidates (hits / trials) the probabilities are calibrated on.
+    pub calibration_trials: u32,
+    pub calibration_hits: u32,
+    pub assumptions: Vec<String>,
+    pub freshness: Freshness,
+}
+
+/// Outcome of earlier flip candidates with the same comparable key: did a comparable item sell
+/// at the recommended price within 24 hours after the candidate was seen?
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct FlipTrackRecord {
+    pub trials: u32,
+    pub hits: u32,
+    pub hit_rate: f64,
+    pub median_sell_minutes: Option<f64>,
+    /// Mean net profit actually reached (hit at target, otherwise a forced exit).
+    pub average_realized_profit: Option<f64>,
+    /// Hours of history the record covers.
+    pub window_hours: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

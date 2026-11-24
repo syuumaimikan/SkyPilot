@@ -307,8 +307,11 @@ final class ModManager {
 		Thread.ofVirtual().start(() -> {
 			int count = 0;
 			int failed = 0;
+			boolean skyblockerAuto = SkyPilot.get().config().skyblockerAutoUpdate;
 			for (Entry e : entries) {
 				if (e.file() == null) continue;
+				// Skyblocker auto-update off = keep the installed copy
+				if (!skyblockerAuto && e.id().equals("skyblocker")) continue;
 				String h = sha1(e.file());
 				if (h == null) continue;
 				dev.skypilot.mod.network.Dto.ModUpdate u = updates.get(h);
@@ -349,26 +352,43 @@ final class ModManager {
 		});
 	}
 
+	/**
+	 * Installs SkyPilot's pinned Skyblocker build. The download must match the pinned size and
+	 * SHA-512 ({@link dev.skypilot.mod.core.Companions#SKYBLOCKER}); otherwise nothing changes.
+	 */
 	static void updateSkyblocker(java.util.function.Consumer<String> callback) {
 		Thread.ofVirtual().start(() -> {
+			var pin = dev.skypilot.mod.core.Companions.SKYBLOCKER;
 			try {
 				Path dir = modsDir();
 				Files.createDirectories(dir);
-				String url = "https://cdn.modrinth.com/data/y6DuFGwJ/versions/Kegf578l/skyblocker-6.10.4%2B26.2.jar";
-				String fileName = "skyblocker-6.10.4+26.2.jar";
-				var client = java.net.http.HttpClient.newHttpClient();
-				var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).build();
-				byte[] bytes = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofByteArray()).body();
-				Path target = dir.resolve(fileName);
-				Path temp = dir.resolve(fileName + ".tmp");
+				var client = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(15))
+						.followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
+				var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(pin.url()))
+						.timeout(java.time.Duration.ofMinutes(2)).header("User-Agent", "SkyPilot-Mod/0.1.0").build();
+				var res = client.send(req, java.net.http.HttpResponse.BodyHandlers.ofInputStream());
+				if (res.statusCode() != 200) throw new IOException("HTTP " + res.statusCode());
+				byte[] bytes;
+				try (InputStream in = res.body()) {
+					bytes = in.readNBytes((int) pin.size() + 1);
+				}
+				if (!dev.skypilot.mod.core.Companions.verified(pin, bytes)) {
+					callback.accept("Skyblocker のダウンロードが検証（サイズ・SHA-512）に一致しなかったため、何も変更していません。");
+					return;
+				}
+				Path target = dir.resolve(pin.file());
+				Path temp = dir.resolve(pin.file() + ".tmp");
 				Files.write(temp, bytes);
 				try (var stream = Files.list(dir)) {
-					for (Path p : stream.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).startsWith("skyblocker") && !f.equals(target)).toList()) {
+					for (Path p : stream.filter(f -> {
+						String n = f.getFileName().toString().toLowerCase(Locale.ROOT);
+						return n.startsWith("skyblocker") && (n.endsWith(".jar") || n.endsWith(".jar.disabled")) && !f.equals(target);
+					}).toList()) {
 						Files.deleteIfExists(p);
 					}
 				}
 				Files.move(temp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-				callback.accept("Skyblocker を最新版に更新しました。反映するには Minecraft を再起動してください。");
+				callback.accept("Skyblocker " + pin.version() + " を導入しました（SHA-512確認済み）。反映するには Minecraft を再起動してください。");
 			} catch (Exception ex) {
 				callback.accept("更新に失敗しました: " + ex.getMessage());
 			}

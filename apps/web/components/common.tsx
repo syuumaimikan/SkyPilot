@@ -120,6 +120,7 @@ export function SourceBadge({ s }: { s: DataSource }) {
     SKY_PILOT_HEURISTIC: ["Heuristic", "推定", "SkyPilot heuristic estimate - not an official value"],
     MARKET: ["Market", "マーケット", "Live Auction House / Bazaar data"],
     CLIENT_MOD: ["Mod", "MOD", "Reported by the SkyPilot client mod"],
+    HYPIXEL_STATUS_PAGE: ["Status page", "ステータス", "Hypixel's public status page (status.hypixel.net)"],
   };
   const [en, ja, tip] = map[s];
   return (

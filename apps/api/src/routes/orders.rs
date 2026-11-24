@@ -58,6 +58,29 @@ fn auction_order(a: &serde_json::Value, now: i64) -> serde_json::Value {
         "price":a["starting_bid"].as_f64().unwrap_or(0.0), "status":status,
         "auctionId":a["uuid"].as_str(), "endsAtMs":end, "highestBid":bid, "bin":bin, "claimed":claimed})
 }
+/// The player's own auctions as listing rows. Auctions whose coins or item were already
+/// collected (`claimed`) are history, not listings, so they are dropped; the count is kept.
+/// Still running auctions come first, then the ones waiting to be collected in game.
+fn auction_rows(v: &serde_json::Value, now: i64) -> (Vec<serde_json::Value>, usize) {
+    let mut rows: Vec<serde_json::Value> = v["auctions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|a| auction_order(a, now))
+        .collect();
+    let before = rows.len();
+    rows.retain(|r| r["status"] != "CLAIMED");
+    let claimed = before - rows.len();
+    let rank = |r: &serde_json::Value| match r["status"].as_str() {
+        Some("ACTIVE") => 0,
+        Some("SOLD") => 1,
+        Some("EXPIRED") => 2,
+        _ => 3,
+    };
+    rows.sort_by_key(|r| (rank(r), r["endsAtMs"].as_i64().unwrap_or(i64::MAX)));
+    rows.truncate(100);
+    (rows, claimed)
+}
 /// Only a linked device can upload observations; identity always comes from its token.
 pub async fn save(
     State(state): State<Arc<AppState>>,
@@ -98,14 +121,8 @@ pub async fn get(
         {
             match state.hypixel.player_auctions(uuid).await {
                 Ok(v) => {
-                    let rows: Vec<_> = v["auctions"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .take(100)
-                        .map(|a| auction_order(a, now))
-                        .collect();
-                    let snapshot = json!({"orders":rows,"observedAtMs":now,"source":"HYPIXEL_API"});
+                    let (rows, claimed) = auction_rows(&v, now);
+                    let snapshot = json!({"orders":rows,"observedAtMs":now,"source":"HYPIXEL_API","claimedHidden":claimed});
                     state.store.save_orders(user.id, "ah", &snapshot).await?;
                     ah = Some(snapshot);
                 }
@@ -143,6 +160,23 @@ mod tests {
         a["end"] = json!(null);
         a["bin"] = json!(false);
         assert_eq!(auction_order(&a, now)["status"], "UNKNOWN");
+    }
+    #[test]
+    fn claimed_auctions_are_dropped_and_active_listings_come_first() {
+        let now = 10_000;
+        let v = json!({"auctions":[
+            {"uuid":"sold","item_name":"Sold by bid","end":5_000,"highest_bid_amount":900,"bin":false,"claimed":false,"starting_bid":100},
+            {"uuid":"done","item_name":"Already collected","end":4_000,"highest_bid_amount":500,"bin":true,"claimed":true,"starting_bid":500},
+            {"uuid":"live","item_name":"Still listed","end":90_000,"highest_bid_amount":0,"bin":true,"claimed":false,"starting_bid":700},
+            {"uuid":"bid","item_name":"Running auction with bids","end":20_000,"highest_bid_amount":300,"bin":false,"claimed":false,"starting_bid":100},
+            {"uuid":"old","item_name":"Expired","end":3_000,"highest_bid_amount":0,"bin":false,"claimed":false,"starting_bid":100}
+        ]});
+        let (rows, claimed) = auction_rows(&v, now);
+        assert_eq!(claimed, 1);
+        let ids: Vec<_> = rows.iter().map(|r| r["auctionId"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["bid", "live", "sold", "old"]);
+        let status: Vec<_> = rows.iter().map(|r| r["status"].as_str().unwrap()).collect();
+        assert_eq!(status, ["ACTIVE", "ACTIVE", "SOLD", "EXPIRED"]);
     }
     #[test]
     fn rejects_invalid_prices_and_status() {

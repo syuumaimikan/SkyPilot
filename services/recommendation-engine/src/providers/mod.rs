@@ -22,6 +22,7 @@ pub mod museum;
 pub mod pets;
 pub mod rift;
 pub mod slayer;
+pub mod today;
 
 use skypilot_protocol::advisor::{AdvisorReport, AdvisorSection, Cell, Table, Tone};
 use skypilot_protocol::common::{DataSource, Freshness, Metric};
@@ -86,6 +87,7 @@ pub fn all() -> Vec<Box<dyn Provider>> {
         Box::new(daily::DailyProvider),
         Box::new(events::EventsProvider),
         Box::new(liquidation::LiquidationProvider),
+        Box::new(today::TodayProvider),
     ]
 }
 

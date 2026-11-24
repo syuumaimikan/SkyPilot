@@ -119,12 +119,20 @@ pub fn scan(
             }
             let Some(sell_minutes) = fair.expected_sell_minutes else { continue };
             let position = if next_other.is_finite() && unit_sell <= next_other { 1.0 } else { 0.6 };
-            let p_sale = (fair.liquidity * position * (0.5 + 0.5 * fair.confidence.score)).clamp(0.05, 0.98);
+            let model_p = (fair.liquidity * position * (0.5 + 0.5 * fair.confidence.score)).clamp(0.05, 0.98);
+            // blend in how flips with this key really did (SkyPilot's own record)
+            let adj = state.calibration.adjust(&key, model_p);
+            let p_sale = adj.p_sale;
             let manipulation = manipulation::check(&listings, &sales, &fair, unit_buy, now_ms);
             let risk = risk_level(fair.volatility.unwrap_or(0.5), fair.confidence.score, manipulation.suspicious, buy);
             let mut confidence = fair.confidence.clone();
             if manipulation.suspicious {
                 confidence = Confidence::from_score(confidence.score * 0.3, [confidence.reasons.clone(), manipulation.flags.clone()].concat());
+            }
+            if let Some(reason) = adj.reason.clone() {
+                let mut reasons = confidence.reasons.clone();
+                reasons.push(reason);
+                confidence = Confidence::from_score((confidence.score * adj.confidence_factor).clamp(0.0, 1.0), reasons);
             }
             if let Some(t) = falling {
                 let mut reasons = confidence.reasons.clone();
@@ -154,7 +162,11 @@ pub fn scan(
                 expected_net_profit: profit,
                 roi,
                 probability_of_sale: p_sale,
-                expected_sell_minutes: Range { low: sell_minutes.low, high: sell_minutes.high },
+                expected_sell_minutes: match adj.sell_minutes {
+                    // observed sell times for this key replace the model's range once there are enough
+                    Some((lo, hi)) => Range { low: lo, high: hi.max(lo) },
+                    None => Range { low: sell_minutes.low, high: sell_minutes.high },
+                },
                 risk,
                 manipulation,
                 confidence,
@@ -163,6 +175,7 @@ pub fn scan(
                 seen_at_ms: now_ms,
                 comparables: fair.comparables_used,
                 view_command: format!("/viewauction {}", listing.auction_id),
+                track_record: adj.track.clone(),
             };
             opp.score = strategy.score(&opp);
             candidates.push(CandidateRecord {
@@ -176,6 +189,8 @@ pub fn scan(
                 expected_profit: profit,
                 sales_per_day: fair.sales_per_day,
                 confidence: opp.confidence.score,
+                count: listing.count.max(1),
+                p_sale: Some(model_p),
             });
             out.push(opp);
         }

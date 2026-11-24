@@ -46,7 +46,7 @@ category = "Market"
 estimator = "ah_flip"
 risk = "MEDIUM"
 requirements = ["purse>=5000000"]
-link = "/market/flips"
+link = "/market/flips?tab=snowball"
 
 [[methods]]
 id = "bazaar_flipping"

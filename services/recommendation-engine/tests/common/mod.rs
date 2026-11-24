@@ -64,6 +64,7 @@ pub fn ctx(w: &'static World, lang: Lang) -> Ctx<'static> {
         budget: None,
         now_ms: 1_791_167_060_000,
         lang,
+        live: None,
     }
 }
 

@@ -13,6 +13,7 @@ import { useAnalyze, useWorkspace } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 import { localizeWarning } from "@/lib/warnings";
 import { DashboardHero, QuickAccess } from "@/components/dashboard-hero";
+import { CompletionCard } from "@/components/completion";
 
 const STAGES: Record<GameStage, [string, string]> = {
   EARLY_GAME: ["Early game", "序盤"],
@@ -143,6 +144,10 @@ function Overview({ r, ws }: { r: AnalyzeResponse; ws: WorkspaceState }) {
               );
             })}
           </div>
+        </Section>
+
+        <Section title={t("Completion", "達成率")} description={t("How much of each measurable part of SkyBlock you have done, in %.", "SkyBlock の測れる分野ごとに、どこまで達成したかを % で表示します。")}>
+          <CompletionCard />
         </Section>
 
         <Section title={t("Progression", "進行度")} description={t("Not networth-only: each area is scored from your actual progress.", "資産だけでなく、各分野の実際の進行度からスコア化しています。")}>

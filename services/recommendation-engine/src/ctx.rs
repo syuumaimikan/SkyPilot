@@ -29,6 +29,16 @@ impl Lang {
     }
 }
 
+/// Live information from outside the profile and the market (Hypixel's status page, SkyBlock
+/// news, the server's own API key state). Only the "today" guide reads it; None elsewhere.
+#[derive(Debug, Clone, Default)]
+pub struct LiveSignals {
+    pub server: Option<skypilot_protocol::mod_api::ModServerStatus>,
+    pub news: Vec<skypilot_protocol::mod_api::ModNewsItem>,
+    /// Hypixel answered 403 for the server's key after its last success.
+    pub key_rejected: bool,
+}
+
 pub struct Ctx<'a> {
     pub registry: &'a Registry,
     pub oracle: &'a dyn PriceOracle,
@@ -39,6 +49,7 @@ pub struct Ctx<'a> {
     pub budget: Option<f64>,
     pub now_ms: i64,
     pub lang: Lang,
+    pub live: Option<&'a LiveSignals>,
 }
 
 impl<'a> Ctx<'a> {

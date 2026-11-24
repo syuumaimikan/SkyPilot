@@ -155,6 +155,8 @@ pub enum DataSource {
     Market,
     /// Data reported by the SkyPilot client mod from the game client.
     ClientMod,
+    /// Hypixel's public status page (status.hypixel.net): maintenance and incidents.
+    HypixelStatusPage,
 }
 
 /// A labelled before/after metric for cards like "MP 437 → 481".

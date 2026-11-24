@@ -217,6 +217,9 @@ public final class Features {
 	public static final Feature STATUS_ALERTS = f("hud.maintenance_alerts", Category.HUD, "Maintenance alerts", "メンテナンス通知",
 			"A notice when a SkyBlock maintenance is scheduled, 30 minutes before it, when it starts and when SkyBlock is back; also login / server incidents.",
 			"SkyBlockのメンテナンス予定・30分前・開始・再開時と、ログインやサーバーの障害を通知します。", "nr");
+	public static final Feature HUD_COMPLETION = f("hud.completion", Category.HUD, "Profile completion %", "プロフィール達成率",
+			"Your profile's completion in % and its lowest part, from your last SkyPilot analysis.",
+			"最後のSkyPilot分析から、プロフィール達成率（%）といちばん低い分野を表示します。", "n");
 	public static final Feature HUD_EFFECTS = f("hud.effects", Category.HUD, "Active effects", "有効な効果",
 			"The tab list's \"Active Effects\" widget.", "タブリストの「Active Effects」欄。", "");
 	public static final Feature HUD_TIMERS = f("hud.timers", Category.HUD, "Timers widget", "タイマー欄",

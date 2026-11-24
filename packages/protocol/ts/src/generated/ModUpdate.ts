@@ -11,4 +11,4 @@ upToDate: boolean,
 /**
  * Modrinth page of the latest version.
  */
-url: string, };
+url: string, downloadUrl: string | null, filename: string | null, targetSha1: string | null, };

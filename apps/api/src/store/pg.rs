@@ -480,9 +480,11 @@ impl Store for PgStore {
         let profit: Vec<f64> = c.iter().map(|x| x.expected_profit).collect();
         let spd: Vec<f64> = c.iter().map(|x| x.sales_per_day).collect();
         let conf: Vec<f64> = c.iter().map(|x| x.confidence).collect();
+        let count: Vec<i32> = c.iter().map(|x| x.count.max(1) as i32).collect();
+        let p_sale: Vec<Option<f64>> = c.iter().map(|x| x.p_sale).collect();
         sqlx::query(
-            "INSERT INTO flip_candidates (ts, price_key, item_id, buy_price, recommended_sell, fair_value, roi, expected_profit, sales_per_day, confidence)
-             SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::text[], $4::float8[], $5::float8[], $6::float8[], $7::float8[], $8::float8[], $9::float8[], $10::float8[])",
+            "INSERT INTO flip_candidates (ts, price_key, item_id, buy_price, recommended_sell, fair_value, roi, expected_profit, sales_per_day, confidence, item_count, p_sale)
+             SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::text[], $4::float8[], $5::float8[], $6::float8[], $7::float8[], $8::float8[], $9::float8[], $10::float8[], $11::int4[], $12::float8[])",
         )
         .bind(&ts)
         .bind(&keys)
@@ -494,6 +496,8 @@ impl Store for PgStore {
         .bind(&profit)
         .bind(&spd)
         .bind(&conf)
+        .bind(&count)
+        .bind(&p_sale)
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -549,7 +553,7 @@ impl Store for PgStore {
     }
 
     async fn load_candidates_since(&self, since_ms: i64) -> StoreResult<Vec<CandidateRecord>> {
-        let rows = sqlx::query("SELECT ts, price_key, item_id, buy_price, recommended_sell, fair_value, roi, expected_profit, sales_per_day, confidence FROM flip_candidates WHERE ts >= $1 ORDER BY ts ASC LIMIT 500000")
+        let rows = sqlx::query("SELECT ts, price_key, item_id, buy_price, recommended_sell, fair_value, roi, expected_profit, sales_per_day, confidence, item_count, p_sale FROM flip_candidates WHERE ts >= $1 ORDER BY ts ASC LIMIT 500000")
             .bind(ms_to_dt(since_ms))
             .fetch_all(&self.pool)
             .await?;
@@ -566,6 +570,8 @@ impl Store for PgStore {
                 expected_profit: r.get("expected_profit"),
                 sales_per_day: r.get("sales_per_day"),
                 confidence: r.get("confidence"),
+                count: r.get::<i32, _>("item_count").max(1) as u32,
+                p_sale: r.get("p_sale"),
             })
             .collect())
     }

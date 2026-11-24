@@ -8,6 +8,12 @@ package dev.skypilot.mod.core;
  */
 public final class SkyPilotConfig {
     public boolean dungeonSolver = true;
+	/**
+	 * Keep the bundled Skyblocker on SkyPilot's pinned build automatically (launcher start and
+	 * "update all"). Off pins the installed copy; the explicit "Update Skyblocker" button still works.
+	 * Shared by the launcher and the mod.
+	 */
+	public boolean skyblockerAutoUpdate = true;
 	/** SkyPilot backend (web origin). Plain http is only accepted for localhost. */
 	public String apiBaseUrl = "http://localhost:3000";
 	/** "auto" (follow the game language), "en" or "ja". */

@@ -67,14 +67,24 @@ pub async fn report(State(state): State<Arc<AppState>>, jar: CookieJar, headers:
     let player = state.player(user.id).await?;
     let registry = state.registry();
     let lang = AppState::lang_of(&user, q.lang.as_deref());
+    // the "today" guide also reads live information (status page, news, the key's state)
+    let live = if domain == skypilot_reco::providers::today::ID { Some(live_signals(&state).await) } else { None };
     let r = tokio::task::block_in_place(|| {
         let mut ctx = state.ctx(&registry, &player, &user, lang);
         if let Some(b) = finite(q.budget, 0.0, 1e13) {
             ctx.budget = Some(b);
         }
+        ctx.live = live.as_ref();
         state.planner.report(&ctx, &domain, &texts)
     });
     r.map(Json).ok_or_else(|| AppError::not_found("unknown domain"))
+}
+
+/// Live information for the "today" guide; each part is optional and cached by its own route.
+pub async fn live_signals(state: &Arc<AppState>) -> skypilot_reco::LiveSignals {
+    let server = Some(super::status_page::current().await).filter(|s| s.available);
+    let news = super::modfit::latest_news(state).await.items;
+    skypilot_reco::LiveSignals { server, news, key_rejected: state.hypixel.key_health().state == "rejected" }
 }
 
 pub async fn domains(State(state): State<Arc<AppState>>) -> Json<Vec<&'static str>> {
@@ -189,7 +199,7 @@ pub async fn farm(State(state): State<Arc<AppState>>, Path(id): Path<String>, Qu
     // Material prices only need the market; use an empty analysis context.
     let empty = empty_analysis();
     let inv = skypilot_profile::Inventories::default();
-    let ctx = skypilot_reco::Ctx { registry: &registry, oracle: state.market.as_ref(), market: Some(state.market.as_ref()), analysis: &empty, inv: &inv, play_style: Default::default(), budget: None, now_ms: AppState::now_ms(), lang };
+    let ctx = skypilot_reco::Ctx { registry: &registry, oracle: state.market.as_ref(), market: Some(state.market.as_ref()), analysis: &empty, inv: &inv, play_style: Default::default(), budget: None, now_ms: AppState::now_ms(), lang, live: None };
     providers::farming::design(&ctx, &id).map(Json).ok_or_else(|| AppError::not_found("unknown farm design"))
 }
 

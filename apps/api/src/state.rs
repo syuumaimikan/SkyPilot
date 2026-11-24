@@ -186,6 +186,7 @@ impl AppState {
             budget: user.budget,
             now_ms: Self::now_ms(),
             lang,
+            live: None,
         }
     }
 

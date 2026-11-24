@@ -337,6 +337,11 @@ pub async fn skyblock_now(State(state): State<Arc<AppState>>) -> ApiResult<Json<
 
 /// SkyBlock patch notes (Hypixel's public news resource, cached 30 minutes; links to hypixel.net only).
 pub async fn news(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModNews>> {
+    Ok(Json(latest_news(&state).await))
+}
+
+/// SkyBlock news from the 30-minute cache (refetched when older; the last copy on errors).
+pub async fn latest_news(state: &Arc<AppState>) -> ModNews {
     use std::sync::Mutex;
     static NEWS: std::sync::OnceLock<Mutex<(i64, serde_json::Value)>> = std::sync::OnceLock::new();
     let now = AppState::now_ms();
@@ -358,7 +363,7 @@ pub async fn news(State(state): State<Arc<AppState>>) -> ApiResult<Json<ModNews>
             }
         },
     };
-    Ok(Json(ModNews { items: parse_news(&json), source: "Hypixel".into() }))
+    ModNews { items: parse_news(&json), source: "Hypixel".into() }
 }
 
 pub fn parse_news(v: &serde_json::Value) -> Vec<ModNewsItem> {

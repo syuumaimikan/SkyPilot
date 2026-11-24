@@ -40,6 +40,11 @@ fn cache() -> &'static Mutex<Cached> {
 }
 
 pub async fn server_status(State(_state): State<Arc<AppState>>) -> ApiResult<Json<ModServerStatus>> {
+    Ok(Json(current().await))
+}
+
+/// The cached status (refreshed when older than 2 minutes; the last good one on errors).
+pub async fn current() -> ModServerStatus {
     let now = AppState::now_ms();
     {
         let mut c = cache().lock().expect("status cache");
@@ -54,7 +59,7 @@ pub async fn server_status(State(_state): State<Arc<AppState>>) -> ApiResult<Jso
         }
         // fresh, or a failed try less than 30 s ago: answer from the cache
         if now - c.at < TTL_MS || now - c.tried_at < 30_000 {
-            return Ok(Json(c.status.clone().unwrap_or_else(|| unavailable(now))));
+            return c.status.clone().unwrap_or_else(|| unavailable(now));
         }
         c.tried_at = now;
     }
@@ -64,11 +69,11 @@ pub async fn server_status(State(_state): State<Arc<AppState>>) -> ApiResult<Jso
             let status = parse(&summary, &c.history, now);
             c.at = now;
             c.status = Some(status.clone());
-            Ok(Json(status))
+            status
         }
         Err(e) => {
             tracing::warn!(error = %e, "Hypixel status page not refreshed");
-            Ok(Json(cache().lock().expect("status cache").status.clone().unwrap_or_else(|| unavailable(now))))
+            cache().lock().expect("status cache").status.clone().unwrap_or_else(|| unavailable(now))
         }
     }
 }

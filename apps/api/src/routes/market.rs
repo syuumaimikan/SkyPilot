@@ -50,6 +50,22 @@ pub struct CapitalParams {
     pub flipper: Option<u32>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnowballParams {
+    pub capital: Option<f64>,
+    pub hours_per_day: Option<f64>,
+    pub days: Option<u32>,
+}
+
+/// Diversified flip basket for the capital plus a compounding projection (public market data).
+pub async fn snowball(State(state): State<Arc<AppState>>, Query(p): Query<SnowballParams>) -> Json<skypilot_protocol::market::SnowballPlan> {
+    let capital = p.capital.filter(|c| c.is_finite() && *c > 0.0).unwrap_or(10_000_000.0).min(1e12);
+    let hours = p.hours_per_day.filter(|h| h.is_finite()).unwrap_or(2.0).clamp(0.0, 24.0);
+    let days = p.days.unwrap_or(30).clamp(1, 365);
+    Json(state.market.snowball(capital, hours, days))
+}
+
 pub async fn bazaar(State(state): State<Arc<AppState>>, Query(p): Query<CapitalParams>) -> Json<BazaarList> {
     let capital = p.capital.filter(|c| c.is_finite() && *c > 0.0).unwrap_or(50_000_000.0).min(1e12);
     Json(state.market.bazaar_list_for(capital, p.flipper.unwrap_or(0)))

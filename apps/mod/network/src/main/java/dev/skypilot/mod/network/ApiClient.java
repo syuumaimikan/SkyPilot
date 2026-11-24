@@ -286,6 +286,11 @@ public final class ApiClient {
 		return getPublic("/api/mod/news", Dto.News.class, 1_800_000);
 	}
 
+	/** Completion % of the last analysed profile (cached 2 minutes). */
+	public CompletableFuture<Dto.Completion> completion() {
+		return getCached("/api/mod/completion", Dto.Completion.class, 120_000);
+	}
+
 	/** Hypixel server status, maintenance and incidents (public, cached 2 minutes). */
 	public CompletableFuture<Dto.ServerStatus> serverStatus() {
 		return getPublic("/api/mod/server-status", Dto.ServerStatus.class, 120_000);

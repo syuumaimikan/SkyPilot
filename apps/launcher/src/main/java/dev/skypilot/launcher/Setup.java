@@ -60,7 +60,7 @@ public final class Setup {
 			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
 			Mods.installFabricApi(s.mods(), pins, fetch);
 		}
-		if (s.autoUpdateMods) {
+		if (Instance.skyblockerAutoUpdate(s.instance())) {
 			CompanionMods.updateIfInstalled(s.mods(), "skyblocker", Net::download);
 		}
 		progress.accept(l.t("Adding the profile to the official launcher…", "公式ランチャーにプロファイルを追加中…"));
@@ -91,7 +91,7 @@ public final class Setup {
 			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
 			Mods.installFabricApi(s.mods(), pins, fetch);
 		}
-		if (s.autoUpdateMods) {
+		if (Instance.skyblockerAutoUpdate(s.instance())) {
 			CompanionMods.updateIfInstalled(s.mods(), "skyblocker", Net::download);
 		}
 		Files.createDirectories(s.instance());

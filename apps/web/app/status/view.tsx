@@ -7,8 +7,25 @@ import { fmtDate, fmtNum } from "@/lib/format";
 import { useApi } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 
+function KeyBadge({ sys }: { sys: SystemStatus }) {
+  const { t, lang } = useI18n();
+  const k = sys.hypixel.key;
+  if (!sys.hypixel.keyConfigured) return <Badge tone="warn">{t("not set - profile analysis disabled", "未設定 - プロフィール分析は無効")}</Badge>;
+  if (k?.state === "rejected")
+    return (
+      <span className="flex flex-col items-end gap-1">
+        <Badge tone="bad">{t("rejected by Hypixel (403)", "Hypixel に拒否されました (403)")}</Badge>
+        <span className="text-xs text-muted-foreground">
+          {t("Expired or revoked. Create a Personal API Key on developer.hypixel.net and paste it in Settings.", "期限切れか無効化されています。developer.hypixel.net で Personal API Key を作成し、設定に貼り付けてください。")}
+        </span>
+      </span>
+    );
+  if (k?.state === "ok") return <Badge tone="good">{t("working", "有効")}{k.lastOkMs ? ` · ${fmtDate(k.lastOkMs, lang)}` : ""}</Badge>;
+  return <Badge tone="info">{t("configured · not used yet", "設定済み・未使用")}</Badge>;
+}
+
 interface SystemStatus {
-  hypixel: { keyConfigured: boolean; circuit: string; rateLimitRemaining: number | null; rateLimitLimit: number | null; metrics: Record<string, number> };
+  hypixel: { keyConfigured: boolean; key?: { state: "missing" | "unchecked" | "ok" | "rejected"; lastOkMs: number | null; lastRejectedMs: number | null }; circuit: string; rateLimitRemaining: number | null; rateLimitLimit: number | null; metrics: Record<string, number> };
   registry: { items: number; neuFiles: number; skyblockVersion: string | null; itemsLastUpdated: number | null; loadedAtMs: number };
   translation: { externalProvider: string | null; externalEnabled: boolean; circuit: string };
   llm: { enabled: boolean; model: string | null };
@@ -61,7 +78,7 @@ export function StatusView() {
             <CardTitle>{t("Server", "サーバー")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
-            <Row k={t("Hypixel API key", "Hypixel API キー")} v={sys.data.hypixel.keyConfigured ? <Badge tone="good">{t("configured", "設定済み")}</Badge> : <Badge tone="warn">{t("not set - profile analysis disabled", "未設定 - プロフィール分析は無効")}</Badge>} />
+            <Row k={t("Hypixel API key", "Hypixel API キー")} v={<KeyBadge sys={sys.data} />} />
             <Row k={t("Key rate limit", "キーのレート制限")} v={sys.data.hypixel.rateLimitRemaining !== null ? `${sys.data.hypixel.rateLimitRemaining} / ${sys.data.hypixel.rateLimitLimit}` : "—"} />
             <Row k={t("Items in registry", "レジストリのアイテム数")} v={fmtNum(sys.data.registry.items)} />
             <Row k={t("NEU-REPO files", "NEU-REPO ファイル数")} v={fmtNum(sys.data.registry.neuFiles)} />

@@ -496,7 +496,7 @@ final class ModsPage {
 				});
 			});
 			actions.add(updateBtn);
-		} else if (m.id().equals("skyblocker") || m.provides().containsKey("skyblocker")) {
+		} else if (isSkyblocker(m)) {
 			actions.add(Box.createHorizontalStrut(8));
 			JButton updateSkyblocker = Widgets.primary(c.t("Update Skyblocker", "Skyblockerを更新"), "refresh");
 			updateSkyblocker.addActionListener(e -> {
@@ -511,6 +511,23 @@ final class ModsPage {
 				});
 			});
 			actions.add(updateSkyblocker);
+			actions.add(Box.createHorizontalStrut(12));
+			Widgets.Toggle auto = new Widgets.Toggle(dev.skypilot.launcher.Instance.skyblockerAutoUpdate(c.settings.instance()));
+			auto.setToolTipText(c.t("Keep Skyblocker on SkyPilot's verified build when the game starts. Off keeps the installed copy.",
+					"ゲーム起動時にSkyPilotが検証済みのSkyblockerへ自動更新します。オフにすると今のバージョンのままにします。"));
+			auto.onChange(e -> {
+				try {
+					dev.skypilot.launcher.Instance.setSkyblockerAutoUpdate(c.settings.instance(), auto.isOn());
+					c.ok(auto.isOn() ? c.t("Skyblocker auto-update on", "Skyblockerの自動更新: オン") : c.t("Skyblocker auto-update off", "Skyblockerの自動更新: オフ"),
+							auto.isOn() ? c.t("It is updated when the game starts.", "ゲーム起動時に更新します。") : c.t("The installed version is kept.", "今のバージョンのままにします。"));
+				} catch (java.io.IOException ex) {
+					auto.setOn(!auto.isOn());
+					c.fail(c.t("Could not save", "保存できませんでした"), ex);
+				}
+			});
+			actions.add(Ui.muted(c.t("Auto-update", "自動更新")));
+			actions.add(Box.createHorizontalStrut(6));
+			actions.add(auto);
 		}
 		card.add(actions);
 		card.add(Box.createVerticalStrut(8));
@@ -584,6 +601,10 @@ final class ModsPage {
 		reload();
 	}
 
+	private static boolean isSkyblocker(ModScan.Meta m) {
+		return m.id().equals("skyblocker") || m.provides().containsKey("skyblocker");
+	}
+
 	private void checkUpdates(JButton btn) {
 		btn.setEnabled(false);
 		List<Path> files = mods.stream().filter(ModScan.Meta::fabric).map(ModScan.Meta::file).toList();
@@ -594,7 +615,10 @@ final class ModsPage {
 			if (n > 0 && c.settings.autoUpdateMods) {
 				c.toast("refresh", Theme.ACCENT_2, c.t("Updating " + n + " mod(s)…", n + " 件のMODを自動更新中…"),
 						c.t("Downloading and installing latest releases from Modrinth…", "Modrinthから最新版をダウンロードして導入中…"));
-				c.async(() -> ModrinthUpdates.updateAll(c.settings.mods(), r, Net::download), updated -> {
+				// Skyblocker follows its own switch (pinned build, SHA-512 checked) instead of Modrinth's latest
+				java.util.Map<Path, ModrinthUpdates.Update> auto = new java.util.LinkedHashMap<>(r);
+				for (ModScan.Meta m : mods) if (isSkyblocker(m)) auto.remove(m.file());
+				c.async(() -> ModrinthUpdates.updateAll(c.settings.mods(), auto, Net::download), updated -> {
 					reload();
 					c.toast("refresh", Theme.OK, c.t("Updated " + updated + " mod(s)", updated + " 個のMODを自動更新しました"),
 							c.t("New versions installed. Start Minecraft to apply.", "最新版を導入しました。Minecraft起動後に反映されます。"));

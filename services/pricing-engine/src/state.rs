@@ -46,6 +46,10 @@ pub struct CandidateRecord {
     pub expected_profit: f64,
     pub sales_per_day: f64,
     pub confidence: f64,
+    /// Items in the listing (recommended_sell is for all of them).
+    pub count: u32,
+    /// The model's probability of sale when the candidate was seen (None for old records).
+    pub p_sale: Option<f64>,
 }
 
 #[derive(Debug, Default)]
@@ -69,6 +73,10 @@ pub struct MarketState {
     pub flips: Vec<FlipOpportunity>,
     pub flips_computed_ms: i64,
     pub candidates: VecDeque<CandidateRecord>,
+    /// Total candidates ever recorded (the ring above drops old ones; this keeps counting).
+    pub candidates_recorded: u64,
+    /// Per-key outcomes of past candidates (refreshed every 15 minutes).
+    pub calibration: crate::calibration::Calibration,
     pub sales_recorded: u64,
     pub last_error: Option<String>,
     pub collector_started_ms: i64,
@@ -180,6 +188,7 @@ impl MarketState {
 
     pub fn record_candidate(&mut self, c: CandidateRecord) {
         self.candidates.push_back(c);
+        self.candidates_recorded += 1;
         while self.candidates.len() > 200_000 {
             self.candidates.pop_front();
         }

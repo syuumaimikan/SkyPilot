@@ -191,3 +191,24 @@ fn profile_selection_errors() {
     i3.player.uuid = "ffffffffffffffffffffffffffffffff".into();
     assert_eq!(analyze(&i3, &reg, &NoMarket).unwrap_err(), AnalyzeError::NotAMember);
 }
+
+#[test]
+fn completion_counts_against_data_maxima_and_lists_the_rest_as_unknown() {
+    let reg = registry();
+    let p = profiles();
+    let m = museum();
+    let (a, _) = analyze(&input(&p, Some(&m)), &reg, &NoMarket).unwrap();
+    let c = skypilot_profile::completion::compute(&a, &reg);
+    let ids: Vec<&str> = c.parts.iter().map(|p| p.id.as_str()).chain(c.unknown.iter().map(|u| u.id.as_str())).collect();
+    for id in ["skills", "catacombs", "classes", "slayers", "hotm", "garden", "collections", "minions", "museum", "fairy_souls"] {
+        assert_eq!(ids.iter().filter(|i| **i == id).count(), 1, "{id} must be measured or listed as unknown exactly once");
+    }
+    for part in &c.parts {
+        assert!(part.total > 0.0 && part.done <= part.total, "{part:?}");
+        assert!((0.0..=100.0).contains(&part.percent), "{part:?}");
+    }
+    assert!(c.parts.iter().any(|p| p.id == "skills"));
+    assert!(c.parts.iter().any(|p| p.id == "collections"));
+    let overall = c.overall.unwrap();
+    assert!(overall > 0.0 && overall <= 100.0);
+}

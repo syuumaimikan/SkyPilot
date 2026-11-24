@@ -4,4 +4,4 @@
  * Where a fact used in a recommendation came from. Shown in the UI so users can
  * tell game rules apart from SkyPilot heuristics.
  */
-export type DataSource = "HYPIXEL_PROFILE" | "HYPIXEL_RESOURCES" | "NEU_REPO" | "SKY_PILOT_REGISTRY" | "SKY_PILOT_HEURISTIC" | "MARKET" | "CLIENT_MOD";
+export type DataSource = "HYPIXEL_PROFILE" | "HYPIXEL_RESOURCES" | "NEU_REPO" | "SKY_PILOT_REGISTRY" | "SKY_PILOT_HEURISTIC" | "MARKET" | "CLIENT_MOD" | "HYPIXEL_STATUS_PAGE";

@@ -55,6 +55,7 @@ final class SettingsPage {
 	private final Widgets.Toggle autoUpdate;
 	private final Widgets.Toggle autostartServer;
 	private final Widgets.Toggle autoUpdateMods;
+	private final Widgets.Toggle skyblockerAuto;
 	private final JTextField hypixelKeyField = new JTextField();
 	private final JTextField deeplKeyField = new JTextField();
 	private final JTextField anthropicKeyField = new JTextField();
@@ -68,6 +69,7 @@ final class SettingsPage {
 		autoUpdate = new Widgets.Toggle(c.settings.autoUpdateCheck);
 		autostartServer = new Widgets.Toggle(isAutoStartEnabled());
 		autoUpdateMods = new Widgets.Toggle(c.settings.autoUpdateMods);
+		skyblockerAuto = new Widgets.Toggle(Instance.skyblockerAutoUpdate(c.settings.instance()));
 		memory = new JSlider(2, 16, Math.max(2, Math.min(16, c.settings.memoryMb / 1024)));
 		root = build();
 	}
@@ -244,7 +246,8 @@ final class SettingsPage {
 		body.add(section("download", c.t("Updates", "アップデート"), form(
 				row(c.t("This launcher", "このランチャー"), upd),
 				row(c.t("Check when the launcher starts", "起動時に確認する"), autoUpdate),
-				row(c.t("Auto-update mods on launch", "ゲーム起動時にMODを自動更新"), autoUpdateMods))));
+				row(c.t("Auto-update mods on launch", "ゲーム起動時にMODを自動更新"), autoUpdateMods),
+				row(c.t("Auto-update the bundled Skyblocker", "内蔵Skyblockerを自動更新"), skyblockerAuto))));
 
 		hypixelKeyField.putClientProperty("JTextField.placeholderText", c.t("Hypixel Persistent API Key (UUID)", "Hypixel 永続APIキー (UUID)"));
 		JButton applyHypixel = Widgets.primary(c.t("Apply on Dashboard", "永続APIキー申請"), "external");
@@ -492,6 +495,7 @@ final class SettingsPage {
 			}
 			String url = server.getText().strip();
 			if (!url.equals(Instance.config(c.settings.instance()).apiBaseUrl)) Instance.setServer(c.settings.instance(), url);
+			if (skyblockerAuto.isOn() != Instance.skyblockerAutoUpdate(c.settings.instance())) Instance.setSkyblockerAutoUpdate(c.settings.instance(), skyblockerAuto.isOn());
 			int updated = 0;
 			for (Path f : LauncherProfiles.files(c.settings.minecraft())) if (LauncherProfiles.updateOptions(f, c.settings.profileOptions())) updated++;
 			c.ok(c.t("Settings saved", "設定を保存しました"), updated > 0 ? c.t("The SkyPilot profile was updated too.", "SkyPilotプロファイルにも反映しました。") : null);

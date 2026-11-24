@@ -119,7 +119,13 @@ Server commands are only put into the chat box (`ChatScreen` prefill / `SuggestC
 - **Check updates** (feature `tools.mod_updates`, off by default): the SHA-1 of each mod file goes
   to the SkyPilot server (`POST /api/mod/mod-updates`), which asks Modrinth
   (`/v2/version_files/update`, cached 1 h, a 429 is not retried) and returns version info and a
-  Modrinth link. SkyPilot never downloads, installs or runs other mods' files.
+  Modrinth link. SkyPilot never runs other mods' files.
+- **Skyblocker**: "Update" installs only the version pinned in SkyPilot (`Companions.SKYBLOCKER`,
+  the same pin as the launcher). The download must match the pinned size and SHA-512 before the
+  old `skyblocker*.jar` is replaced; on a mismatch nothing changes. "自動更新: ON/OFF" next to it,
+  or `/skypilot update skyblocker auto [on|off]`, switches the automatic update (on by default,
+  shared with the launcher through `skyblockerAutoUpdate` in `config/skypilot.json`). When off,
+  "Update all" skips Skyblocker and the launcher leaves it as it is.
 
 ## Feature switches
 
@@ -148,7 +154,8 @@ features that use the SkyPilot server (never Hypixel), ✉ those that send chat 
 | World | mayor and minister with perks ☁ (Hypixel election), fire sale toasts ☁ (Hypixel firesales, cached 5 min) |
 | Sacks | value of everything stored in a sack window ("Stored:" × Bazaar value by name) ☁ |
 | Rift | Rift time (action bar) and Motes (sidebar), low Rift time titles, Rift guide on entry ☁ |
-| Guides | next action on the info HUD ☁, automatic guide line to where the next action is done ☁ |
+| Guides | next action on the info HUD ☁, automatic guide line to where the next action is done ☁, "Today" advice tab (status page, events, mayor, goals, completion, flip basket, news combined) ☁ |
+| Progress | completion % in the menu's NOW tab (per part, lowest first, parts without a known maximum listed as unknown) ☁; lowest parts on the info HUD ☁ (`hud.completion`, off by default, refreshed every 5 min) |
 | Market | flip panel ☁, flip alerts ☁, alert sound, price watchlist ☁, Dark Auction toast ☁ |
 | Tools | calculator (`calc 1.5m*3+200k`), reminders (`remind 30m …`), own waypoints (`wp add/show/remove/list`), to-do list (`todo`), stopwatch (`timer start/lap/stop`), item lookup (`lookup <name>`) ☁, session tracking, session upload ☁ |
 | Market (more) | Bazaar order helper ☁ |

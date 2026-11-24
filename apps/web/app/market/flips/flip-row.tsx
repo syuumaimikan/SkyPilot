@@ -20,6 +20,17 @@ export function FlipBreakdown({ f }: { f: FlipOpportunity }) {
     [t("7. Expected sell time", "7. 想定売却時間"), `${fmtMinutesRange(f.expectedSellMinutes, lang)} · P(sale) ${fmtPct(f.probabilityOfSale, 0)}`],
     [t("8. Confidence", "8. 信頼度"), <ConfidenceBadge key="c" c={f.confidence} />],
     [t("9. Risk", "9. リスク"), <RiskBadge key="r" r={f.risk} />],
+    [
+      t("10. Track record", "10. 実績"),
+      f.trackRecord ? (
+        <span key="tr">
+          {t(`${f.trackRecord.hits}/${f.trackRecord.trials} similar flips sold at target in 24h`, `類似フリップ ${f.trackRecord.trials} 件中 ${f.trackRecord.hits} 件が24時間以内に目標価格で売却`)}
+          {f.trackRecord.averageRealizedProfit !== null ? ` · ${t("avg. realised", "平均実現")} ${fmtCoins(f.trackRecord.averageRealizedProfit)}` : ""}
+        </span>
+      ) : (
+        <span key="tr" className="text-muted-foreground">{t("No record yet (model estimate only)", "まだ実績なし（モデル推定のみ）")}</span>
+      ),
+    ],
   ];
   return (
     <div className="grid gap-4 p-4 md:grid-cols-[1fr_1fr]">
@@ -79,7 +90,14 @@ export function FlipRow({ f, open, onToggle }: { f: FlipOpportunity; open: boole
         <TD>{fmtPct(f.roi)}</TD>
         <TD className="whitespace-nowrap text-xs">{fmtMinutesRange(f.expectedSellMinutes, lang)}</TD>
         <TD>
-          <ConfidenceBadge c={f.confidence} />
+          <span className="flex items-center gap-1">
+            <ConfidenceBadge c={f.confidence} />
+            {f.trackRecord && f.trackRecord.trials >= 3 ? (
+              <Badge tone={f.trackRecord.hitRate >= 0.6 ? "good" : f.trackRecord.hitRate >= 0.3 ? "neutral" : "warn"} title={t("Similar flips that sold at target in 24h (SkyPilot's record)", "24時間以内に目標価格で売れた類似フリップ（SkyPilotの実績）")}>
+                {f.trackRecord.hits}/{f.trackRecord.trials}
+              </Badge>
+            ) : null}
+          </span>
         </TD>
         <TD>{blocked ? <Badge tone="bad">{t("DO NOT FLIP", "フリップ禁止")}</Badge> : <RiskBadge r={f.risk} />}</TD>
         <TD className="text-right text-muted-foreground">{fmtNum(f.score, 2)}</TD>

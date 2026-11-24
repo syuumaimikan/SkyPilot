@@ -6,6 +6,7 @@ import { useWorkspace } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 
 const GUIDES = [
+  ["/daily", "Today's guide", "今日のガイド", "Maintenance, events, the mayor, your goals, completion, flips and news combined into what to do today.", "メンテナンス・イベント・市長・目標・達成率・フリップ・ニュースをまとめた、今日やるべきこと。"],
   ["/combat/gear", "Armor & equipment", "防具・装備", "Compare owned slots and upgrades within your budget.", "所持装備をスロット別に比較し、予算内の強化候補を表示。"],
   ["/combat/weapons", "Weapons & classes", "武器・クラス", "Melee, archer, mage and survival loadouts with use requirements.", "近接・弓・魔法・生存向けの構成と使用条件を確認。"],
   ["/pets", "Pets", "ペット", "Owned levels, active pet, activity shortlists and market quotes.", "所持レベル・使用中ペット・用途別の候補・市場価格を比較。"],

@@ -4,6 +4,7 @@
 //! Output: [`PlayerAnalysis`] - every field is either a value derived deterministically from
 //! the API/registry, or `Unknown` with the reason. Nothing is inferred by an LLM.
 
+pub mod completion;
 pub mod gear;
 pub mod inventory;
 pub mod networth;

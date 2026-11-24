@@ -96,6 +96,7 @@ final class InfoHud {
 			}
 		}
 		if (Feat.on(Features.HUD_SERVER_STATUS)) HypixelStatus.hudRows(out, l, now);
+		if (Feat.on(Features.HUD_COMPLETION)) ProfileCompletion.hudRows(out, l);
 		if (Feat.on(Features.HUD_STATS) && Trackers.stats != null && now - Trackers.statsAt < 10_000) {
 			ActionBarStats.Stats s = Trackers.stats;
 			if (s.health() != null && s.maxHealth() != null && s.maxHealth() > 0) {

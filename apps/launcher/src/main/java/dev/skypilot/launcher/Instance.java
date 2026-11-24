@@ -47,6 +47,18 @@ public final class Instance {
 		new ConfigStore(configDir(instance)).save(c);
 	}
 
+	/** The shared "keep the bundled Skyblocker updated" switch (stored in the mod's config, default on). */
+	public static boolean skyblockerAutoUpdate(Path instance) {
+		return config(instance).skyblockerAutoUpdate;
+	}
+
+	public static void setSkyblockerAutoUpdate(Path instance, boolean on) throws IOException {
+		ConfigStore store = new ConfigStore(configDir(instance));
+		SkyPilotConfig c = store.load();
+		c.skyblockerAutoUpdate = on;
+		store.save(c);
+	}
+
 	public static void setServer(Path instance, String url) throws IOException {
 		if (!validServerUrl(url)) throw new IOException("the server URL must use https (http only for localhost)");
 		ConfigStore store = new ConfigStore(configDir(instance));

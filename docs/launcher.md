@@ -88,6 +88,13 @@ Nothing of this is sent to the SkyPilot server, logged or shown. The start comma
 The Mods page now offers optional, SHA-512-verified performance, Iris and Skyblocker packs
 for Fabric 26.2. See [client expansion](client-expansion.md) for the pinned versions and new in-game features.
 
+**Built-in Skyblocker auto-update** (on by default): when Skyblocker is installed, PLAY replaces
+it with the version pinned in the launcher (SHA-512 checked) if it is out of date. Turn it off in
+Settings → "内蔵Skyblockerを自動更新", or on the Mods page in Skyblocker's details ("自動更新"); the
+"Update all" action then skips Skyblocker too. The switch is stored as `skyblockerAutoUpdate` in
+the instance's `config/skypilot.json`, the same file the mod reads, so the launcher and the mod
+always agree.
+
 ```bash
 cd apps/mod
 ./gradlew :launcher:jpackageImage       # portable app: apps/launcher/build/jpackage/SkyPilot Launcher/

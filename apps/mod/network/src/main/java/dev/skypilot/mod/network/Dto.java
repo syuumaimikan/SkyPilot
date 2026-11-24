@@ -144,6 +144,16 @@ public final class Dto {
 	public record News(List<NewsItem> items, String source) {
 	}
 
+	/** Profile completion in % (maximums from Hypixel resources / NEU-REPO; unknown parts listed). */
+	public record Completion(List<CompletionPart> parts, Double overall, List<UnknownCompletion> unknown, Long analyzedAtMs, String profileName) {
+	}
+
+	public record CompletionPart(String id, String name, double done, double total, double percent, String basis, String source) {
+	}
+
+	public record UnknownCompletion(String id, String name, String reason) {
+	}
+
 	/** Hypixel's public status page (status.hypixel.net, via the SkyPilot server). */
 	public record ServerStatus(boolean available, String indicator, String description, List<ServiceStatus> services, List<Maintenance> maintenances,
 			List<Incident> incidents, List<Maintenance> recentMaintenances, long checkedAtMs, String pageUrl, String source) {

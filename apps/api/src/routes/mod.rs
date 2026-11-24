@@ -4,6 +4,7 @@ pub mod auth_routes;
 pub mod launcher;
 pub mod market;
 pub mod orders;
+pub mod progress;
 pub mod misc;
 pub mod modapi;
 pub mod modfit;
@@ -69,6 +70,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/advisor/gear", get(advisor::gear))
         .route("/advisor/slayer/plan", get(advisor::slayer_plan))
         .route("/advisor/money", get(advisor::money))
+        .route("/me/completion", get(progress::completion))
         .route("/advisor/dungeons/floors", get(advisor::floors))
         .route("/advisor/farming/crops", get(advisor::crops))
         .route("/advisor/liquidation", get(advisor::liquidation))
@@ -79,6 +81,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/market/orders", get(orders::get))
         .route("/mod/orders", post(orders::save))
         .route("/market/flips", get(market::flips))
+        .route("/market/snowball", get(market::snowball))
         .route("/market/bazaar", get(market::bazaar))
         .route("/market/craft", get(market::craft))
         .route("/market/time", get(market::time_flips))
@@ -138,6 +141,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/skyblock", get(modfit::skyblock_now))
         .route("/mod/news", get(modfit::news))
         .route("/mod/server-status", get(status_page::server_status))
+        .route("/mod/completion", get(progress::completion))
         .route("/mod/mod-updates", post(modlist::mod_updates))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 

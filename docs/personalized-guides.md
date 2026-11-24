@@ -8,6 +8,32 @@
 - Minecraft: `/skypilot guides`, `/skypilot apihelp`, `/skypilot media`; the J menu has
   Web and Media buttons. Web pages use the configured SkyPilot server.
 
+## Today's guide
+
+`/daily` opens on "今日のガイド" (also `/api/advisor/report/today` and the mod's "Today" tab).
+It combines what is true right now and ranks it for your profile:
+
+| Section | Source |
+|---|---|
+| Alerts | Hypixel's status page (maintenance in progress / within 24 h, SkyBlock incidents), the server key's state |
+| Focus | your goals, your weakest completion parts, the best action from every other advisor |
+| Events | the SkyBlock calendar (event start / end in your local time) |
+| Mayor | the elected mayor's and minister's perks, matched to activities by keywords at word starts |
+| Money | the snowball flip basket for your purse (expected value per cycle, calibrated on the record) |
+| Completion | the overall % and the three lowest parts |
+| News | the latest SkyBlock news posts |
+
+A section whose live source does not answer is listed under "unknown" with the reason; nothing
+is guessed. The other advisors' actions are not counted twice in the roadmap.
+
+## Completion
+
+`/api/me/completion` (web dashboard "達成率", mod NOW tab, optional HUD lines) gives each part
+as done / total and %. Maxima come only from data: skill and dungeon caps from the level tables,
+collection tiers and minion tiers from NEU-REPO, museum items without the "special" ones, fairy
+souls from NEU's constants. Parts without a known maximum (or not in the API answer, such as
+disabled API settings) are listed as unknown and are not part of the overall %.
+
 ## Profile and freshness
 
 Owned slots and usable weapons come from the analysed profile. Reanalyse after equipment
@@ -44,6 +70,30 @@ Server `HYPIXEL_API_KEY` configuration is explained separately from in-game API 
 Menu path reference (April 2026):
 <https://hypixel.net/threads/account-wiped-on-skyblock.6085198/>.
 API format and authentication reference: <https://api.hypixel.net/>.
+
+## Snowball flipping
+
+Market → Live Flips → "雪だるまプラン" (`/market/flips?tab=snowball`, `/api/market/snowball`).
+
+- **Calibration**: every recorded flip candidate older than 24 h (up to 14 days) is checked against
+  comparable sales at or above its unit target within 24 h. Per item, the observed hit rate is
+  blended with the model's P(sale) (4 prior trials), and the whole model is scaled by
+  observed / expected hits once 20 hits are expected. Confidence and the sell-time range follow
+  the record (p25–p75 of the sell minutes with at least 3 hits). Refreshed every 15 minutes.
+  Each flip shows its record as hits / trials.
+- **Basket**: flips that are not suspicious, risk at most High, confidence ≥ 0.45 and positive
+  expected value (P × net profit − (1 − P) × (listing and duration fees + a 3% markdown to
+  relist)). One per item, at most 50% of the coins in one flip, 10% kept for listing fees.
+  Ordered by expected value per coin-hour (sell time + 0.5 h to buy and list).
+- **Projection**: cycles per day = hours played / cycle length + one overnight cycle (at most
+  24 h / cycle length). Each day reinvests the profit; the coins put to work per day are capped
+  at 15% of what the market offers, and coins beyond the basket earn the smaller rate. The
+  capital ladder shows from which amount more item types become flippable.
+- The money ranking (`/money`) uses the same basket for AH flipping: coins per hour you play =
+  expected profit per cycle × cycles per day / 2 h, range 50–100%.
+
+This is a model of past market behaviour, not a guarantee. Prices move, other players buy the
+same listings, and every purchase, listing and claim is done by you in game.
 
 ## Wealth forecasts and money tools
 

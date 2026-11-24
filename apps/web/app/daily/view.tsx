@@ -21,12 +21,16 @@ export function DailyView() {
         )}
       />
       <ServerStatusCard />
-      <Tabs defaultValue="schedule">
+      <Tabs defaultValue="today">
         <TabsList>
+          <TabsTrigger value="today">{t("Today's guide", "今日のガイド")}</TabsTrigger>
           <TabsTrigger value="schedule">{t("Event schedule", "イベント予定")}</TabsTrigger>
           <TabsTrigger value="daily">{t("Daily", "デイリー")}</TabsTrigger>
           <TabsTrigger value="events">{t("Events & mayor", "イベント・市長")}</TabsTrigger>
         </TabsList>
+        <TabsContent value="today">
+          <EmbeddedReport domain="today" />
+        </TabsContent>
         <TabsContent value="schedule">
           <EventScheduleCard />
         </TabsContent>

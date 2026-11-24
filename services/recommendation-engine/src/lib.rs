@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use skypilot_protocol::advisor::AdvisorReport;
 use skypilot_protocol::goals::{GoalParseResult, GoalPriority, GoalResult, GoalSpec, RecommendedAction};
 
-pub use ctx::{Ctx, Lang};
+pub use ctx::{Ctx, Lang, LiveSignals};
 pub use providers::{GoalContext, Provider};
 
 use crate::optimizer::{DefaultStrategy, ScoringInput, ScoringStrategy};
@@ -93,7 +93,8 @@ impl Planner {
         let (parse, specs) = self.parse(ctx, texts);
         let goal_ctx = self.contexts(ctx, &specs);
         let mut candidates = Vec::new();
-        for p in &self.providers {
+        // "today" re-proposes the other providers' actions; skip it so nothing counts twice
+        for p in self.providers.iter().filter(|p| p.id() != providers::today::ID) {
             candidates.extend(p.actions(ctx, &goal_ctx));
         }
         let priorities: BTreeMap<String, GoalPriority> = goal_ctx.iter().map(|g| (g.id.clone(), g.priority)).collect();

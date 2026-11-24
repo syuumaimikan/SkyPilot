@@ -13,12 +13,15 @@ import { useLiveFlips } from "@/lib/live";
 import { AlertsPanel } from "./alerts";
 import { BacktestPanel } from "./backtest";
 import { FlipRow } from "./flip-row";
+import { SnowballPanel } from "./snowball";
 
 type SortKey = "score" | "profit" | "roi" | "confidence";
 
 export function FlipsView() {
   const { t } = useI18n();
-  const focus = useSearchParams().get("focus");
+  const params = useSearchParams();
+  const focus = params.get("focus");
+  const initialTab = ["snowball", "alerts", "backtest"].find((x) => x === params.get("tab")) ?? "flips";
   const { list, state, error } = useLiveFlips();
   const [budget, setBudget] = useState("");
   const [minProfit, setMinProfit] = useState("");
@@ -62,9 +65,10 @@ export function FlipsView() {
         }
       />
       {list && !list.collectorHealthy ? <Alert tone="warn">{t("The market collector is not healthy - data may be outdated.", "マーケットコレクターが正常ではありません。データが古い可能性があります。")}</Alert> : null}
-      <Tabs defaultValue="flips">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTrigger value="flips">{t("Flips", "フリップ")}</TabsTrigger>
+          <TabsTrigger value="snowball">{t("Snowball plan", "雪だるまプラン")}</TabsTrigger>
           <TabsTrigger value="alerts">{t("Alerts", "通知")}</TabsTrigger>
           <TabsTrigger value="backtest">{t("Backtest", "バックテスト")}</TabsTrigger>
         </TabsList>
@@ -154,6 +158,9 @@ export function FlipsView() {
               </CardContent>
             </Card>
           ) : null}
+        </TabsContent>
+        <TabsContent value="snowball">
+          <SnowballPanel />
         </TabsContent>
         <TabsContent value="alerts">
           <AlertsPanel flips={list?.flips ?? []} />

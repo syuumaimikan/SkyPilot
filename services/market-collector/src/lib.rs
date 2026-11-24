@@ -139,12 +139,15 @@ impl Collector {
     }
 
     async fn recompute(&self) {
-        let before = self.engine.state.read().candidates.len();
+        let before = self.engine.state.read().candidates_recorded;
         let engine = self.engine.clone();
         let _ = tokio::task::spawn_blocking(move || engine.recompute()).await;
         let new: Vec<CandidateRecord> = {
+            // count from the total, not the ring's length: once the ring is full its length stays
+            // the same and new candidates would otherwise never reach the store
             let st = self.engine.state.read();
-            st.candidates.iter().skip(before.min(st.candidates.len())).cloned().collect()
+            let added = (st.candidates_recorded - before).min(st.candidates.len() as u64) as usize;
+            st.candidates.iter().skip(st.candidates.len() - added).cloned().collect()
         };
         self.sink.on_flips(&new).await;
     }

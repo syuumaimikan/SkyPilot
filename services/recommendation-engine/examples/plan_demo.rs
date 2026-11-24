@@ -29,7 +29,7 @@ fn main() {
     let uuid = profiles["profiles"][0]["members"].as_object().unwrap().keys().next().unwrap().clone();
     let input = AnalyzerInput { player: PlayerRef { username: "SampleUser".into(), uuid }, profiles: &profiles, profile_id: None, museum: None, garden: None, fetched_at_ms: 0, now_ms: 0 };
     let (analysis, inv) = analyze(&input, &registry, &market).unwrap();
-    let ctx = Ctx { registry: &registry, oracle: &market, market: Some(&market), analysis: &analysis, inv: &inv, play_style: PlayStyle::Fastest, budget: None, now_ms: 1_791_167_060_000, lang };
+    let ctx = Ctx { registry: &registry, oracle: &market, market: Some(&market), analysis: &analysis, inv: &inv, play_style: PlayStyle::Fastest, budget: None, now_ms: 1_791_167_060_000, lang, live: None };
     let out = Planner::default().plan(&ctx, &[(goal, GoalPriority::Primary)], 8);
     println!("parsed: {:?}", out.parse.goals.iter().map(|g| &g.title).collect::<Vec<_>>());
     for g in &out.goals {

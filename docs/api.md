@@ -9,7 +9,7 @@ state-changing request. The mod uses `Authorization: Bearer spm_…` from the de
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/health`, `/status` | - | Liveness; registry/Hypixel/collector/store status |
+| GET | `/health`, `/status` | - | Liveness; registry/Hypixel/collector/store status. `status.key` is the server key's health: `state` = `missing` / `unchecked` / `ok` / `rejected` (Hypixel answered 403 after the last success), `lastOkMs`, `lastRejectedMs` |
 | GET | `/auth/me` | cookie | Session bootstrap (CSRF token, linked devices) |
 | POST | `/auth/register`, `/auth/login`, `/auth/logout` | CSRF | Optional SkyPilot login for the workspace |
 | DELETE | `/devices/{id}` | CSRF | Revoke a linked mod |
@@ -23,14 +23,18 @@ state-changing request. The mod uses `Authorization: Bearer spm_…` from the de
 | PUT | `/workspace/goals?lang=` | CSRF | Replace goals (≤6) and re-plan from stored data |
 | PUT | `/workspace/prefs` | CSRF | Play style, budget, language |
 | GET | `/snapshots` | cookie/bearer | Progress history |
+| GET | `/me/completion`, `/mod/completion` | cookie / bearer | `CompletionReport`: % done per part (skills, catacombs, classes, slayers, collections, minions, museum, HOTM, garden, fairy souls) against maxima from NEU-REPO and Hypixel's resources; parts without a known maximum are listed in `unknown` with the reason, never guessed. `overall` is the mean of the known parts |
 | GET | `/advisor` | - | Advisor domains |
-| GET | `/advisor/report/{domain}?lang=&budget=` | cookie/bearer | `AdvisorReport` for a domain |
+| GET | `/advisor/report/{domain}?lang=&budget=` | cookie/bearer | `AdvisorReport` for a domain. `today` combines Hypixel's status page, the SkyBlock calendar, the mayor's perks, your goals, completion, the snowball flip basket and news; parts whose live source is unavailable are listed as unknown |
 | GET | `/advisor/mining/calc`, `/advisor/mining/hotm?preset=`, `/advisor/mining/powder` | cookie/bearer | Mining calculator, HOTM planner, powder planner |
 | GET | `/advisor/gear?purpose=&budget=` | cookie/bearer | Gear optimizer |
 | GET | `/advisor/slayer/plan?slayer=&target=` | cookie/bearer | Slayer planner |
 | GET | `/advisor/money`, `/advisor/dungeons/floors`, `/advisor/farming/crops?bps=`, `/advisor/liquidation` | cookie/bearer | Rankings and tables |
 | GET | `/farms`, `/farms/{id}` | - | Farm designs (blocks, materials, build steps) |
 | GET | `/market/status`, `/market/flips`, `/market/bazaar?capital=`, `/market/craft`, `/market/time`, `/market/search?q=`, `/market/items/{id}?range=1H…90D` | - | Market data |
+| GET | `/market/snowball?capital=&hoursPerDay=&days=` | - | `SnowballPlan`: a diversified AH flip basket for the coins (≤ 50% in one item, 10% reserve), expected profit per cycle, cycles per day, a day-by-day projection with reinvestment (capped by what the market offers) and capital milestones. Defaults 10M / 2 h / 30 days |
+| GET | `/market/orders` | cookie | Your AH listings (Hypixel's player auctions for the analysed UUID) and the Bazaar orders the mod synced. Claimed auctions are dropped (`claimedHidden` counts them); active listings come first, then sold / expired ones still to claim in game |
+| POST | `/mod/orders` | bearer | Mod: upload the visible `Your Bazaar Orders` page |
 | POST | `/market/backtest` | - | Backtest flip parameters |
 | GET (WS) | `/ws/market` | - | Live `{kind:"flips"|"status", data}` frames |
 | GET/PUT/DELETE | `/notifications/rules[/{id}]` | cookie (+CSRF) | Flip alert rules |

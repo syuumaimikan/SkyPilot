@@ -110,6 +110,47 @@ struct KeyBudget {
     remaining: Option<i64>,
     limit: Option<i64>,
     last_request: Option<Instant>,
+    /// Wall-clock ms of the last keyed 200 and the last keyed 403 (for the key's real state).
+    last_ok_ms: Option<i64>,
+    last_rejected_ms: Option<i64>,
+}
+
+/// What the server knows about its Hypixel key from real responses (never the key itself).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyHealth {
+    pub configured: bool,
+    /// "missing" | "unchecked" | "ok" | "rejected"
+    pub state: &'static str,
+    pub last_ok_ms: Option<i64>,
+    pub last_rejected_ms: Option<i64>,
+}
+
+impl KeyHealth {
+    fn from(configured: bool, last_ok_ms: Option<i64>, last_rejected_ms: Option<i64>) -> Self {
+        let state = if !configured {
+            "missing"
+        } else {
+            match (last_ok_ms, last_rejected_ms) {
+                (_, Some(bad)) if last_ok_ms.is_none_or(|ok| bad > ok) => "rejected",
+                (Some(_), _) => "ok",
+                _ => "unchecked",
+            }
+        };
+        KeyHealth { configured, state, last_ok_ms, last_rejected_ms }
+    }
+
+    /// False only once Hypixel has actually refused the key (403) after its last success.
+    pub fn usable(&self) -> bool {
+        self.configured && self.state != "rejected"
+    }
+}
+
+fn wall_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 #[derive(Clone)]
@@ -190,6 +231,16 @@ impl HypixelClient {
             if s.is_empty() { None } else { Some(s) }
         });
         *self.inner.api_key.write().unwrap() = clean;
+        // a new key starts unchecked
+        let mut b = self.inner.budget.lock();
+        b.last_ok_ms = None;
+        b.last_rejected_ms = None;
+    }
+
+    /// The key's state from the last keyed responses: missing, unchecked, ok or rejected (403).
+    pub fn key_health(&self) -> KeyHealth {
+        let b = self.inner.budget.lock();
+        KeyHealth::from(self.has_key(), b.last_ok_ms, b.last_rejected_ms)
     }
 
     pub fn get_api_key(&self) -> Option<String> {
@@ -335,6 +386,11 @@ impl HypixelClient {
             if remaining == Some(0) {
                 b.blocked_until = Some(Instant::now() + Duration::from_secs(reset.unwrap_or(60).clamp(1, 600) as u64));
             }
+            match status.as_u16() {
+                200 => b.last_ok_ms = Some(wall_ms()),
+                403 => b.last_rejected_ms = Some(wall_ms()),
+                _ => {}
+            }
         }
         match status.as_u16() {
             200 => resp.bytes().await.map_err(|e| HypixelError::Network(e.to_string())),
@@ -469,4 +525,21 @@ impl moka::Expiry<String, Bytes> for TtlExpiry {
 /// Milliseconds since epoch.
 pub fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
+}
+
+#[cfg(test)]
+mod key_health_tests {
+    use super::KeyHealth;
+
+    #[test]
+    fn key_state_follows_the_latest_keyed_answer() {
+        assert_eq!(KeyHealth::from(false, Some(5), None).state, "missing");
+        assert_eq!(KeyHealth::from(true, None, None).state, "unchecked");
+        assert_eq!(KeyHealth::from(true, Some(10), None).state, "ok");
+        assert_eq!(KeyHealth::from(true, None, Some(10)).state, "rejected");
+        assert_eq!(KeyHealth::from(true, Some(5), Some(10)).state, "rejected");
+        assert_eq!(KeyHealth::from(true, Some(20), Some(10)).state, "ok");
+        assert!(!KeyHealth::from(true, Some(5), Some(10)).usable());
+        assert!(KeyHealth::from(true, None, None).usable());
+    }
 }

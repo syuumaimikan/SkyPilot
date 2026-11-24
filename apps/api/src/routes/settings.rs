@@ -157,7 +157,15 @@ pub async fn test_translation(State(state): State<Arc<AppState>>, jar: CookieJar
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HypixelStatusView {
     pub configured: bool,
+    /// False once Hypixel answered 403 for the key after its last success.
     pub valid: bool,
+    /// "missing" | "unchecked" | "ok" | "rejected"
+    #[serde(default)]
+    pub key_state: String,
+    #[serde(default)]
+    pub last_ok_ms: Option<i64>,
+    #[serde(default)]
+    pub last_rejected_ms: Option<i64>,
     pub rate_limit_remaining: Option<i64>,
     pub rate_limit_limit: Option<i64>,
     pub hint: Option<String>,
@@ -176,7 +184,8 @@ pub struct SimpleResponse {
 
 pub async fn get_hypixel_status(State(state): State<Arc<AppState>>, jar: CookieJar, headers: HeaderMap) -> ApiResult<Json<HypixelStatusView>> {
     let _user = auth::any_user(&state, &jar, &headers).await?;
-    let configured = state.hypixel.has_key();
+    let health = state.hypixel.key_health();
+    let configured = health.configured;
     let (rate_limit_remaining, rate_limit_limit) = state.hypixel.key_budget();
     let hint = state.hypixel.get_api_key().map(|k| {
         let last4: String = k.chars().rev().take(4).collect::<String>().chars().rev().collect();
@@ -184,7 +193,10 @@ pub async fn get_hypixel_status(State(state): State<Arc<AppState>>, jar: CookieJ
     });
     Ok(Json(HypixelStatusView {
         configured,
-        valid: configured,
+        valid: health.usable(),
+        key_state: health.state.to_string(),
+        last_ok_ms: health.last_ok_ms,
+        last_rejected_ms: health.last_rejected_ms,
         rate_limit_remaining,
         rate_limit_limit,
         hint,
@@ -292,6 +304,13 @@ pub struct HypixelApiView {
     pub hint: Option<String>,
     pub rate_limit_remaining: Option<i64>,
     pub rate_limit_limit: Option<i64>,
+    /// "missing" | "unchecked" | "ok" | "rejected" (from real Hypixel answers)
+    #[serde(default)]
+    pub key_state: String,
+    #[serde(default)]
+    pub last_ok_ms: Option<i64>,
+    #[serde(default)]
+    pub last_rejected_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -355,12 +374,16 @@ pub struct HypixelAppGuide {
 pub fn current_server_apis_view(state: &AppState) -> ServerApisView {
     let (hypixel_configured, hypixel_hint) = mask_key(state.hypixel.get_api_key().as_deref());
     let (rate_limit_remaining, rate_limit_limit) = state.hypixel.key_budget();
+    let health = state.hypixel.key_health();
     let hypixel = HypixelApiView {
         configured: hypixel_configured,
         base_url: state.hypixel.get_base_url(),
         hint: hypixel_hint,
         rate_limit_remaining,
         rate_limit_limit,
+        key_state: health.state.to_string(),
+        last_ok_ms: health.last_ok_ms,
+        last_rejected_ms: health.last_rejected_ms,
     };
 
     let deepl_env = std::env::var("DEEPL_API_KEY").ok();

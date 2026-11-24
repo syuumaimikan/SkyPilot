@@ -195,6 +195,10 @@ pub struct NeuData {
     pub ignored_talismans: HashSet<String>,
     pub slayer_cost: Vec<f64>,
     pub minion_max_tiers: BTreeMap<String, u32>,
+    /// constants/fairy_souls.json "Max Souls"
+    pub fairy_souls_max: Option<u32>,
+    /// constants/museum.json items per category, without "special" (which has no fixed end)
+    pub museum_items: BTreeMap<String, Vec<String>>,
     pub essence_costs: HashMap<String, EssenceCost>,
     pub garden: GardenConstants,
     pub enchant_names: HashSet<String>,
@@ -336,6 +340,22 @@ impl NeuData {
                     neu.hotf = Some(layout);
                 }
             }
+        }
+
+        if let Ok(f) = read_json(&c.join("fairy_souls.json")) {
+            neu.fairy_souls_max = f.get("Max Souls").and_then(Value::as_u64).map(|n| n as u32);
+        }
+        if let Ok(m) = read_json(&c.join("museum.json")) {
+            neu.museum_items = m
+                .get("items")
+                .and_then(Value::as_object)
+                .map(|o| {
+                    o.iter()
+                        .filter(|(k, _)| k.as_str() != "special")
+                        .map(|(k, v)| (k.clone(), v.as_array().map(|a| a.iter().filter_map(Value::as_str).map(str::to_string).collect()).unwrap_or_default()))
+                        .collect()
+                })
+                .unwrap_or_default();
         }
 
         if let Ok(misc) = read_json(&c.join("misc.json")) {

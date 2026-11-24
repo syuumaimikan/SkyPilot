@@ -7,12 +7,14 @@
 
 pub mod backtest;
 pub mod bazaar;
+pub mod calibration;
 pub mod craft;
 pub mod fair_value;
 pub mod flips;
 pub mod manipulation;
 pub mod networth;
 pub mod normalize;
+pub mod snowball;
 pub mod oracle;
 pub mod state;
 pub mod timeflip;
@@ -147,6 +149,15 @@ impl MarketEngine {
         let defaults = &registry.curated.market.flip_defaults;
         let cfg = FlipConfig { listing_hours: defaults.listing_hours, min_profit: defaults.min_profit, min_roi: defaults.min_roi, listings_per_key: 3 };
         let names = |id: &str| registry.display_name(id);
+        // outcomes of past candidates, computed outside the write lock
+        let stale = now - self.state.read().calibration.computed_ms > calibration::REFRESH_MS;
+        if stale {
+            let cal = {
+                let st = self.state.read();
+                calibration::compute(&st.candidates, &st.sales, &fees, now)
+            };
+            self.state.write().calibration = cal;
+        }
         {
             let mut st = self.state.write();
             let flips = flips::scan(&mut st, &fees, &cfg, &self.fv_config, self.strategy.as_ref(), &names, now);
@@ -349,6 +360,21 @@ impl MarketEngine {
             history,
             range: range.to_string(),
         }
+    }
+
+    /// Compounding plan for `capital` over `days` (see [`snowball`]).
+    pub fn snowball(&self, capital: f64, hours_per_day: f64, days: u32) -> skypilot_protocol::market::SnowballPlan {
+        let (ah, _, _) = self.freshness();
+        let st = self.state.read();
+        snowball::plan(snowball::Inputs {
+            flips: &st.flips,
+            capital,
+            hours_per_day,
+            days,
+            calibration_trials: st.calibration.global_trials,
+            calibration_hits: st.calibration.global_hits,
+            freshness: ah,
+        })
     }
 
     pub fn backtest(&self, req: &BacktestRequest) -> BacktestResult {

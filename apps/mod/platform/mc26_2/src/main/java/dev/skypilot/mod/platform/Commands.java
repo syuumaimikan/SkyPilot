@@ -155,7 +155,11 @@ final class Commands {
 				.then(argument("key", StringArgumentType.greedyString())
 						.executes(c -> setHypixelKey(StringArgumentType.getString(c, "key").strip()))));
 		root.then(literal("update")
-				.then(literal("skyblocker").executes(c -> updateSkyblocker())));
+				.then(literal("skyblocker").executes(c -> updateSkyblocker())
+						.then(literal("auto")
+								.executes(c -> skyblockerAuto(null))
+								.then(literal("on").executes(c -> skyblockerAuto(true)))
+								.then(literal("off").executes(c -> skyblockerAuto(false))))));
 		ToolCommands.register(root);
 		d.register(root);
 	}
@@ -579,6 +583,17 @@ final class Commands {
 		Lang l = lang();
 		MccLang.info("Checking and downloading Skyblocker update...", "Skyblockerの更新を確認・ダウンロード中...");
 		ModManager.updateSkyblocker(msg -> McText.chat(McText.prefix().append(Component.literal(msg).withStyle(ChatFormatting.AQUA))));
+		return 1;
+	}
+
+	/** /skypilot update skyblocker auto [on|off]: the shared "keep Skyblocker updated" switch. */
+	private static int skyblockerAuto(Boolean on) {
+		Lang l = lang();
+		if (on != null) ModManagerScreen.setSkyblockerAuto(on);
+		boolean now = SkyPilot.get().config().skyblockerAutoUpdate;
+		McText.chat(McText.prefix().append(Component.literal(l.t("Skyblocker auto-update: ", "Skyblocker自動更新: ") + (now ? "ON" : "OFF")).withStyle(now ? ChatFormatting.GREEN : ChatFormatting.YELLOW))
+				.append(Component.literal(now ? l.t(" (updated when the launcher starts the game)", "（ランチャーからの起動時に更新）")
+						: l.t(" (installed version kept; /skypilot update skyblocker updates once)", "（今のバージョンを維持。/skypilot update skyblocker で手動更新）")).withStyle(ChatFormatting.GRAY)));
 		return 1;
 	}
 

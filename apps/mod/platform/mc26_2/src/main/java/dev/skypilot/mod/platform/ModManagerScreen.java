@@ -173,6 +173,7 @@ final class ModManagerScreen extends Screen {
 				addRenderableWidget(ClientButton.create(Component.literal(l.t("Open update page", "更新ページを開く")), b -> openLink(u.url())).bounds(detailX, y - 22, detailW, 20).build());
 			}
 		} else if (e.id().equals("skyblocker")) {
+			int half = (detailW - 4) / 2;
 			addRenderableWidget(ClientButton.create(Component.literal(l.t("Update Skyblocker", "Skyblockerを更新 / 導入")), b -> {
 				b.active = false;
 				setMessage(l.t("Updating Skyblocker…", "Skyblockerを更新中…"), false);
@@ -181,8 +182,24 @@ final class ModManagerScreen extends Screen {
 					all = ModManager.scan();
 					rebuildWidgets();
 				}));
-			}).bounds(detailX, y - 22, detailW, 20).build());
+			}).bounds(detailX, y - 22, half, 20).build());
+			addRenderableWidget(ClientButton.create(Component.literal(skyblockerAutoLabel(l)), b -> {
+				setSkyblockerAuto(!SkyPilot.get().config().skyblockerAutoUpdate);
+				b.setMessage(Component.literal(skyblockerAutoLabel(l)));
+				setMessage(SkyPilot.get().config().skyblockerAutoUpdate
+						? l.t("Skyblocker is updated when the launcher starts the game.", "Skyblockerはランチャーからの起動時に自動更新されます。")
+						: l.t("Skyblocker stays on the installed version.", "Skyblockerは今のバージョンのままにします（手動更新のみ）。"), false);
+			}).bounds(detailX + half + 4, y - 22, half, 20).build());
 		}
+	}
+
+	private String skyblockerAutoLabel(Lang l) {
+		return l.t("Auto-update: ", "自動更新: ") + (SkyPilot.get().config().skyblockerAutoUpdate ? "ON" : "OFF");
+	}
+
+	static void setSkyblockerAuto(boolean on) {
+		SkyPilot.get().config().skyblockerAutoUpdate = on;
+		SkyPilot.get().saveConfig();
 	}
 
 	private void openLink(String url) {

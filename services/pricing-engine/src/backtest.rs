@@ -44,11 +44,13 @@ pub fn run(
             .get(&c.comparable_key)
             .map(|v| v.iter().filter(|s| s.ts_ms > c.ts_ms && s.ts_ms <= c.ts_ms + hold_ms).collect())
             .unwrap_or_default();
-        let (sell, minutes, forced) = match later.iter().find(|s| s.unit_price >= c.recommended_sell) {
+        // sales are per item; a stack's target is per item too
+        let count = c.count.max(1) as f64;
+        let (sell, minutes, forced) = match later.iter().find(|s| s.unit_price * count >= c.recommended_sell * 0.999) {
             Some(s) => (c.recommended_sell, (s.ts_ms - c.ts_ms) as f64 / 60_000.0, false),
             None => {
                 let prices: Vec<f64> = later.iter().map(|s| s.unit_price).collect();
-                (stats::median(&prices).unwrap_or(c.buy_price * 0.9), hold_ms as f64 / 60_000.0, true)
+                (stats::median(&prices).map(|m| m * count).unwrap_or(c.buy_price * 0.9), hold_ms as f64 / 60_000.0, true)
             }
         };
         let net = fees.bin_net_proceeds(sell, 24.0);

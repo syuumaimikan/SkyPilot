@@ -30,6 +30,7 @@ pub async fn status(State(state): State<Arc<AppState>>) -> Json<Value> {
     Json(json!({
         "hypixel": {
             "keyConfigured": state.hypixel.has_key(),
+            "key": state.hypixel.key_health(),
             "circuit": state.hypixel.breaker_state().as_str(),
             "rateLimitRemaining": remaining,
             "rateLimitLimit": limit,

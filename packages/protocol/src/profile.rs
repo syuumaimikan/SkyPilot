@@ -361,6 +361,49 @@ pub struct MuseumInfo {
     pub donated_count: u32,
 }
 
+/// How much of one measurable thing is done. The total always comes from data (Hypixel
+/// resources, NEU-REPO constants), never from memory; parts without a known maximum are listed
+/// in [`CompletionReport::unknown`] instead.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CompletionPart {
+    /// "skills", "catacombs", "classes", "slayers", "hotm", "garden", "collections", "minions", "museum", "fairy_souls"
+    pub id: String,
+    pub name: String,
+    pub done: f64,
+    pub total: f64,
+    /// 0..=100
+    pub percent: f64,
+    /// What was counted, e.g. "skill levels 312.4 / 540".
+    pub basis: String,
+    pub source: crate::common::DataSource,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UnknownCompletion {
+    pub id: String,
+    pub name: String,
+    pub reason: String,
+}
+
+/// Completion of the player's profile in % (each known part counts equally in `overall`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CompletionReport {
+    pub parts: Vec<CompletionPart>,
+    /// Mean of the known parts, None when nothing could be measured.
+    pub overall: Option<f64>,
+    pub unknown: Vec<UnknownCompletion>,
+    /// When the analysis it was computed from ran (None without an analysis).
+    #[ts(type = "number | null")]
+    pub analyzed_at_ms: Option<i64>,
+    pub profile_name: Option<String>,
+}
+
 /// 0-100 score per area plus strong/weak lists.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

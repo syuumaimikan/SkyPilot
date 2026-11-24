@@ -59,7 +59,7 @@ final class MenuScreen extends Screen {
 
 	/** Advisor domains offered in the guide tab (ids of the server's report providers). */
 	static final String[][] DOMAINS = {
-			{"mining", "Mining", "採掘"}, {"slayer", "Slayer", "スレイヤー"}, {"dungeons", "Dungeons", "ダンジョン"}, {"farming", "Farming", "農業"},
+			{"today", "Today", "今日"}, {"mining", "Mining", "採掘"}, {"slayer", "Slayer", "スレイヤー"}, {"dungeons", "Dungeons", "ダンジョン"}, {"farming", "Farming", "農業"},
 			{"fishing", "Fishing", "釣り"}, {"foraging", "Foraging", "伐採"}, {"kuudra", "Kuudra", "クードラ"}, {"rift", "Rift", "リフト"},
 			{"accessories", "Accessories", "アクセサリー"}, {"pets", "Pets", "ペット"}, {"minions", "Minions", "ミニオン"}, {"money", "Money", "金策"},
 			{"daily", "Daily", "デイリー"}, {"events", "Events", "イベント"}, {"gear", "Gear", "装備"}, {"combat", "Combat", "戦闘"},
@@ -167,7 +167,10 @@ final class MenuScreen extends Screen {
 				if (api == null) {
 					planError = sp.apiError();
 				} else if (force || plan == null) {
-					if (force) api.clearCache();
+					if (force) {
+						api.clearCache();
+						ProfileCompletion.refresh(minecraft, true, () -> dataVersion++);
+					}
 					api.plan(lang).whenComplete((p, err) -> minecraft.execute(() -> {
 						if (p != null) {
 							plan = p;
@@ -296,7 +299,7 @@ final class MenuScreen extends Screen {
 		return SkyPilot.shortError(err);
 	}
 
-	/** Guide domain: chosen by the player, else the one for the current area, else money. */
+	/** Guide domain: chosen by the player, else the one for the current area, else today's guide. */
 	static String domain() {
 		if (guideDomain != null) return guideDomain;
 		Dto.HudState h = SkyPilot.get().hudState();
@@ -312,7 +315,7 @@ final class MenuScreen extends Screen {
 			case "FISHING" -> "fishing";
 			default -> null;
 		};
-		return byArea != null ? byArea : "money";
+		return byArea != null ? byArea : "today";
 	}
 
 	// ---------------------------------------------------------------- document
@@ -451,6 +454,7 @@ final class MenuScreen extends Screen {
 			return;
 		}
 		if (plan.profile() != null) para(plan.profile() + " · " + l.t("analysed ", "分析 ") + Text.duration(Math.max(0, System.currentTimeMillis() - plan.analyzedAtMs())) + l.t(" ago", "前"), Ui.GRAY, 0);
+		completionSection(l);
 		for (Dto.PlanGoal goal : plan.goals()) {
 			heading(goal.title(), Ui.GOLD);
 			bar(goal.progress(), 0xFF9D8CFF, Ui.pct(goal.progress()) + goalRest(goal, l));
@@ -473,6 +477,32 @@ final class MenuScreen extends Screen {
 		}
 		for (String w : plan.warnings()) para("! " + w, Ui.YELLOW, 0);
 	}
+
+	/** Profile completion in % (server-computed from the last analysis; unknown parts are named, not guessed). */
+	private void completionSection(Lang l) {
+		Dto.Completion c = ProfileCompletion.data;
+		if (c == null) {
+			if (!completionRequested) {
+				completionRequested = true;
+				ProfileCompletion.refresh(minecraft, false, () -> dataVersion++);
+			}
+			return;
+		}
+		if (c.overall() == null) return;
+		heading(l.t("Profile completion", "プロフィール達成率"), Ui.PURPLE);
+		bar(c.overall() / 100.0, 0xFF9D8CFF, ProfileCompletion.pct(c.overall()));
+		List<Dto.CompletionPart> parts = new ArrayList<>(orEmpty(c.parts()));
+		parts.sort(java.util.Comparator.comparingDouble(Dto.CompletionPart::percent));
+		for (Dto.CompletionPart p : parts) {
+			statusRow(ProfileCompletion.name(p.id(), p.name(), l), ProfileCompletion.pct(p.percent()) + " · " + p.basis(), p.percent() >= 90 ? Ui.GREEN : p.percent() >= 50 ? Ui.WHITE : Ui.YELLOW);
+		}
+		for (Dto.UnknownCompletion u : orEmpty(c.unknown())) {
+			statusRow(ProfileCompletion.name(u.id(), u.name(), l), l.t("not available from API", "APIから取得できません"), Ui.DARK_GRAY);
+		}
+		toggle(l.t("Completion line on the info HUD", "情報HUDに達成率を表示"), Feat.on(Features.HUD_COMPLETION), () -> flipFeature(Features.HUD_COMPLETION));
+	}
+
+	private boolean completionRequested;
 
 	/** "▶ Guide: Maddox the Slayer (Hub) · /warp crypt" - draws the guide line there. */
 	private void guideLink(Dto.Place p, Lang l) {
