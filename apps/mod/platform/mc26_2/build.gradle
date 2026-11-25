@@ -41,6 +41,8 @@ def mediaBridge = tasks.register('buildMediaBridge', Exec) {
 processResources {
 	dependsOn mediaBridge
 	from(mediaOutput) { include 'SkyPilot.Media.exe'; into 'native/windows' }
+	// Bundle shared cosmetic models & textures from :core directly into the mod's Minecraft assets.
+	from(project(':core').file('src/main/resources/assets')) { into 'assets' }
 	def version = project.version
 	inputs.property 'version', version
 	filesMatching('fabric.mod.json') {
@@ -76,8 +78,17 @@ def releaseJar = tasks.named('jar').flatMap { it.archiveFile }
 def signKeystore = providers.environmentVariable('SKYPILOT_SIGN_KEYSTORE')
 def signAlias = providers.environmentVariable('SKYPILOT_SIGN_ALIAS')
 def signStorepass = providers.environmentVariable('SKYPILOT_SIGN_STOREPASS')
-def jarsigner = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }.map {
-	it.metadata.installationPath.file('bin/jarsigner' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : '')).asFile.absolutePath
+def jarsigner = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }.map {
+	def binName = 'bin/jarsigner' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : '')
+	def candidate = it.metadata.installationPath.file(binName).asFile
+	if (candidate.exists()) return candidate.absolutePath
+	def jdksDir = new File(System.getProperty('user.home'), '.gradle/jdks')
+	if (jdksDir.isDirectory()) {
+		def found = jdksDir.listFiles()?.findAll { it.isDirectory() && it.name.contains('25') }
+				?.collect { new File(it, binName) }?.find { it.exists() }
+		if (found != null) return found.absolutePath
+	}
+	return candidate.absolutePath
 }
 
 def signJar = tasks.register('signJar', Exec) {

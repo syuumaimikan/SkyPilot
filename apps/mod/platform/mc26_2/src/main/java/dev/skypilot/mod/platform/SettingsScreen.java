@@ -388,6 +388,8 @@ final class SettingsScreen extends Screen {
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe…", "ワードローブ…")), b -> minecraft.gui.setScreen(new AppearanceScreen(this))).bounds(right, y + ROW * 2, colW, 20).build());
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Performance…", "軽量化…")), b -> minecraft.gui.setScreen(new PerformanceScreen(this)))
 				.bounds(x, y + ROW * 2, colW, 20).build());
+		toggle(x, y + ROW * 3, pw, onOff(l, l.t("1st-Person Wardrobe Pet", "一人称視点でペットを表示"), c.appearance.firstPersonPet),
+				b -> c.appearance.firstPersonPet = !c.appearance.firstPersonPet);
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
 			if (sp.api() != null) sp.api().clearCache();
 			sp.translator().clearCache();
@@ -400,7 +402,7 @@ final class SettingsScreen extends Screen {
 			lastPage = page;
 			rebuildWidgets();
 		}).bounds(right, y + ROW, colW, 20).build());
-		y += ROW * 3 + 4;
+		y += ROW * 4 + 4;
 		String status = (sp.linked() ? l.t("Linked", "連携済み") : l.t("Not linked", "未連携")) + " · " + c.apiBaseUrl;
 		labels.add(new Label(status, x, y, sp.linked() ? 0xFF55FF55 : 0xFFAAAAAA, false, 0));
 		y += 12;

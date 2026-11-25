@@ -12,6 +12,197 @@ import { fmtDate } from "@/lib/format";
 import { useApi, useInvalidateProfile, useMe, useWorkspace } from "@/lib/hooks";
 import { useI18n, type Lang } from "@/lib/i18n";
 
+interface HypixelApiView {
+  configured: boolean;
+  baseUrl: string;
+  hint: string | null;
+  rateLimitRemaining: number | null;
+  rateLimitLimit: number | null;
+}
+
+interface ServerApisView {
+  hypixel: HypixelApiView;
+  translation: Record<string, unknown>;
+  llm: Record<string, unknown>;
+}
+
+function HypixelServerSettings() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const s = useApi<ServerApisView>("/api/me/settings/apis");
+  const [key, setKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  const h = s.data?.hypixel;
+
+  const save = useMutation<unknown, ApiError, { hypixelKey?: string; hypixelBaseUrl?: string }>({
+    mutationFn: (p) => api.put("/api/me/settings/apis", p),
+    onSuccess: () => {
+      setKey("");
+      void qc.invalidateQueries({ queryKey: ["/api/me/settings/apis"] });
+      void qc.invalidateQueries({ queryKey: ["/api/status"] });
+    },
+  });
+
+  const removeKey = useMutation<unknown, ApiError, void>({
+    mutationFn: () => api.put("/api/me/settings/apis", { hypixelKey: "" }),
+    onSuccess: () => {
+      setKey("");
+      void qc.invalidateQueries({ queryKey: ["/api/me/settings/apis"] });
+      void qc.invalidateQueries({ queryKey: ["/api/status"] });
+    },
+  });
+
+  if (s.isLoading) return <Loading rows={1} />;
+  if (s.error) return <ErrorView error={s.error} />;
+
+  const isConfigured = h?.configured ?? false;
+  const typedKey = key.trim();
+  const canSave = typedKey.length > 0 || (baseUrl.trim().length > 0 && baseUrl.trim() !== h?.baseUrl);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>{t("Hypixel API (Server)", "Hypixel API（サーバー設定）")}</CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge tone={isConfigured ? "good" : "warn"}>
+              {isConfigured ? t(`Active (${h?.hint ?? ""})`, `有効 (${h?.hint ?? ""})`) : t("Not configured", "未設定")}
+            </Badge>
+            {h?.rateLimitRemaining !== null && h?.rateLimitRemaining !== undefined ? (
+              <Badge>
+                {t("Budget", "予算")}: {h.rateLimitRemaining} / {h.rateLimitLimit ?? 300} req/min
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+        <CardDescription>
+          {t(
+            "Hypixel API key used by the SkyPilot server for player profile analysis, stats, collections, and inventory sync. The key is securely saved on your server (.env) and never exposed to other players or clients.",
+            "プレイヤーのプロファイル分析、ステータス、コレクション、インベントリ同期にSkyPilotサーバーが使用するHypixel APIキーです。キーはサーバー側（.env）に安全に保存され、他のプレイヤーや外部クライアントに漏洩することはありません。",
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="hypixel-key">{t("Hypixel API Key", "Hypixel APIキー")}</Label>
+            <div className="relative flex items-center">
+              <Input
+                id="hypixel-key"
+                type={showKey ? "text" : "password"}
+                autoComplete="off"
+                spellCheck={false}
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder={
+                  isConfigured
+                    ? t(`Saved ${h?.hint ?? ""} — paste new key to update`, `保存済み ${h?.hint ?? ""}・新しいキーを貼り付けて更新`)
+                    : t("e.g. 12345678-abcd-1234-abcd-1234567890ab", "例: 12345678-abcd-1234-abcd-1234567890ab")
+                }
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowKey(!showKey)}
+              >
+                {showKey ? t("Hide", "非表示") : t("Show", "表示")}
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1 sm:w-64">
+            <Label htmlFor="hypixel-base-url">{t("API Base URL (optional)", "APIベースURL（任意）")}</Label>
+            <Input
+              id="hypixel-base-url"
+              type="text"
+              value={baseUrl || (h?.baseUrl ?? "")}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="https://api.hypixel.net"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            disabled={save.isPending || !canSave}
+            onClick={() =>
+              save.mutate({
+                hypixelKey: typedKey ? typedKey : undefined,
+                hypixelBaseUrl: baseUrl.trim() ? baseUrl.trim() : undefined,
+              })
+            }
+          >
+            {save.isPending ? t("Verifying & saving...", "検証・保存中...") : t("Save & Verify Key", "保存してキーを検証")}
+          </Button>
+
+          {isConfigured ? (
+            <Button
+              variant="outline"
+              disabled={removeKey.isPending}
+              onClick={() => removeKey.mutate()}
+            >
+              {t("Remove Key", "キーを削除")}
+            </Button>
+          ) : null}
+
+          <a
+            href="https://developer.hypixel.net/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline ml-auto"
+          >
+            {t("Hypixel Developer Dashboard ↗", "Hypixel開発者ダッシュボード（キー申請・取得）↗")}
+          </a>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowGuide(!showGuide)}
+            className="text-xs text-muted-foreground"
+          >
+            {showGuide ? t("Hide application guide", "申請ガイドを閉じる") : t("How to apply for a persistent key?", "永続キーの申請方法・文面例")}
+          </Button>
+        </div>
+
+        {save.isSuccess ? (
+          <Alert tone="good">
+            {t("Hypixel API key verified and saved successfully to server .env!", "Hypixel APIキーが正常に検証され、サーバー（.env）に保存されました！")}
+          </Alert>
+        ) : null}
+        {save.error ? <ErrorView error={save.error} /> : null}
+        {removeKey.isSuccess ? (
+          <span className="text-xs text-muted-foreground">{t("Key removed.", "キーを削除しました。")}</span>
+        ) : null}
+
+        {showGuide ? (
+          <div className="rounded-lg border border-border bg-muted/30 p-4 text-xs flex flex-col gap-2">
+            <span className="font-semibold text-foreground">
+              {t("Hypixel Personal API Key Application Template", "Hypixel Personal API キー申請テンプレート")}
+            </span>
+            <p className="text-muted-foreground">
+              {t(
+                "Hypixel requires all developers to submit an application explaining their project. SkyPilot complies fully with Hypixel ToS (fair play, no automated gameplay, read-only information copilot).",
+                "Hypixelでは規約上、キー発行時にプロジェクト内容の申請が必要です。SkyPilotは完全なFair Play（自動化なし・情報提供コパイロットのみ）に準拠しています。",
+              )}
+            </p>
+            <div className="rounded bg-background p-2 font-mono text-[11px] leading-relaxed border border-border select-all">
+              <strong>Project Name:</strong> SkyPilot<br />
+              <strong>Category:</strong> Personal Mod / Copilot<br />
+              <strong>Description:</strong> SkyPilot is a read-only companion tool and local dashboard for Hypixel SkyBlock that analyzes profile progression and market data. It does not automate any gameplay actions or violate Hypixel Fair Play guidelines.<br />
+              <strong>Repository:</strong> https://github.com/SkyPilot/SkyPilot
+            </div>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function Preferences() {
   const ws = useWorkspace();
   if (ws.isLoading) return <Loading rows={1} />;
@@ -340,6 +531,7 @@ export function SettingsView() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={t("Settings", "設定")} />
+      <HypixelServerSettings />
       <Preferences />
       <Account />
       <Translation />

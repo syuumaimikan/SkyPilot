@@ -8,7 +8,7 @@ import { PageHeader, Loading } from "@/components/common";
 import { useWorkspace } from "@/lib/hooks";
 import { useI18n } from "@/lib/i18n";
 import { decodeAdventure, isDone, type Adventure } from "@/lib/adventure";
-import { useAdventure } from "./store";
+import { newId, useAdventure } from "./store";
 import { TodayPanel } from "./today";
 import { SessionPanel, type SessionDraft } from "./sessions";
 import { ProgressPanel } from "./progress";
@@ -58,7 +58,7 @@ function Planner({ storageKey, profile, actions }: { storageKey: string; profile
     {store.error && <Alert tone="bad">{store.error}</Alert>}
     {store.canUndo && <Button variant="outline" size="sm" onClick={store.undoChange}><RotateCcw/>{t("Undo the last change", "直前の変更を戻す")}</Button>}
     <Tabs value={tab} onValueChange={setTab}><TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"><TabsTrigger value="today">{t("Today & focus", "今日・集中")}</TabsTrigger><TabsTrigger value="sessions">{t("Journal & review", "記録・振り返り")}</TabsTrigger><TabsTrigger value="progress">{t("Progress & gear", "育成・装備")}</TabsTrigger><TabsTrigger value="notes">{t("Notes & timers", "メモ・タイマー")}</TabsTrigger></TabsList>
-      <TabsContent value="today" forceMount className="data-[state=inactive]:hidden"><TodayPanel store={store} now={now} actions={actions} record={(title, minutes) => { setDraft({ key: crypto.randomUUID(), title, minutes }); setTab("sessions"); }}/></TabsContent>
+      <TabsContent value="today" forceMount className="data-[state=inactive]:hidden"><TodayPanel store={store} now={now} actions={actions} record={(title, minutes) => { setDraft({ key: newId(), title, minutes }); setTab("sessions"); }}/></TabsContent>
       <TabsContent value="sessions" forceMount className="data-[state=inactive]:hidden"><SessionPanel key={draft?.key ?? "manual"} store={store} now={now} draft={draft}/></TabsContent>
       <TabsContent value="progress" forceMount className="data-[state=inactive]:hidden"><ProgressPanel store={store}/></TabsContent>
       <TabsContent value="notes" forceMount className="data-[state=inactive]:hidden"><NotesPanel store={store} now={now}/></TabsContent>

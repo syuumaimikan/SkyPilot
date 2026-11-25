@@ -14,7 +14,8 @@ COPY packages/protocol/ts packages/protocol/ts
 # Where the Next.js rewrite sends /api when the web container is used without the proxy.
 ARG SKYPILOT_API_URL=http://api:8080
 ENV SKYPILOT_API_URL=${SKYPILOT_API_URL} \
-    NEXT_TELEMETRY_DISABLED=1
+    NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_STANDALONE=true
 RUN pnpm --filter @skypilot/web build
 
 FROM node:24-trixie-slim

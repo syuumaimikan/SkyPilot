@@ -97,8 +97,18 @@ tasks.register('launcherJar', Jar) {
 tasks.named('assemble') { dependsOn 'launcherJar' }
 
 // A self-contained app (bundled Java runtime) with jpackage: build/jpackage/SkyPilot Launcher/.
-def jpackageExe = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }.map {
-	it.metadata.installationPath.file('bin/jpackage' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : '')).asFile.absolutePath
+// Use compilerFor (not launcherFor) so Gradle always selects a full JDK with jpackage, never a JRE.
+def jpackageExe = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) }.map {
+	def binName = 'bin/jpackage' + (System.getProperty('os.name').toLowerCase().contains('win') ? '.exe' : '')
+	def candidate = it.metadata.installationPath.file(binName).asFile
+	if (candidate.exists()) return candidate.absolutePath
+	def jdksDir = new File(System.getProperty('user.home'), '.gradle/jdks')
+	if (jdksDir.isDirectory()) {
+		def found = jdksDir.listFiles()?.findAll { it.isDirectory() && it.name.contains('25') }
+				?.collect { new File(it, binName) }?.find { it.exists() }
+		if (found != null) return found.absolutePath
+	}
+	return candidate.absolutePath
 }
 // Only the runnable jar goes into the app (the plain jar stays out).
 def jpackageInput = tasks.register('jpackageInput', Sync) {

@@ -92,7 +92,7 @@ class LauncherFrameTest {
 				}
 			}
 			for (String page : run[1].equals("light") ? new String[] {"home", "mods", "settings"} : pages) {
-				if(page.equals("wardrobe")){var cfg=dev.skypilot.launcher.Instance.config(game);cfg.appearance.cape="aurora";cfg.appearance.hat="horns";cfg.appearance.back="dragon";dev.skypilot.launcher.Instance.saveConfig(game,cfg);}
+				if(page.equals("wardrobe")){var cfg=dev.skypilot.launcher.Instance.config(game);cfg.appearance.cape="fuji_sakura";cfg.appearance.hat="samurai_kabuto";cfg.appearance.back="frost_chain_wings";cfg.appearance.aura="thunder_cloud_aura";cfg.appearance.pet="pet_bumblebee";cfg.appearance.companion="comp_cyber_tiger";dev.skypilot.launcher.Instance.saveConfig(game,cfg);}
 				JComponent[] content = new JComponent[1];
 				SwingUtilities.invokeAndWait(() -> content[0] = LauncherFrame.createContent(s, Pins.load(), page, launcherDir));
 				Thread.sleep(page.equals("mods") || page.equals("screenshots") || page.equals("tools") ? 1500 : 300);

@@ -27,6 +27,7 @@ public final class VisualEffects {
     public static void hurt(LivingEntity target,DamageSource damage){
         var mc=Minecraft.getInstance();var sp=SkyPilot.get();if(sp==null||mc.player==null||mc.level==null||target.level()!=mc.level||target==mc.player)return;
         if(damage.getEntity()!=mc.player){hits.remove(target.getId());return;}
+        PetWorldPhysics.onPlayerAttack(target);
         var a=sp.config().visuals;if(!a.killParticles&&!a.hitMarker&&!a.combo)return;
         if(target.isInvisibleTo(mc.player)||target.distanceToSqr(mc.player)>4096)return;
         if(hits.size()>=128)hits.remove(hits.keySet().iterator().next());hits.put(target.getId(),new Hit(target,now()));hitAt=now();

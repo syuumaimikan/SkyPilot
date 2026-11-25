@@ -3,10 +3,13 @@ import type { NextConfig } from "next";
 
 // Where the Rust API listens. In Docker Compose a Caddy front proxy routes /api to the API
 // directly; this rewrite makes `pnpm dev` / `next start` work without a proxy.
-const API_URL = (process.env.SKYPILOT_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
+const API_URL = (
+  process.env.SKYPILOT_API_URL ?? "http://localhost:8080"
+).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  allowedDevOrigins: ["192.168.0.10", "169.254.83.107"],
+  output: process.env.NEXT_STANDALONE === "true" ? "standalone" : undefined,
   outputFileTracingRoot: path.join(__dirname, "../.."),
   transpilePackages: ["@skypilot/ui", "@skypilot/protocol"],
   poweredByHeader: false,
@@ -22,7 +25,10 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=()",
+          },
         ],
       },
       {

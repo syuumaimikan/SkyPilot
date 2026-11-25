@@ -91,7 +91,7 @@ fn main() -> anyhow::Result<()> {
 
 async fn run() -> anyhow::Result<()> {
     #[cfg(windows)]
-    if std::env::var_os("SKYPILOT_DETACH").is_some() {
+    if std::env::var_os("SKYPILOT_DETACH").is_some() || std::env::args().any(|a| a == "--detach" || a == "-d") {
         unsafe {
             FreeConsole();
         }
@@ -262,8 +262,24 @@ async fn run() -> anyhow::Result<()> {
     let app = routes::router(state.clone());
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     tracing::info!(addr = %config.bind, "SkyPilot API listening");
-    let res = axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async {
-        let _ = tokio::signal::ctrl_c().await;
+    let is_detached = std::env::var_os("SKYPILOT_DETACH").is_some() || std::env::args().any(|a| a == "--detach" || a == "-d");
+    let res = axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).with_graceful_shutdown(async move {
+        if is_detached {
+            std::future::pending::<()>().await;
+        } else {
+            #[cfg(windows)]
+            {
+                if let Ok(mut ctrl) = tokio::signal::windows::ctrl_c() {
+                    let _ = ctrl.recv().await;
+                } else {
+                    std::future::pending::<()>().await;
+                }
+            }
+            #[cfg(not(windows))]
+            {
+                let _ = tokio::signal::ctrl_c().await;
+            }
+        }
     })
     .await;
     let _ = std::fs::remove_file(&pid_path);

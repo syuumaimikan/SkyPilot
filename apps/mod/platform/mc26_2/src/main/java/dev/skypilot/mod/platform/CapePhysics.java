@@ -75,4 +75,12 @@ final class CapePhysics {
     static double getSmoothedSpeed() {
         return smoothedSpeed;
     }
+
+    static double getSmoothedVertSpeed() {
+        return smoothedVertSpeed;
+    }
+
+    static double getYawTurnRate() {
+        return yawTurnRate;
+    }
 }

@@ -8,6 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const isHttps = forwardedProto ? forwardedProto === "https" : request.nextUrl.protocol === "https:";
   const extraConnect = process.env.NEXT_PUBLIC_API_WS_URL ? ` ${new URL(process.env.NEXT_PUBLIC_API_WS_URL).origin}` : "";
   const csp = [
     "default-src 'self'",
@@ -22,7 +24,7 @@ export function proxy(request: NextRequest) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+    ...(!isDev && isHttps ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 
   const requestHeaders = new Headers(request.headers);

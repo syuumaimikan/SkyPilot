@@ -12,11 +12,13 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.event.client.player.ClientPlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionResult;
 
 /**
  * Fabric entrypoint for Minecraft 26.2.
@@ -48,6 +50,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 			Waypoints.hud(g, mc().font, g.guiWidth());
 			FarmBuilder.hud(g, mc().font, g.guiWidth(), Waypoints.target() != null ? 17 : 2);
 		});
+		LevelRenderEvents.COLLECT_SUBMITS.register(CosmeticWorldRenderer::render);
 		LevelRenderEvents.BEFORE_GIZMOS.register(context -> {
 			Waypoints.render();
 			FarmBuilder.render();
@@ -73,8 +76,15 @@ public final class SkyPilotClient implements ClientModInitializer {
 			}
 		});
 		ClientPlayerBlockBreakEvents.AFTER.register((level, player, pos, state) -> Trackers.blockBroken(state));
+		AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
+			if (world.isClientSide() && player == mc().player) {
+				PetWorldPhysics.onPlayerAttack(entity);
+			}
+			return InteractionResult.PASS;
+		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			PetWorldPhysics.tick(mc);
 			WindowsMedia.tick();
 			PestTracker.tick();
 			DungeonSolver.tick();
@@ -100,6 +110,7 @@ public final class SkyPilotClient implements ClientModInitializer {
 		});
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {UtilityHud.join();SkyPilot.get().refreshHud(System.currentTimeMillis(), true);});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+			PetWorldPhysics.reset();
 			SkyPilot.get().endSession();
 			ClickTranslate.clear();
 			ChatFeatures.clear();

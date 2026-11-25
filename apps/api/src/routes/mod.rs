@@ -1,6 +1,7 @@
 pub mod advisor;
 pub mod analyze;
 pub mod auth_routes;
+pub mod dashboard;
 pub mod launcher;
 pub mod market;
 pub mod orders;
@@ -145,15 +146,33 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/mod-updates", post(modlist::mod_updates))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
-    let origin: HeaderValue = state.config.public_web_url.trim_end_matches('/').parse().unwrap_or(HeaderValue::from_static("http://localhost:3000"));
+    let pub_origin = state.config.public_web_url.trim_end_matches('/').to_string();
     let cors = CorsLayer::new()
-        .allow_origin(origin)
+        .allow_origin(tower_http::cors::AllowOrigin::predicate(move |origin, _parts| {
+            let Ok(s) = origin.to_str() else { return false };
+            s.starts_with("http://localhost:")
+                || s.starts_with("https://localhost:")
+                || s.starts_with("http://127.0.0.1:")
+                || s.starts_with("https://127.0.0.1:")
+                || s.starts_with("http://[::1]:")
+                || s.starts_with("http://192.168.")
+                || s.starts_with("https://192.168.")
+                || s.starts_with("http://10.")
+                || s.starts_with("https://10.")
+                || s.starts_with("http://172.")
+                || s.starts_with("https://172.")
+                || s.starts_with("http://169.254.")
+                || s.starts_with("https://169.254.")
+                || s == pub_origin
+        }))
         .allow_credentials(true)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, HeaderName::from_static(auth::CSRF_HEADER)])
         .max_age(Duration::from_secs(600));
 
     Router::new()
+        .route("/", get(dashboard::root_handler))
+        .route("/dashboard", get(dashboard::dashboard_handler))
         .nest("/api", api)
         .layer(RequestBodyLimitLayer::new(256 * 1024))
         .layer(CompressionLayer::new())
@@ -161,7 +180,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .layer(SetResponseHeaderLayer::overriding(header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff")))
         .layer(SetResponseHeaderLayer::overriding(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY")))
         .layer(SetResponseHeaderLayer::overriding(header::REFERRER_POLICY, HeaderValue::from_static("no-referrer")))
-        .layer(SetResponseHeaderLayer::overriding(header::CONTENT_SECURITY_POLICY, HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'")))
+        .layer(SetResponseHeaderLayer::overriding(header::CONTENT_SECURITY_POLICY, HeaderValue::from_static("default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'")))
         .layer(SetResponseHeaderLayer::if_not_present(header::CACHE_CONTROL, HeaderValue::from_static("no-store")))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

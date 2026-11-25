@@ -68,6 +68,13 @@ public final class SkyPilotConfig {
 		public String accessory = "none"; // Legacy slot; migrated on load.
 		public String hat = "none";
 		public String back = "none";
+		public String aura = "none";
+		public String pet = "none";
+		public String companion = "none";
+		public double wingScale = 1.0;
+		public boolean cosmeticGlow = true;
+		/** Whether to show equipped wardrobe pet & companion in first-person view. */
+		public boolean firstPersonPet = true;
 		public int color = 0xA38BFA;
 		public java.util.List<String> favorites = new java.util.ArrayList<>();
 		public java.util.List<WardrobeTools.Outfit> outfits = new java.util.ArrayList<>();
@@ -275,7 +282,11 @@ public final class SkyPilotConfig {
 		if (!java.util.List.of("none", "crown", "halo", "wings").contains(appearance.accessory == null ? "" : appearance.accessory)) appearance.accessory = "none";
 		if (!CosmeticCatalog.valid("hat", appearance.hat)) appearance.hat = "none";
 		if (!CosmeticCatalog.valid("back", appearance.back)) appearance.back = "none";
+		if (!CosmeticCatalog.valid("aura", appearance.aura)) appearance.aura = "none";
+		if (!CosmeticCatalog.valid("pet", appearance.pet)) appearance.pet = "none";
+		if (!CosmeticCatalog.valid("companion", appearance.companion)) appearance.companion = "none";
 		CosmeticCatalog.migrate(appearance);
+		appearance.wingScale = clamp(appearance.wingScale <= 0 ? 1.0 : appearance.wingScale, 0.6, 1.5);
 		appearance.color &= 0xFFFFFF;
 		WardrobeTools.sanitize(appearance);
 		if(deskNotes==null)deskNotes="";

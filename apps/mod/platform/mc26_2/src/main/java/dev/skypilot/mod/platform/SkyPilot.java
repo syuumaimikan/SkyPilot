@@ -2,6 +2,7 @@ package dev.skypilot.mod.platform;
 
 import dev.skypilot.mod.core.ConfigStore;
 import dev.skypilot.mod.core.ContextParser;
+import dev.skypilot.mod.core.CustomCosmetics;
 import dev.skypilot.mod.core.Lang;
 import dev.skypilot.mod.core.SkyBlockContext;
 import dev.skypilot.mod.core.SkyPilotConfig;
@@ -35,6 +36,7 @@ public final class SkyPilot {
 	public static final Logger LOG = LoggerFactory.getLogger("SkyPilot");
 	private static SkyPilot instance;
 
+	private final Path configDir;
 	private final ConfigStore configStore;
 	private final TokenStore tokens;
 	private final HttpTransport transport;
@@ -54,6 +56,8 @@ public final class SkyPilot {
 	private long dictionaryLoadedAt;
 
 	private SkyPilot(Path dir) {
+		this.configDir = dir;
+		CustomCosmetics.reload(dir);
 		this.configStore = new ConfigStore(dir);
 		this.config = configStore.load();
 		this.tokens = new TokenStore(dir);
@@ -84,6 +88,10 @@ public final class SkyPilot {
 	}
 
 	// ---------------------------------------------------------------- accessors
+
+	public Path configDir() {
+		return configDir;
+	}
 
 	public SkyPilotConfig config() {
 		return config;
