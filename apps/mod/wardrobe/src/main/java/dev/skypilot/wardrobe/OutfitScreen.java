@@ -85,7 +85,7 @@ final class OutfitScreen extends Screen {
         int rightX = width / 2 + 8;
 
         g.centeredText(font, l.t("✦ THEMES & SAVED OUTFITS", "✦ おすすめテーマ ＆ 保存コーデ"), width / 2, 14, WardrobeUi.WHITE);
-        g.text(font, l.t("CURATED 6-SLOT THEMES", "厳選6スロットテーマ"), leftX, 40, WardrobeUi.PURPLE, false);
+        g.text(font, l.t("CURATED 10-SLOT THEMES", "厳選10スロットテーマ"), leftX, 40, WardrobeUi.PURPLE, false);
         g.text(font, l.t("MY SAVED OUTFITS (8)", "マイ保存コーデ (最大8件)"), rightX, 40, WardrobeUi.CYAN, false);
         if (!notice.isEmpty()) g.centeredText(font, notice, width / 2, height - 44, WardrobeUi.CYAN);
         super.extractRenderState(g, mx, my, delta);

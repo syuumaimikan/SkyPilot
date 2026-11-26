@@ -845,9 +845,11 @@ def _is_eye_glow(lx: int, ly: int) -> bool:
 
 def _soft_bevel(nx: float, ny: float) -> float:
     edge = min(nx, 1.0 - nx, ny, 1.0 - ny)
-    ao = 0.84 + 0.16 * min(1.0, edge / 0.12)
-    top_hi = 1.06 - 0.14 * ny
-    return ao * top_hi
+    # Crisp commercial edge definition + rich top-down studio key lighting + soft bottom AO
+    ao = 0.78 + 0.22 * min(1.0, edge / 0.11)
+    rim = 1.08 if 0.04 <= edge <= 0.09 and ny < 0.55 else 1.0
+    key_light = 1.10 - 0.22 * ny
+    return ao * key_light * rim
 
 
 def _zone_a(style: str, lx: int, ly: int, nx: float, ny: float, p, s, a, alpha: int):

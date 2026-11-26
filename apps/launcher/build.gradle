@@ -8,11 +8,9 @@ plugins {
 
 // The mod jar tasks must exist before this script looks them up.
 evaluationDependsOn(':platform:mc26_2')
-evaluationDependsOn(':wardrobe')
 
 dependencies {
 	implementation project(':core')
-	implementation project(':wardrobe-assets')
 	implementation project(':network')
 	implementation "com.google.code.gson:gson:${gson_version}"
 	implementation "com.formdev:flatlaf:${flatlaf_version}"
@@ -44,7 +42,6 @@ application {
 }
 
 def modJar = project(':platform:mc26_2').tasks.named('jar').flatMap { it.archiveFile }
-def wardrobeJar = project(':wardrobe').tasks.named('jar').flatMap { it.archiveFile }
 def modIcon = project(':platform:mc26_2').file('src/main/resources/assets/skypilot/icon.png')
 def pins = [
 		minecraft    : project.property('minecraft_version'),
@@ -56,12 +53,11 @@ def pins = [
 		fabricApiSize: project.property('fabric_api_size'),
 ]
 
-// Both mod jars (SkyPilot + standalone SkyPilot Wardrobe), their SHA-256 and pinned versions go into launcher resources.
+// The SkyPilot mod jar, its SHA-256 and pinned versions go into launcher resources.
 def bundle = tasks.register('bundleMod') {
-	description = 'Copies the SkyPilot & standalone Wardrobe mod jars into the launcher and records their SHA-256 and pinned versions.'
-	dependsOn ':platform:mc26_2:signJar', ':wardrobe:jar'
+	description = 'Copies the SkyPilot mod jar into the launcher and records its SHA-256 and pinned versions.'
+	dependsOn ':platform:mc26_2:signJar'
 	inputs.file(modJar)
-	inputs.file(wardrobeJar)
 	inputs.file(modIcon)
 	inputs.property('pins', pins.toString())
 	def out = layout.buildDirectory.dir('bundled')
@@ -69,22 +65,17 @@ def bundle = tasks.register('bundleMod') {
 	doLast {
 		def dir = out.get().dir('bundled').asFile
 		dir.mkdirs()
+		def staleWardrobe = new File(dir, 'skypilot-wardrobe.jar')
+		if (staleWardrobe.exists()) staleWardrobe.delete()
 		def jar = modJar.get().asFile
 		def target = new File(dir, 'skypilot-mod.jar')
 		target.bytes = jar.bytes
-		def wJar = wardrobeJar.get().asFile
-		def wTarget = new File(dir, 'skypilot-wardrobe.jar')
-		wTarget.bytes = wJar.bytes
 		new File(dir, 'icon.png').bytes = modIcon.bytes
 		def md = java.security.MessageDigest.getInstance('SHA-256')
 		md.update(target.bytes)
-		def wmd = java.security.MessageDigest.getInstance('SHA-256')
-		wmd.update(wTarget.bytes)
 		def props = new Properties()
 		props.setProperty('mod.sha256', md.digest().encodeHex().toString())
 		props.setProperty('mod.file', 'skypilot-' + pins.modVersion + '.jar')
-		props.setProperty('wardrobe.sha256', wmd.digest().encodeHex().toString())
-		props.setProperty('wardrobe.file', 'skypilot-wardrobe-' + pins.modVersion + '.jar')
 		pins.each { k, v -> props.setProperty(k, v.toString()) }
 		new File(dir, 'pins.properties').withWriter('UTF-8') { props.store(it, 'SkyPilot launcher pins (generated)') }
 	}

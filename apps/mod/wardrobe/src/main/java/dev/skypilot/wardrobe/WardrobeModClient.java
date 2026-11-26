@@ -44,6 +44,8 @@ public final class WardrobeModClient implements ClientModInitializer {
                 new KeyMapping("key.skypilot_wardrobe.adjust", InputConstants.UNKNOWN.getValue(), CATEGORY));
         KeyMapping openSettings = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.skypilot_wardrobe.settings", InputConstants.UNKNOWN.getValue(), CATEGORY));
+        KeyMapping openVfx = KeyMappingHelper.registerKeyMapping(
+                new KeyMapping("key.skypilot_wardrobe.vfx", InputConstants.UNKNOWN.getValue(), CATEGORY));
         KeyMapping randomOutfit = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.skypilot_wardrobe.random", InputConstants.UNKNOWN.getValue(), CATEGORY));
 
@@ -58,6 +60,7 @@ public final class WardrobeModClient implements ClientModInitializer {
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (world.isClientSide() && player == Minecraft.getInstance().player) {
                 PetWorldPhysics.onPlayerAttack(entity);
+                WardrobeVfxEngine.onPlayerAttack(entity);
             }
             return InteractionResult.PASS;
         });
@@ -74,6 +77,10 @@ public final class WardrobeModClient implements ClientModInitializer {
                     }))
                     .then(literal("settings").executes(c -> {
                         openLater(() -> new WardrobeSettingsScreen(null));
+                        return 1;
+                    }))
+                    .then(literal("vfx").executes(c -> {
+                        openLater(() -> new WardrobeVfxScreen(null));
                         return 1;
                     }))
                     .then(literal("outfits").executes(c -> {
@@ -93,6 +100,7 @@ public final class WardrobeModClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             PetWorldPhysics.tick(mc);
             CosmeticParticles.tick(mc);
+            WardrobeVfxEngine.tick(mc);
             RemoteWardrobeSync.tick(mc);
 
             boolean inGame = mc.player != null && mc.gui.screen() == null;
@@ -104,6 +112,9 @@ public final class WardrobeModClient implements ClientModInitializer {
             }
             while (openSettings.consumeClick()) {
                 if (inGame) mc.gui.setScreen(new WardrobeSettingsScreen(null));
+            }
+            while (openVfx.consumeClick()) {
+                if (inGame) mc.gui.setScreen(new WardrobeVfxScreen(null));
             }
             while (randomOutfit.consumeClick()) {
                 if (inGame) {
@@ -121,6 +132,7 @@ public final class WardrobeModClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> RemoteWardrobeSync.markDirty());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
             PetWorldPhysics.reset();
+            WardrobeVfxEngine.reset();
             CapePhysics.clear();
             RemoteWardrobeSync.onDisconnect();
         });

@@ -27,7 +27,8 @@ TEX_DIR = RES_ROOT / "textures" / "cosmetics"
 CATALOG_PATH = CORE_RES_ROOT / "cosmetics" / "catalog.json"
 
 sys.path.insert(0, str(HERE))
-from catalog_defs import ALL_COSMETICS, CosmeticDef  # noqa: E402
+from catalog_defs import ALL_COSMETICS as BASE_COSMETICS, CosmeticDef  # noqa: E402
+from catalog_defs_slots import NEW_SLOT_COSMETICS  # noqa: E402
 from pixel_art import paint_cloak_texture, paint_rig_atlas  # noqa: E402
 from rig_builders import (  # noqa: E402
     build_aura_bones,
@@ -37,6 +38,14 @@ from rig_builders import (  # noqa: E402
     build_pet_bones,
     build_wings_bones,
 )
+from rig_builders_slots import (  # noqa: E402
+    build_face_bones,
+    build_feet_bones,
+    build_shoulder_bones,
+    build_waist_bones,
+)
+
+ALL_COSMETICS = BASE_COSMETICS + NEW_SLOT_COSMETICS
 
 
 def deterministic_uuid(key: str) -> str:
@@ -131,13 +140,13 @@ def verify_anti_clipping(c: CosmeticDef, elements: list[dict[str, Any]]) -> list
         elif c.slot == "back":
             if z0 < 2.95 and abs((x0 + x1) * 0.5) < 5.5 and y0 < 25.0 and y1 > 10.0:
                 issues.append(f"{c.id}/{e['name']}: back z0={z0} < 2.95 inside torso")
-        elif c.slot == "hat":
+        elif c.slot in ("hat", "face"):
             # Bare+overlay head box is [-4.5..4.5, 23.5..32.5, -4.5..4.5]
             if x1 > -4.45 and x0 < 4.45 and y1 > 23.6 and y0 < 32.45 and z1 > -4.45 and z0 < 4.45:
-                issues.append(f"{c.id}/{e['name']}: hat penetrates head box ({e['from']}..{e['to']})")
-        elif c.slot == "companion":
+                issues.append(f"{c.id}/{e['name']}: {c.slot} penetrates head box ({e['from']}..{e['to']})")
+        elif c.slot in ("companion", "feet"):
             if y0 < -0.01:
-                issues.append(f"{c.id}/{e['name']}: companion y0={y0} < 0 (sinks below ground)")
+                issues.append(f"{c.id}/{e['name']}: {c.slot} y0={y0} < 0 (sinks below ground)")
     return issues
 
 
@@ -220,6 +229,10 @@ def bones_to_bbmodel(
         "cape": "body",
         "back": "body",
         "hat": "head",
+        "face": "head",
+        "shoulder": "body",
+        "waist": "body",
+        "feet": "root",
         "aura": "root",
         "pet": "pet",
         "companion": "companion",
@@ -281,6 +294,14 @@ def _build_one(c: CosmeticDef) -> tuple[CosmeticDef, dict[str, Any], int, bool, 
             bones = build_wings_bones(c.arch, c.color, c.secondary, c.accent, c.emissive, c.translucent)
         elif c.slot == "hat":
             bones = build_hat_bones(c.arch, c.color, c.secondary, c.accent)
+        elif c.slot == "face":
+            bones = build_face_bones(c.arch, c.color, c.secondary, c.accent)
+        elif c.slot == "shoulder":
+            bones = build_shoulder_bones(c.arch, c.color, c.secondary, c.accent)
+        elif c.slot == "waist":
+            bones = build_waist_bones(c.arch, c.color, c.secondary, c.accent)
+        elif c.slot == "feet":
+            bones = build_feet_bones(c.arch, c.color, c.secondary, c.accent)
         elif c.slot == "aura":
             bones = build_aura_bones(c.arch, c.color, c.secondary, c.accent)
         elif c.slot == "pet":

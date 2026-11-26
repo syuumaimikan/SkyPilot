@@ -12,9 +12,10 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Upgraded 6-slot 3D Wardrobe Studio supporting 300+ bundled {@code .bbmodel} designs, smart
- * multi-keyword &amp; Hiragana/Katakana search, rarity filtering, 6 sort modes, per-slot fine
- * transform tuning, granular 1st-person &amp; multiplayer settings, and custom Blockbench import.
+ * Commercial-grade 10-slot 3D Wardrobe Studio supporting 380+ bundled {@code .bbmodel} designs
+ * across Cloak, Wings, Head, Face, Shoulder, Waist/Tail, Feet, Aura, Pet, and Companion slots,
+ * with smart multi-keyword &amp; Kana search, rarity filters, 6 sort modes, per-slot transform
+ * tuning, 256×256 HDR Custom VFX studio, and zero-server standalone LAN multiplayer sync.
  */
 final class AppearanceScreen extends Screen {
     private final Screen parent;
@@ -41,14 +42,14 @@ final class AppearanceScreen extends Screen {
         var a = rt.appearance();
 
         left = 12;
-        top = 74;
-        studioWidth = Math.max(142, Math.min(210, width / 3));
+        top = 86;
+        studioWidth = Math.max(146, Math.min(212, width / 3));
         studioX = width - studioWidth - 12;
         collectionWidth = studioX - left - 12;
         cardW = (collectionWidth - 8) / 3;
-        rows = Math.max(1, Math.min(3, (height - top - 56) / 56));
+        rows = Math.max(1, Math.min(3, (height - top - 54) / 54));
         capacity = rows * 3;
-        cardH = Math.max(52, Math.min(82, (height - top - 62 - (rows - 1) * 5) / rows));
+        cardH = Math.max(50, Math.min(82, (height - top - 60 - (rows - 1) * 5) / rows));
 
         // Smart Search Row: [Search Box] [×] [Rarity] [Sort]
         int rarityW = Math.min(58, Math.max(46, collectionWidth / 6));
@@ -56,9 +57,9 @@ final class AppearanceScreen extends Screen {
         int clearW = 16;
         int searchW = Math.max(70, collectionWidth - rarityW - sortW - clearW - 6);
 
-        search = new EditBox(font, left, 34, searchW, 16, Component.literal(l.t("Search collection", "コレクション検索")));
+        search = new EditBox(font, left, 32, searchW, 16, Component.literal(l.t("Search collection", "コレクション検索")));
         search.setMaxLength(80);
-        search.setHint(Component.literal(l.t("Search 300+ (e.g. sakura wing, cute, mythic…)", "300種+検索 (例: 桜 翼 / うーぱー / かわいい…)")));
+        search.setHint(Component.literal(l.t("Search 380+ (e.g. kitsune, glasses, sakura…)", "380種+検索 (例: 桜 翼 / 狐 / 眼鏡 / うーぱー…)")));
         search.setValue(query);
         search.setResponder(value -> {
             query = value;
@@ -76,7 +77,7 @@ final class AppearanceScreen extends Screen {
             page = 0;
             searching = false;
             rebuildWidgets();
-        }).bounds(bx, 34, clearW, 16).tooltip(l.t("Clear search & filters", "検索・フィルタをクリア")).build();
+        }).bounds(bx, 32, clearW, 16).tooltip(l.t("Clear search & filters", "検索・フィルタをクリア")).build();
         clearBtn.active = !query.isEmpty() || !"all".equals(rarityFilter) || sortOrder != WardrobeSearch.SortOrder.DEFAULT;
         addRenderableWidget(clearBtn);
 
@@ -85,30 +86,53 @@ final class AppearanceScreen extends Screen {
             rarityFilter = WardrobeSearch.nextRarity(rarityFilter);
             page = 0;
             rebuildWidgets();
-        }).bounds(bx, 34, rarityW, 16).tooltip(l.t("Filter by rarity", "レアリティで絞り込み")).build());
+        }).bounds(bx, 32, rarityW, 16).tooltip(l.t("Filter by rarity", "レアリティで絞り込み")).build());
 
         bx += rarityW + 2;
         addRenderableWidget(WardrobeUi.button(sortOrder.label(ja), b -> {
             sortOrder = sortOrder.next();
             page = 0;
             rebuildWidgets();
-        }).bounds(bx, 34, sortW, 16).tooltip(l.t("Change sort order", "並び替え順を変更")).build());
+        }).bounds(bx, 32, sortW, 16).tooltip(l.t("Change sort order", "並び替え順を変更")).build());
 
-        // 8 Category tabs
-        String[] ids = {"all", "cape", "back", "hat", "aura", "pet", "companion", "favorites"};
-        String[] en = {"All", "Cloak", "Wing", "Head", "Aura", "Pet", "Comp", "★"};
-        String[] jaL = {"全て", "マント", "翼", "頭", "オーラ", "ペット", "相棒", "★"};
-        int tabW = Math.max(20, (collectionWidth - (ids.length - 1) * 2) / ids.length);
-        for (int i = 0; i < ids.length; i++) {
-            String id = ids[i];
-            String label = (category.equals(id) ? "▸" : "") + (ja ? jaL[i] : en[i]);
-            addRenderableWidget(WardrobeUi.button(label, b -> {
-                category = id;
-                page = 0;
-                if ("cape".equals(id) || "back".equals(id)) { rotation = 160; autoSpin = false; }
-                else if ("hat".equals(id) || "pet".equals(id) || "companion".equals(id)) { rotation = 20; autoSpin = false; }
-                rebuildWidgets();
-            }).bounds(left + i * (tabW + 2), 54, tabW, 15).build());
+        // 12 Category Tabs arranged cleanly in 2 rows of 6 (All + 10 wearable slots + Favorites)
+        String[][] rowIds = {
+                {"all", "cape", "back", "hat", "face", "shoulder"},
+                {"waist", "feet", "aura", "pet", "companion", "favorites"}
+        };
+        String[][] rowEn = {
+                {"All", "Cloak", "Wings", "Head", "Face", "Shoulder"},
+                {"Waist", "Feet", "Aura", "Pet", "Comp", "★ Fav"}
+        };
+        String[][] rowJa = {
+                {"全て", "マント", "翼", "頭", "顔", "肩"},
+                {"腰・尻尾", "足元", "オーラ", "ペット", "相棒", "★お気入"}
+        };
+        int tabW = Math.max(24, (collectionWidth - 5 * 2) / 6);
+        for (int r = 0; r < 2; r++) {
+            int ty = 51 + r * 16;
+            for (int c = 0; c < 6; c++) {
+                String id = rowIds[r][c];
+                boolean eqSlot = CosmeticCatalog.SLOTS.contains(id) && !"none".equals(CosmeticCatalog.equippedId(a, id));
+                String prefix = (category.equals(id) ? "▸" : "") + (eqSlot ? "●" : "");
+                String label = prefix + (ja ? rowJa[r][c] : rowEn[r][c]);
+                addRenderableWidget(WardrobeUi.button(label, b -> {
+                    category = id;
+                    page = 0;
+                    if ("cape".equals(id) || "back".equals(id) || "waist".equals(id)) {
+                        rotation = 156;
+                        autoSpin = false;
+                    } else if ("hat".equals(id) || "face".equals(id) || "shoulder".equals(id)
+                            || "pet".equals(id) || "companion".equals(id)) {
+                        rotation = 22;
+                        autoSpin = false;
+                    } else if ("feet".equals(id)) {
+                        rotation = 34;
+                        autoSpin = false;
+                    }
+                    rebuildWidgets();
+                }).bounds(left + c * (tabW + 2), ty, tabW, 14).build());
+            }
         }
 
         visible = WardrobeSearch.filterAndSort(
@@ -160,9 +184,9 @@ final class AppearanceScreen extends Screen {
             try {
                 var tpl = CustomCosmetics.exportTemplates(rt.configDir());
                 Util.getPlatform().openPath(tpl);
-                statusMsg = l.t("Exported 6 .bbmodel templates!", "6種 .bbmodel テンプレート出力済");
+                statusMsg = l.t("Exported 10 .bbmodel templates!", "10種 .bbmodel テンプレート出力済");
             } catch (Exception e) { statusMsg = e.getMessage(); }
-        }).bounds(customX + (cbW + 3) * 2, footer, cbW, 18).tooltip(l.t("Export Blockbench starter templates", "Blockbench用テンプレート書き出し")).build());
+        }).bounds(customX + (cbW + 3) * 2, footer, cbW, 18).tooltip(l.t("Export 10-slot Blockbench starter templates", "10スロット対応Blockbenchテンプレート書き出し")).build());
 
         // Right Studio Action Rows
         int half = (studioWidth - 4) / 2;
@@ -178,17 +202,25 @@ final class AppearanceScreen extends Screen {
             rebuildWidgets();
         }).bounds(studioX + (third + 3) * 2, height - 128, third, 14).build());
 
-        // Row 2: Dedicated Fine-Transform Adjust + Granular 1st-Person/Multiplayer Settings!
+        // Row 2: Dedicated Fine-Transform Adjust + Custom 3D VFX Studio + Granular Settings
         String initialSlot = CosmeticCatalog.SLOTS.contains(category) ? category : "cape";
+        int activeVfx = WardrobeVfxCatalog.activeCount(a.vfx);
         addRenderableWidget(WardrobeUi.button(l.t("✦ Adjust", "✦ 位置・傾き"), b ->
                 minecraft.gui.setScreen(new WardrobeAdjustScreen(this, initialSlot)))
-                .bounds(studioX, height - 110, half, 15)
-                .tooltip(l.t("Fine-tune X/Y/Z position, scale & tilt for every cosmetic slot", "スロットごとに位置(XYZ)・大きさ・傾きを細かく調整"))
+                .bounds(studioX, height - 110, third, 15)
+                .tooltip(l.t("Fine-tune X/Y/Z position, scale & tilt for all 10 slots", "全10スロットの位置(XYZ)・大きさ・傾きを細かく調整"))
                 .build());
-        addRenderableWidget(WardrobeUi.button(l.t("⚙ Settings", "⚙ 詳細設定"), b ->
+        addRenderableWidget(WardrobeUi.button(
+                activeVfx > 0 ? l.t("✦ VFX(" + activeVfx + ")", "✦ VFX(" + activeVfx + ")") : l.t("✦ VFX", "✦ エフェクト"),
+                b -> minecraft.gui.setScreen(new WardrobeVfxScreen(this)))
+                .bounds(studioX + third + 3, height - 110, third, 15)
+                .tooltip(l.t("Configure HD custom 3D Attack, Kill, Move, Jump, Warp, Projectile & Ambient VFX!",
+                        "高精細自作3Dエフェクト設定（攻撃・撃破・移動・ジャンプ・ワープ・飛翔体・常時）"))
+                .build());
+        addRenderableWidget(WardrobeUi.button(l.t("⚙ Settings", "⚙ 設定"), b ->
                 minecraft.gui.setScreen(new WardrobeSettingsScreen(this)))
-                .bounds(studioX + half + 4, height - 110, half, 15)
-                .tooltip(l.t("1st-person visibility (Aura/Wings/Cape/Hat/Pet) & Multiplayer sync", "一人称視点(オーラ/翼/マント/頭/ペット)とマルチプレイ共有設定"))
+                .bounds(studioX + (third + 3) * 2, height - 110, third, 15)
+                .tooltip(l.t("1st-person visibility for all 10 slots & standalone LAN sync", "全10スロット一人称設定とサーバー不要LAN共有設定"))
                 .build());
 
         // Row 3: Theme Presets + Random + Clear
@@ -199,7 +231,7 @@ final class AppearanceScreen extends Screen {
             rt.save();
             statusMsg = "✦ " + preset.label(ja);
             rebuildWidgets();
-        }).bounds(studioX, height - 92, third, 15).tooltip(l.t("Cycle curated 6-slot theme outfits", "厳選6スロットコーデをワンクリック試着")).build());
+        }).bounds(studioX, height - 92, third, 15).tooltip(l.t("Cycle curated 10-slot theme outfits", "厳選10スロットコーデをワンクリック試着")).build());
         addRenderableWidget(WardrobeUi.button(l.t("Random", "ランダム"), b -> {
             WardrobeTools.randomize(a, ThreadLocalRandom.current());
             rt.save();
@@ -230,7 +262,7 @@ final class AppearanceScreen extends Screen {
         }).bounds(studioX + studioWidth - 26, height - 74, 26, 15).build());
 
         // Row 5: FX | Glow | 3D
-        addRenderableWidget(WardrobeUi.button(l.t("FX:", "粒子:") + (a.cosmeticParticles ? "ON" : "OFF"), b -> {
+        addRenderableWidget(WardrobeUi.button(l.t("FX:", "光粒:") + (a.cosmeticParticles ? "ON" : "OFF"), b -> {
             a.cosmeticParticles = !a.cosmeticParticles;
             rt.save();
             rebuildWidgets();
@@ -256,7 +288,7 @@ final class AppearanceScreen extends Screen {
             while (i < WardrobeTools.PALETTE.length && WardrobeTools.PALETTE[i] != a.color) i++;
             a.color = WardrobeTools.PALETTE[(i + 1) % WardrobeTools.PALETTE.length];
             rt.save();
-        }).bounds(studioX + studioWidth - 24, 38, 18, 14).tooltip(l.t("Change studio accent color", "スタジオ配色を切り替え")).build());
+        }).bounds(studioX + studioWidth - 24, 36, 18, 14).tooltip(l.t("Change studio accent color", "スタジオ配色を切り替え")).build());
 
         if (searching) {
             setFocused(search);
@@ -279,25 +311,26 @@ final class AppearanceScreen extends Screen {
         double time = CosmeticAnimation.animationTimeSeconds();
         int accentRgb = a.color & 0xFFFFFF;
 
-        g.text(font, l.t("✦ SKYPILOT 3D WARDROBE", "✦ 3D ワードローブ (独立MOD)"), left, 10, WardrobeUi.WHITE, false);
+        g.text(font, l.t("✦ 3D WARDROBE STUDIO (STANDALONE)", "✦ 3D ワードローブ (完全独立MOD)"), left, 9, WardrobeUi.WHITE, false);
         String syncBadge = RemoteWardrobeSync.statusSummary(ja);
-        int syncCol = RemoteWardrobeSync.isConnected() ? WardrobeUi.CYAN : WardrobeUi.GRAY;
-        g.text(font, syncBadge, width - font.width(syncBadge) - 14, 10, syncCol, false);
+        int syncCol = RemoteWardrobeSync.nearbySyncedCount() > 0 ? WardrobeUi.GREEN
+                : (RemoteWardrobeSync.isConnected() ? WardrobeUi.CYAN : WardrobeUi.GRAY);
+        g.text(font, syncBadge, width - font.width(syncBadge) - 14, 9, syncCol, false);
 
         int totalCount = CosmeticCatalog.all().size();
         String sub = visible.size() + " / " + totalCount + " "
-                + l.t("HD 3D .bbmodel designs · 6 slots · free", "種表示 · 6スロット · 無料")
+                + l.t("HD 3D .bbmodel designs · 10 slots · free", "種表示 · 10スロット · 無料")
                 + (statusMsg.isEmpty() ? "" : "  ·  " + statusMsg);
-        g.text(font, sub, left, 22, statusMsg.isEmpty() ? WardrobeUi.GRAY : (0xFF000000 | accentRgb), false);
+        g.text(font, sub, left, 20, statusMsg.isEmpty() ? WardrobeUi.GRAY : (0xFF000000 | accentRgb), false);
 
         // Right 3D Studio Stage
-        int stageH = Math.max(60, height - 166);
-        WardrobeUi.panel(g, studioX, 34, studioWidth, stageH);
-        g.fill(studioX + 1, 35, studioX + studioWidth - 1, 37, 0xFF000000 | accentRgb);
-        g.fill(studioX + 1, 37, studioX + studioWidth - 1, 37 + Math.min(34, stageH / 3), 0x1E000000 | accentRgb);
-        g.text(font, "STUDIO " + WardrobeTools.equippedCount(a) + "/6", studioX + 8, 41, 0xFF000000 | accentRgb, false);
+        int stageH = Math.max(60, height - 164);
+        WardrobeUi.panel(g, studioX, 32, studioWidth, stageH);
+        g.fill(studioX + 1, 33, studioX + studioWidth - 1, 35, 0xFF000000 | accentRgb);
+        g.fill(studioX + 1, 35, studioX + studioWidth - 1, 35 + Math.min(34, stageH / 3), 0x1E000000 | accentRgb);
+        g.text(font, "STUDIO " + WardrobeTools.equippedCount(a) + "/10", studioX + 8, 39, 0xFF000000 | accentRgb, false);
 
-        int y0 = 54, y1 = height - 134;
+        int y0 = 52, y1 = height - 134;
         if (y1 > y0) {
             int midX = studioX + studioWidth / 2;
             int floorY = y1 - 12;
@@ -331,9 +364,11 @@ final class AppearanceScreen extends Screen {
 
             int rRgb = item.rarityColor() & 0xFFFFFF;
             g.fill(x + 2, y + 2, x + cardW + 2, y + cardH + 2, 0x70000000);
-            g.fill(x, y, x + cardW, y + cardH, isHover ? 0xEE182135 : 0xE6101726);
-            int sheenH = Math.min(26, (cardH - 16) / 2);
-            g.fill(x + 1, y + 2, x + cardW - 1, y + 2 + sheenH, (eq ? 0x30000000 : 0x1D000000) | rRgb);
+            g.fillGradient(x, y, x + cardW, y + cardH - 15,
+                    isHover ? 0xEE182338 : 0xE6101829,
+                    isHover ? 0xEE0F1524 : 0xE60A0F1A);
+            int sheenH = Math.min(24, (cardH - 16) / 2);
+            g.fill(x + 1, y + 2, x + cardW - 1, y + 2 + sheenH, (eq ? 0x30000000 : 0x1A000000) | rRgb);
             g.fill(x + 1, y + 1, x + cardW - 1, y + 3, 0xFF000000 | (eq ? 0x55D6D2 : rRgb));
             g.outline(x, y, cardW, cardH, eq ? WardrobeUi.CYAN : (isHover ? (0xFF000000 | rRgb) : WardrobeUi.PANEL_BORDER));
 
@@ -366,8 +401,8 @@ final class AppearanceScreen extends Screen {
                 g.text(font, font.plainSubstrByWidth(hovered.detail(ja), rem), px, inspY + 3, WardrobeUi.GRAY, false);
             }
         } else {
-            g.text(font, l.t("Multi-word search (sakura wing) · Drag studio to spin · Scroll to zoom",
-                    "複数語/ひらがな検索対応 (例: うーぱー / 桜 翼) · ドラッグで回転 · スクロールで拡大"), left + 5, inspY + 3, WardrobeUi.GRAY, false);
+            g.text(font, l.t("10 slots (Face/Shoulder/Waist/Feet added!) · Drag studio to spin · Scroll to zoom",
+                    "10スロット対応 (顔・肩・腰/尻尾・足元を追加！) · ドラッグ回転 · スクロール拡大"), left + 5, inspY + 3, WardrobeUi.GRAY, false);
         }
 
         g.text(font, (page + 1) + "/" + Math.max(1, (visible.size() + capacity - 1) / capacity), left + 52, height - 20, WardrobeUi.GRAY, false);
@@ -386,7 +421,7 @@ final class AppearanceScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent e, double dx, double dy) {
-        if (e.x() >= studioX && e.y() > 40 && e.y() < height - 128) {
+        if (e.x() >= studioX && e.y() > 36 && e.y() < height - 128) {
             autoSpin = false;
             rotation += (float) dx * 2;
             return true;
@@ -408,4 +443,3 @@ final class AppearanceScreen extends Screen {
         minecraft.gui.setScreen(parent);
     }
 }
-

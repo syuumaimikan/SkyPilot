@@ -32,6 +32,10 @@ public final class WardrobeApi {
         return new WardrobeSettingsScreen(parent);
     }
 
+    public static Screen createVfxScreen(Screen parent) {
+        return new WardrobeVfxScreen(parent);
+    }
+
     public static void openWardrobe(Screen parent) {
         Minecraft.getInstance().gui.setScreen(new AppearanceScreen(parent));
     }
@@ -44,8 +48,13 @@ public final class WardrobeApi {
         Minecraft.getInstance().gui.setScreen(new WardrobeSettingsScreen(parent));
     }
 
+    public static void openVfx(Screen parent) {
+        Minecraft.getInstance().gui.setScreen(new WardrobeVfxScreen(parent));
+    }
+
     public static void onPlayerAttack(Entity target) {
         PetWorldPhysics.onPlayerAttack(target);
+        WardrobeVfxEngine.onPlayerAttack(target);
     }
 
     public static void randomizeAndSave() {

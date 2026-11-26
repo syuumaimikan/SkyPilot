@@ -91,6 +91,9 @@ final class CosmeticWorldRenderer {
                 }
             }
         }
+
+        // 3. Custom 3D Procedural Emissive VFX (Slashes, Magic Circles, Light Pillars, Ribbons, etc.)
+        WardrobeVfxEngine.render(ctx);
     }
 
     private static void renderFirstPersonBodyCosmetics(
@@ -105,9 +108,13 @@ final class CosmeticWorldRenderer {
     ) {
         boolean showAura = a.firstPersonAura && !"none".equals(a.aura);
         boolean showWings = a.firstPersonWings && !"none".equals(a.back);
-        boolean showCape = a.firstPersonCape && !"none".equals(a.cape);
+        // Never display the flat inside lining of the cloak when looking steeply downward in 1st-person!
+        boolean showCape = a.firstPersonCape && !"none".equals(a.cape) && player.getXRot() < 34.0f;
         boolean showHat = a.firstPersonHat && !"none".equals(a.hat);
-        if (!showAura && !showWings && !showCape && !showHat) return;
+        boolean showFeet = a.firstPersonFeet && !"none".equals(a.feet);
+        boolean showWaist = a.firstPersonWaist && !"none".equals(a.waist);
+        boolean showShoulder = a.firstPersonShoulder && !"none".equals(a.shoulder);
+        if (!showAura && !showWings && !showCape && !showHat && !showFeet && !showWaist && !showShoulder) return;
 
         CapePhysics.State phys = CapePhysics.update(player);
         double px = Mth.lerp(partialTick, player.xOld, player.getX());
@@ -129,8 +136,52 @@ final class CosmeticWorldRenderer {
                 pose.pushPose();
                 pose.translate(px - cam.x, py - cam.y + 1.501 - crouchDrop, pz - cam.z);
                 pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
-                pose.scale(-0.9375f, -0.9375f, 0.9375f);
+                // Push slightly outward in 1st-person so orbiting ornaments frame peripheral vision without blocking eyes!
+                pose.scale(-1.08f, -0.9375f, 1.08f);
                 CosmeticRigRenderer.applySlotTransform(pose, "aura", a.transformOf("aura"));
+                CosmeticRigRenderer.submit(rig, pose, collector, light, time,
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                pose.popPose();
+            }
+        }
+
+        if (showFeet) {
+            var rig = CosmeticRigRenderer.get(a.feet);
+            if (rig != null) {
+                pose.pushPose();
+                pose.translate(px - cam.x, py - cam.y + 1.501 - crouchDrop, pz - cam.z);
+                pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
+                pose.scale(-0.9375f, -0.9375f, 0.9375f);
+                CosmeticRigRenderer.applySlotTransform(pose, "feet", a.transformOf("feet"));
+                CosmeticRigRenderer.submit(rig, pose, collector, light, time,
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                pose.popPose();
+            }
+        }
+
+        if (showWaist) {
+            var rig = CosmeticRigRenderer.get(a.waist);
+            if (rig != null) {
+                pose.pushPose();
+                pose.translate(px - cam.x, py - cam.y + 1.501 - crouchDrop, pz - cam.z);
+                pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
+                pose.scale(-0.9375f, -0.9375f, 0.9375f);
+                pose.translate(0.0f, 0.0f, 1.4f / 16.0f);
+                CosmeticRigRenderer.applySlotTransform(pose, "waist", a.transformOf("waist"));
+                CosmeticRigRenderer.submit(rig, pose, collector, light, time,
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                pose.popPose();
+            }
+        }
+
+        if (showShoulder) {
+            var rig = CosmeticRigRenderer.get(a.shoulder);
+            if (rig != null) {
+                pose.pushPose();
+                pose.translate(px - cam.x, py - cam.y + 1.44 - crouchDrop, pz - cam.z);
+                pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
+                pose.scale(-0.9375f, -0.9375f, 0.9375f);
+                CosmeticRigRenderer.applySlotTransform(pose, "shoulder", a.transformOf("shoulder"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
                         phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
                 pose.popPose();
@@ -144,7 +195,7 @@ final class CosmeticWorldRenderer {
                 pose.translate(px - cam.x, py - cam.y + 1.501 - crouchDrop, pz - cam.z);
                 pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
                 pose.scale(-0.9375f, -0.9375f, 0.9375f);
-                float zShift = (hasChest ? 1.25f : 0.0f) + (hasCape ? 1.65f : 0.0f) + 1.2f;
+                float zShift = (hasChest ? 1.25f : 0.0f) + (hasCape ? 1.65f : 0.0f) + 2.0f;
                 pose.translate(0.0f, 0.0f, zShift / 16.0f);
                 if (rig.model.scalable && Math.abs(wingScale - 1.0f) > 0.005f) {
                     float wpy = 3.0f / 16.0f, wpz = 3.5f / 16.0f;
@@ -163,10 +214,12 @@ final class CosmeticWorldRenderer {
             var rig = CosmeticRigRenderer.get(a.cape);
             if (rig != null) {
                 pose.pushPose();
-                pose.translate(px - cam.x, py - cam.y + 1.501 - crouchDrop, pz - cam.z);
+                pose.translate(px - cam.x, py - cam.y + 1.46 - crouchDrop, pz - cam.z);
                 pose.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
                 pose.scale(-0.9375f, -0.9375f, 0.9375f);
-                if (hasChest) pose.translate(0.0f, -0.35f / 16.0f, 1.25f / 16.0f);
+                // Offset cleanly behind shoulders and trail outward so the inside lining never cuts into 1st-person view!
+                pose.translate(0.0f, 0.8f / 16.0f, ((hasChest ? 1.25f : 0.0f) + 3.4f) / 16.0f);
+                pose.mulPose(Axis.XP.rotationDegrees(-14.0f));
                 CosmeticRigRenderer.applySlotTransform(pose, "cape", a.transformOf("cape"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
                         phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);

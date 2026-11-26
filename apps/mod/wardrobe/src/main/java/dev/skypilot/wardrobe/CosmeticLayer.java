@@ -118,10 +118,20 @@ final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
                             pose.scale(wingScale, wingScale, wingScale);
                             pose.translate(0.0f, -py, -pz);
                         }
+                    } else if ("shoulder".equals(slot)) {
+                        if (hasChest) {
+                            pose.translate(0.0f, -0.75f / 16.0f, 0.0f);
+                            pose.scale(1.07f, 1.04f, 1.08f);
+                        }
+                    } else if ("waist".equals(slot)) {
+                        if (hasChest || hasLegs) {
+                            pose.translate(0.0f, 0.0f, 0.75f / 16.0f);
+                            pose.scale(1.06f, 1.0f, 1.06f);
+                        }
                     }
                 }
                 default -> {
-                    // "root" (auras) or GUI-mode "pet"/"companion": upright in body-yaw space
+                    // "root" (auras, feet) or GUI-mode "pet"/"companion": upright in body-yaw space
                 }
             }
 

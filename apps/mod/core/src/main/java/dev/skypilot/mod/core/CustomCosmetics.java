@@ -22,7 +22,8 @@ import java.util.*;
  */
 public final class CustomCosmetics {
     private static final List<String> TEMPLATE_SOURCES = List.of(
-            "aurora", "wings", "crown", "gale_wind_aura", "pet_bumblebee", "comp_shiba_inu"
+            "aurora", "wings", "crown", "face_kitsune_half", "sh_sakura_muffler",
+            "waist_nine_tails", "feet_hermes_wings", "gale_wind_aura", "pet_bumblebee", "comp_shiba_inu"
     );
 
     private static volatile List<CosmeticCatalog.Item> customItems = List.of();

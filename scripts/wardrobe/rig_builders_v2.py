@@ -665,17 +665,20 @@ def build_aura_v2(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]] | N
         return bones
 
     if arch == "v2_floating_lanterns":
+        # Sculpted delicate translucent Japanese paper lanterns with slim dark lacquer rims & golden tassels
         bones = []
-        for i in range(6):
-            r = R + 1.4 + (i % 2) * 1.8
-            y = 14.0 + (i % 3) * 4.5
+        for i in range(5):
+            r = R + 2.0 + (i % 2) * 1.8
+            y = 14.5 + (i % 3) * 4.2
             c = [
-                make_cube(f"fl_t_{i}", [r - 1.3, y + 2.0, -1.3], [r + 1.3, y + 2.7, 1.3], zone="D_DARK", color=s),
-                make_cube(f"fl_b_{i}", [r - 1.7, y - 1.8, -1.7], [r + 1.7, y + 2.0, 1.7], zone="A", color=p, emissive=True),
-                make_cube(f"fl_c_{i}", [r - 1.0, y - 1.0, -1.0], [r + 1.0, y + 1.2, 1.0], zone="C", color=a, emissive=True),
-                make_cube(f"fl_d_{i}", [r - 1.3, y - 2.4, -1.3], [r + 1.3, y - 1.8, 1.3], zone="D_DARK", color=s),
+                make_cube(f"fl_ring_{i}", [r - 0.35, y + 2.2, -0.35], [r + 0.35, y + 2.9, 0.35], zone="D_GOLD", color=0xFBBF24, emissive=True),
+                make_cube(f"fl_t_{i}", [r - 1.15, y + 1.6, -1.15], [r + 1.15, y + 2.2, 1.15], zone="D_DARK", color=s),
+                make_cube(f"fl_b_{i}", [r - 1.1, y - 1.4, -1.1], [r + 1.1, y + 1.6, 1.1], zone="A", color=p, emissive=True, translucent=True),
+                make_cube(f"fl_c_{i}", [r - 0.55, y - 0.8, -0.55], [r + 0.55, y + 0.9, 0.55], zone="C", color=a, emissive=True),
+                make_cube(f"fl_d_{i}", [r - 1.15, y - 1.9, -1.15], [r + 1.15, y - 1.4, 1.15], zone="D_DARK", color=s),
+                make_cube(f"fl_tas_{i}", [r - 0.25, y - 3.6, -0.25], [r + 0.25, y - 1.9, 0.25], zone="C", color=a, emissive=True),
             ]
-            bones.append(make_bone(f"fl_lan_{i}", [0, y, 0], anim="aura_orbit_cw", anim_amp=0.55, anim_phase=i * math.tau / 6.0, cubes=c))
+            bones.append(make_bone(f"fl_lan_{i}", [0, y, 0], anim="aura_orbit_cw", anim_amp=0.52, anim_phase=i * math.tau / 5.0, cubes=c))
         return bones
 
     if arch == "v2_mini_planets":

@@ -12,7 +12,7 @@ import java.util.Locale;
 
 /**
  * Interactive per-slot fine transform editor allowing precise adjustment of Position (X/Y/Z),
- * Scale (40%–200%), and Tilt/Rotation (Pitch/Yaw/Roll) for each of the 6 Wardrobe slots with
+ * Scale (40%–200%), and Tilt/Rotation (Pitch/Yaw/Roll) for all 10 Wardrobe slots with
  * live rotatable 3D studio preview.
  */
 final class WardrobeAdjustScreen extends Screen {
@@ -29,9 +29,10 @@ final class WardrobeAdjustScreen extends Screen {
     }
 
     private void angleForSlot(String slot) {
-        if ("cape".equals(slot) || "back".equals(slot)) rotation = 160;
-        else if ("hat".equals(slot) || "pet".equals(slot) || "companion".equals(slot)) rotation = 22;
-        else rotation = 35;
+        if ("cape".equals(slot) || "back".equals(slot) || "waist".equals(slot)) rotation = 156;
+        else if ("hat".equals(slot) || "face".equals(slot) || "shoulder".equals(slot)
+                || "pet".equals(slot) || "companion".equals(slot)) rotation = 22;
+        else rotation = 34;
     }
 
     @Override
@@ -46,65 +47,70 @@ final class WardrobeAdjustScreen extends Screen {
         studioX = width - studioW - 14;
         panelW = studioX - leftX - 14;
 
-        // 6 Slot Tabs
-        String[] slots = {"cape", "back", "hat", "aura", "pet", "companion"};
-        String[] en = {"Cloak", "Wings", "Head", "Aura", "Pet", "Comp"};
-        String[] jaL = {"マント", "翼", "頭", "オーラ", "ペット", "相棒"};
-        int tabW = Math.max(26, (panelW - (slots.length - 1) * 3) / slots.length);
-        for (int i = 0; i < slots.length; i++) {
-            String sl = slots[i];
-            boolean modified = !a.transformOf(sl).isIdentity();
-            String lbl = (activeSlot.equals(sl) ? "▸" : "") + (ja ? jaL[i] : en[i]) + (modified ? "*" : "");
-            addRenderableWidget(WardrobeUi.button(lbl, b -> {
-                activeSlot = sl;
-                angleForSlot(sl);
-                rebuildWidgets();
-            }).bounds(leftX + i * (tabW + 3), 36, tabW, 18).build());
+        // 10 Slot Tabs in 2 tidy rows of 5
+        String[][] slotRows = {
+                {"cape", "back", "hat", "face", "shoulder"},
+                {"waist", "feet", "aura", "pet", "companion"}
+        };
+        String[][] enRows = {
+                {"Cloak", "Wings", "Head", "Face", "Shoulder"},
+                {"Waist", "Feet", "Aura", "Pet", "Comp"}
+        };
+        String[][] jaRows = {
+                {"マント", "翼", "頭", "顔", "肩"},
+                {"腰・尻尾", "足元", "オーラ", "ペット", "相棒"}
+        };
+        int tabW = Math.max(26, (panelW - 4 * 3) / 5);
+        for (int r = 0; r < 2; r++) {
+            int ty = 32 + r * 17;
+            for (int c = 0; c < 5; c++) {
+                String sl = slotRows[r][c];
+                boolean modified = !a.transformOf(sl).isIdentity();
+                String lbl = (activeSlot.equals(sl) ? "▸" : "") + (ja ? jaRows[r][c] : enRows[r][c]) + (modified ? "*" : "");
+                addRenderableWidget(WardrobeUi.button(lbl, b -> {
+                    activeSlot = sl;
+                    angleForSlot(sl);
+                    rebuildWidgets();
+                }).bounds(leftX + c * (tabW + 3), ty, tabW, 15).build());
+            }
         }
 
         // 7 Fine-Adjustment Parameter Rows (Position X/Y/Z, Scale, Tilt X/Y/Z)
         SkyPilotConfig.SlotTransform tr = a.transformOf(activeSlot);
-        int y = 78;
-        int rowStep = Math.max(21, Math.min(25, (height - 138) / 7));
+        int y = 82;
+        int rowStep = Math.max(19, Math.min(24, (height - 134) / 7));
 
-        addControlRow(y, l.t("Pos X (Left/Right)", "位置 X (左右)"),
-                String.format(Locale.ROOT, "%+.2f px", tr.offsetX), -8.0, 8.0, 0.25, 1.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.2f px", tr.offsetX), 0.25, 1.0,
                 d -> { var t = a.editTransform(activeSlot); t.offsetX = round2(clamp(t.offsetX + d, -8, 8)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).offsetX = 0.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Pos Y (Up/Down)", "位置 Y (上下)"),
-                String.format(Locale.ROOT, "%+.2f px", tr.offsetY), -8.0, 8.0, 0.25, 1.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.2f px", tr.offsetY), 0.25, 1.0,
                 d -> { var t = a.editTransform(activeSlot); t.offsetY = round2(clamp(t.offsetY + d, -8, 8)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).offsetY = 0.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Pos Z (Front/Back)", "位置 Z (前後)"),
-                String.format(Locale.ROOT, "%+.2f px", tr.offsetZ), -8.0, 8.0, 0.25, 1.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.2f px", tr.offsetZ), 0.25, 1.0,
                 d -> { var t = a.editTransform(activeSlot); t.offsetZ = round2(clamp(t.offsetZ + d, -8, 8)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).offsetZ = 0.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Scale (Size)", "サイズ (大きさ)"),
-                String.format(Locale.ROOT, "%d%%", Math.round(tr.scale * 100)), 0.4, 2.0, 0.05, 0.20,
+        addControlRow(y, String.format(Locale.ROOT, "%d%%", Math.round(tr.scale * 100)), 0.05, 0.20,
                 d -> { var t = a.editTransform(activeSlot); t.scale = round2(clamp(t.scale + d, 0.4, 2.0)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).scale = 1.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Tilt X (Pitch)", "傾き X (前後)"),
-                String.format(Locale.ROOT, "%+.0f°", tr.rotX), -60.0, 60.0, 5.0, 15.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.0f°", tr.rotX), 5.0, 15.0,
                 d -> { var t = a.editTransform(activeSlot); t.rotX = Math.round(clamp(t.rotX + d, -60, 60)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).rotX = 0.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Tilt Y (Yaw)", "傾き Y (左右回転)"),
-                String.format(Locale.ROOT, "%+.0f°", tr.rotY), -180.0, 180.0, 5.0, 30.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.0f°", tr.rotY), 5.0, 30.0,
                 d -> { var t = a.editTransform(activeSlot); t.rotY = Math.round(clamp(t.rotY + d, -180, 180)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).rotY = 0.0; saveAndRefresh(); });
         y += rowStep;
 
-        addControlRow(y, l.t("Tilt Z (Roll)", "傾き Z (横傾き)"),
-                String.format(Locale.ROOT, "%+.0f°", tr.rotZ), -60.0, 60.0, 5.0, 15.0,
+        addControlRow(y, String.format(Locale.ROOT, "%+.0f°", tr.rotZ), 5.0, 15.0,
                 d -> { var t = a.editTransform(activeSlot); t.rotZ = Math.round(clamp(t.rotZ + d, -60, 60)); saveAndRefresh(); },
                 () -> { a.editTransform(activeSlot).rotZ = 0.0; saveAndRefresh(); });
 
@@ -131,7 +137,7 @@ final class WardrobeAdjustScreen extends Screen {
     }
 
     private void addControlRow(
-            int y, String label, String valText, double lo, double hi, double fineStep, double coarseStep,
+            int y, String valText, double fineStep, double coarseStep,
             java.util.function.DoubleConsumer adjust, Runnable reset
     ) {
         int btnW = 22, coarseW = 24, resetW = 18, valW = 54;
@@ -143,13 +149,12 @@ final class WardrobeAdjustScreen extends Screen {
         int xMinusFine = xVal - btnW - 2;
         int xMinusCoarse = xMinusFine - coarseW - 2;
 
-        addRenderableWidget(WardrobeUi.button("«", b -> adjust.accept(-coarseStep)).bounds(xMinusCoarse, y, coarseW, 18).build());
-        addRenderableWidget(WardrobeUi.button("-", b -> adjust.accept(-fineStep)).bounds(xMinusFine, y, btnW, 18).build());
-        var valBtn = WardrobeUi.button(valText, b -> reset.run()).bounds(xVal, y, valW, 18).build();
-        addRenderableWidget(valBtn);
-        addRenderableWidget(WardrobeUi.button("+", b -> adjust.accept(fineStep)).bounds(xPlusFine, y, btnW, 18).build());
-        addRenderableWidget(WardrobeUi.button("»", b -> adjust.accept(coarseStep)).bounds(xPlusCoarse, y, coarseW, 18).build());
-        addRenderableWidget(WardrobeUi.button("↺", b -> reset.run()).bounds(xReset, y, resetW, 18).build());
+        addRenderableWidget(WardrobeUi.button("«", b -> adjust.accept(-coarseStep)).bounds(xMinusCoarse, y, coarseW, 17).build());
+        addRenderableWidget(WardrobeUi.button("-", b -> adjust.accept(-fineStep)).bounds(xMinusFine, y, btnW, 17).build());
+        addRenderableWidget(WardrobeUi.button(valText, b -> reset.run()).bounds(xVal, y, valW, 17).build());
+        addRenderableWidget(WardrobeUi.button("+", b -> adjust.accept(fineStep)).bounds(xPlusFine, y, btnW, 17).build());
+        addRenderableWidget(WardrobeUi.button("»", b -> adjust.accept(coarseStep)).bounds(xPlusCoarse, y, coarseW, 17).build());
+        addRenderableWidget(WardrobeUi.button("↺", b -> reset.run()).bounds(xReset, y, resetW, 17).build());
     }
 
     private void saveAndRefresh() {
@@ -165,11 +170,11 @@ final class WardrobeAdjustScreen extends Screen {
         boolean ja = rt.japanese();
         var a = rt.appearance();
 
-        g.text(font, l.t("✦ COSMETIC POSITION, SCALE & TILT", "✦ ワードローブ位置・サイズ・傾き調整"), leftX, 12, WardrobeUi.WHITE, false);
+        g.text(font, l.t("✦ COSMETIC POSITION, SCALE & TILT (10 SLOTS)", "✦ ワードローブ位置・サイズ・傾き調整 (全10スロット)"), leftX, 11, WardrobeUi.WHITE, false);
         String eqId = CosmeticCatalog.equippedId(a, activeSlot);
         var eqItem = CosmeticCatalog.byId(eqId);
         String eqLabel = eqItem != null ? eqItem.label(ja) : l.t("(Not equipped)", "（未装備）");
-        g.text(font, CosmeticCatalog.slotLabel(activeSlot, ja) + ": " + eqLabel, leftX, 60, WardrobeUi.CYAN, false);
+        g.text(font, CosmeticCatalog.slotLabel(activeSlot, ja) + ": " + eqLabel, leftX, 69, WardrobeUi.CYAN, false);
 
         // Parameter Row Labels
         String[] labels = {
@@ -181,15 +186,15 @@ final class WardrobeAdjustScreen extends Screen {
                 l.t("Tilt Y (Yaw)", "傾き Y (左右回転)"),
                 l.t("Tilt Z (Roll)", "傾き Z (横傾き)"),
         };
-        int y = 78;
-        int rowStep = Math.max(21, Math.min(25, (height - 138) / 7));
+        int y = 82;
+        int rowStep = Math.max(19, Math.min(24, (height - 134) / 7));
         for (String lbl : labels) {
-            g.text(font, lbl, leftX, y + 5, WardrobeUi.WHITE, false);
+            g.text(font, lbl, leftX, y + 4, WardrobeUi.WHITE, false);
             y += rowStep;
         }
 
         // Right Live 3D Studio Preview
-        int stageY = 36, stageH = height - 72;
+        int stageY = 32, stageH = height - 68;
         WardrobeUi.panel(g, studioX, stageY, studioW, stageH);
         g.text(font, l.t("LIVE 3D PREVIEW (Drag to rotate)", "ライブ3Dプレビュー (ドラッグ回転)"), studioX + 8, stageY + 7, WardrobeUi.CYAN, false);
 
@@ -245,4 +250,3 @@ final class WardrobeAdjustScreen extends Screen {
         return Math.round(v * 100.0) / 100.0;
     }
 }
-

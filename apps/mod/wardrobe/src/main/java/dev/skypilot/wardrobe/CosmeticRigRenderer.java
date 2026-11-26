@@ -75,9 +75,12 @@ final class CosmeticRigRenderer {
             this.guiEmissiveCubeModels = emissiveCubeFrames != null ? new Model.Simple[emissiveCubeFrames.length] : null;
 
             boolean centerSolo = "pet".equals(model.slot) || "companion".equals(model.slot);
-            this.guiCenteredBaseModels = centerSolo ? new Model.Simple[baseFrames.length] : null;
-            this.guiCenteredGlowMaskModels = (centerSolo && emissiveTexture != null) ? new Model.Simple[baseFrames.length] : null;
-            this.guiCenteredEmissiveCubeModels = (centerSolo && emissiveCubeFrames != null) ? new Model.Simple[emissiveCubeFrames.length] : null;
+            boolean centerHead = "hat".equals(model.slot) || "face".equals(model.slot);
+            boolean centerFeet = "feet".equals(model.slot);
+            boolean hasCentered = centerSolo || centerHead || centerFeet;
+            this.guiCenteredBaseModels = hasCentered ? new Model.Simple[baseFrames.length] : null;
+            this.guiCenteredGlowMaskModels = (hasCentered && emissiveTexture != null) ? new Model.Simple[baseFrames.length] : null;
+            this.guiCenteredEmissiveCubeModels = (hasCentered && emissiveCubeFrames != null) ? new Model.Simple[emissiveCubeFrames.length] : null;
 
             double ax = "pet".equals(model.slot) ? 15.0 : -16.5;
             double ay = "pet".equals(model.slot) ? 25.5 : 5.5;
@@ -103,8 +106,10 @@ final class CosmeticRigRenderer {
                     this.guiEmissiveTransformWraps[i] = emWrap;
                     this.guiEmissiveCubeModels[i] = new Model.Simple(emWrap, RenderTypes::entityTranslucentEmissive);
                 }
-                if (centerSolo) {
-                    ModelPart wrappedBase = wrapCentered(baseFrames[i].root, ax, ay, az);
+                if (hasCentered) {
+                    ModelPart wrappedBase = centerSolo
+                            ? wrapCentered(baseFrames[i].root, ax, ay, az)
+                            : wrapShiftY(baseFrames[i].root, centerHead ? 14.0f : -6.0f);
                     this.guiCenteredBaseModels[i] = new Model.Simple(
                             wrappedBase,
                             model.translucent ? RenderTypes::entityTranslucent : RenderTypes::entityCutout
@@ -113,7 +118,9 @@ final class CosmeticRigRenderer {
                         this.guiCenteredGlowMaskModels[i] = new Model.Simple(wrappedBase, RenderTypes::entityTranslucentEmissive);
                     }
                     if (this.guiCenteredEmissiveCubeModels != null) {
-                        ModelPart wrappedEm = wrapCentered(emissiveCubeFrames[i].root, ax, ay, az);
+                        ModelPart wrappedEm = centerSolo
+                                ? wrapCentered(emissiveCubeFrames[i].root, ax, ay, az)
+                                : wrapShiftY(emissiveCubeFrames[i].root, centerHead ? 14.0f : -6.0f);
                         this.guiCenteredEmissiveCubeModels[i] = new Model.Simple(wrappedEm, RenderTypes::entityTranslucentEmissive);
                     }
                 }
@@ -125,6 +132,12 @@ final class CosmeticRigRenderer {
             wrap.x = (float) -ax;
             wrap.y = (float) (ay - 12.0);
             wrap.z = (float) -az;
+            return wrap;
+        }
+
+        private static ModelPart wrapShiftY(ModelPart inner, float dy) {
+            ModelPart wrap = new ModelPart(List.of(), Map.of("c", inner));
+            wrap.y = dy;
             return wrap;
         }
 
@@ -188,8 +201,11 @@ final class CosmeticRigRenderer {
 
     private static float[] slotPivotModelPart(String slot) {
         return switch (slot == null ? "" : slot) {
-            case "hat" -> new float[]{0.0f, -4.0f, 0.0f};
+            case "hat", "face" -> new float[]{0.0f, -4.0f, 0.0f};
+            case "shoulder" -> new float[]{0.0f, 0.0f, 0.0f};
             case "cape", "back" -> new float[]{0.0f, 3.0f, 3.5f};
+            case "waist" -> new float[]{0.0f, 11.5f, 2.5f};
+            case "feet" -> new float[]{0.0f, 22.0f, 0.0f};
             case "aura" -> new float[]{0.0f, 8.0f, 0.0f};
             case "pet" -> new float[]{15.0f, -1.5f, 2.0f};
             case "companion" -> new float[]{-16.5f, 20.0f, 2.5f};

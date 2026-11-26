@@ -87,7 +87,11 @@ public final class WardrobeSearch {
             new String[]{"bird", "owl", "duck", "chick", "penguin", "crane", "raven", "鳥", "フクロウ", "ひよこ", "ペンギン", "鶴", "カラス"},
             new String[]{"cape", "cloak", "mantle", "マント", "クローク"},
             new String[]{"wing", "wings", "back", "backwear", "翼", "羽", "ウィング", "背面"},
-            new String[]{"hat", "head", "headwear", "hood", "beret", "beanie", "mask", "頭", "帽子", "ヘッド", "ベレー", "仮面"},
+            new String[]{"hat", "head", "headwear", "hood", "beret", "beanie", "頭", "帽子", "ヘッド", "ベレー"},
+            new String[]{"face", "mask", "glasses", "visor", "monocle", "eyepatch", "顔", "仮面", "眼鏡", "めがね", "メガネ", "眼帯", "バイザー", "マスク"},
+            new String[]{"shoulder", "scarf", "muffler", "pauldron", "collar", "mantle", "stole", "肩", "マフラー", "スカーフ", "肩当て", "首飾り", "羽衣"},
+            new String[]{"waist", "tail", "tails", "obi", "belt", "nine", "腰", "尻尾", "しっぽ", "シッポ", "九尾", "帯", "ベルト"},
+            new String[]{"feet", "foot", "ankle", "anklet", "boots", "足", "足元", "足羽根", "アンクレット", "足輪", "フット"},
             new String[]{"aura", "orbit", "ring", "オーラ", "リング", "輪"},
             new String[]{"pet", "floating", "ペット", "浮遊"},
             new String[]{"companion", "ground", "相棒", "コンパニオン"}

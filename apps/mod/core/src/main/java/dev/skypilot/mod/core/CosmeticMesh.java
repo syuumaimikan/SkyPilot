@@ -21,6 +21,10 @@ public final class CosmeticMesh {
         collect(out, a.cape, a.color);
         collect(out, hatId, a.color);
         collect(out, backId, a.color);
+        collect(out, a.face, a.color);
+        collect(out, a.shoulder, a.color);
+        collect(out, a.waist, a.color);
+        collect(out, a.feet, a.color);
         collect(out, a.aura, a.color);
         collect(out, a.pet, a.color);
         collect(out, a.companion, a.color);

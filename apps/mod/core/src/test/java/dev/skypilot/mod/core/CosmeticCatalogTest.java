@@ -52,7 +52,7 @@ class CosmeticCatalogTest {
         }
 
         // Verify 100% unique 3D cube geometry for every non-cape cosmetic (zero reused models!)
-        for (String slot : List.of("back", "hat", "aura", "pet", "companion")) {
+        for (String slot : List.of("back", "hat", "face", "shoulder", "waist", "feet", "aura", "pet", "companion")) {
             var sigs = new HashSet<String>();
             for (var item : CosmeticCatalog.bySlot(slot)) {
                 CosmeticRig.Model rig = CosmeticRig.load(item.id());
@@ -85,13 +85,13 @@ class CosmeticCatalogTest {
                             assertTrue(c.from[2] >= 2.95, item.id() + " back cube clips torso: z0=" + c.from[2]);
                         }
                     }
-                    case "hat" -> {
+                    case "hat", "face" -> {
                         boolean inHead = c.to[0] > -4.45 && c.from[0] < 4.45
                                 && c.to[1] > 23.6 && c.from[1] < 32.45
                                 && c.to[2] > -4.45 && c.from[2] < 4.45;
-                        assertFalse(inHead, item.id() + " hat cube clips head: " + c.name);
+                        assertFalse(inHead, item.id() + " " + item.slot() + " cube clips head: " + c.name);
                     }
-                    case "companion" -> assertTrue(c.from[1] >= -0.01, item.id() + " companion sinks below ground: y0=" + c.from[1]);
+                    case "companion", "feet" -> assertTrue(c.from[1] >= -0.01, item.id() + " " + item.slot() + " sinks below ground: y0=" + c.from[1]);
                 }
             }
             verifyAntiClipping(item, b.children);
@@ -105,6 +105,10 @@ class CosmeticCatalogTest {
         c.appearance.hat = "horns";
         c.appearance.accessory = "crown";
         c.appearance.back = "dragon";
+        c.appearance.face = "face_kitsune_half";
+        c.appearance.shoulder = "sh_sakura_muffler";
+        c.appearance.waist = "waist_nine_tails";
+        c.appearance.feet = "feet_hermes_wings";
         c.appearance.aura = "thunder_cloud_aura";
         c.appearance.pet = "pet_bumblebee";
         c.appearance.companion = "comp_cyber_tiger";
@@ -113,6 +117,10 @@ class CosmeticCatalogTest {
         c.sanitize();
         assertEquals("horns", c.appearance.hat);
         assertEquals("none", c.appearance.accessory);
+        assertEquals("face_kitsune_half", c.appearance.face);
+        assertEquals("sh_sakura_muffler", c.appearance.shoulder);
+        assertEquals("waist_nine_tails", c.appearance.waist);
+        assertEquals("feet_hermes_wings", c.appearance.feet);
         assertEquals("thunder_cloud_aura", c.appearance.aura);
         assertEquals("pet_bumblebee", c.appearance.pet);
         assertEquals("comp_cyber_tiger", c.appearance.companion);
@@ -121,13 +129,13 @@ class CosmeticCatalogTest {
         c.appearance.firstPersonPet = false;
         c.sanitize();
         assertFalse(c.appearance.firstPersonPet);
-        assertEquals(6, WardrobeTools.equippedCount(c.appearance));
+        assertEquals(10, WardrobeTools.equippedCount(c.appearance));
         assertTrue(c.appearance.cosmeticParticles);
         for (var preset : WardrobeTools.PRESETS) {
             var pCfg = new SkyPilotConfig();
             preset.apply(pCfg.appearance);
             pCfg.sanitize();
-            assertEquals(6, WardrobeTools.equippedCount(pCfg.appearance), "Invalid preset item in " + preset.id());
+            assertEquals(10, WardrobeTools.equippedCount(pCfg.appearance), "Invalid preset item in " + preset.id());
         }
 
         int combined = CosmeticMesh.build(c.appearance).size();
@@ -142,6 +150,10 @@ class CosmeticCatalogTest {
         c.appearance.cape = null;
         c.appearance.hat = null;
         c.appearance.back = "invalid";
+        c.appearance.face = "invalid";
+        c.appearance.shoulder = "invalid";
+        c.appearance.waist = "invalid";
+        c.appearance.feet = "invalid";
         c.appearance.aura = "invalid";
         c.appearance.pet = "invalid";
         c.appearance.companion = "invalid";

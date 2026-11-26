@@ -6,46 +6,64 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.skypilot.mod.core.CosmeticCatalog;
 import dev.skypilot.mod.core.SkyPilotConfig;
+import dev.skypilot.mod.core.WardrobeVfxCatalog;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 
-import java.net.URI;
+import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Hypixel-safe multiplayer cosmetic synchronization over lightweight HTTP REST calls
- * ({@code /api/wardrobe/sync}, {@code /api/wardrobe/batch}, {@code /api/wardrobe/leave}).
+ * 100% standalone multiplayer cosmetic &amp; VFX synchronization for {@code skypilot_wardrobe}.
  *
- * <p>Sends ZERO custom Minecraft server packets. Runs completely asynchronously off the render
- * thread with short timeouts and silent graceful fallback when the sync server is offline.
+ * <p>Supports three completely self-contained modes without requiring any SkyPilot server:
+ * <ul>
+ *   <li>{@code "lan"} (default): Built-in zero-config UDP Multicast + Broadcast LAN peer discovery
+ *       ({@code 239.255.77.88:47832}). Mod users on the same LAN or machine automatically see each
+ *       other's 10-slot cosmetics, transforms, and VFX with zero external server.</li>
+ *   <li>{@code "offline"}: Strictly local — zero sockets, zero network traffic.</li>
+ *   <li>{@code "relay"}: Optional user-configured external HTTP relay for public internet servers
+ *       (e.g. Hypixel lobbies). Still sends ZERO custom Minecraft game packets.</li>
+ * </ul>
  */
 final class RemoteWardrobeSync {
+    private static final String LAN_MAGIC = "SPW1";
+    private static final String LAN_GROUP = "239.255.77.88";
+    private static final int LAN_PORT = 47832;
+    private static final long LAN_PEER_TTL_MS = 18_000L;
+
     private static final Gson GSON = new Gson();
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(2))
             .build();
     private static final ExecutorService EXEC = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "SkyPilot-WardrobeSync");
+        Thread t = new Thread(r, "Wardrobe-Sync");
         t.setDaemon(true);
         return t;
     });
 
     private static final ConcurrentHashMap<UUID, SkyPilotConfig.Appearance> REMOTE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<UUID, Long> REMOTE_LAST_SEEN = new ConcurrentHashMap<>();
     private static final AtomicBoolean DIRTY = new AtomicBoolean(true);
     private static final AtomicBoolean PUSH_IN_FLIGHT = new AtomicBoolean(false);
     private static final AtomicBoolean POLL_IN_FLIGHT = new AtomicBoolean(false);
+    private static final AtomicBoolean LAN_RUNNING = new AtomicBoolean(false);
 
+    private static volatile MulticastSocket lanSocket;
+    private static volatile Thread lanThread;
+    private static volatile boolean lanReady;
     private static volatile long lastPushMs;
     private static volatile long lastPollMs;
-    private static volatile boolean connected;
+    private static volatile long lastLanBroadcastMs;
+    private static volatile boolean relayConnected;
     private static volatile int serverOnlineCount;
-    private static volatile String lastError = "";
     private static volatile UUID lastLocalUuid;
 
     private RemoteWardrobeSync() {}
@@ -63,11 +81,20 @@ final class RemoteWardrobeSync {
     }
 
     static boolean isConnected() {
-        return connected;
+        WardrobeRuntime rt = WardrobeRuntime.get();
+        if (rt == null) return false;
+        String mode = syncMode(rt.appearance());
+        if ("lan".equals(mode)) return lanReady;
+        if ("relay".equals(mode)) return relayConnected;
+        return false;
     }
 
-    static int serverOnlineCount() {
-        return serverOnlineCount;
+    static String syncMode(SkyPilotConfig.Appearance a) {
+        if (a == null || a.wardrobeSyncMode == null) return "lan";
+        return switch (a.wardrobeSyncMode) {
+            case "offline", "relay" -> a.wardrobeSyncMode;
+            default -> "lan";
+        };
     }
 
     static int nearbySyncedCount() {
@@ -78,32 +105,92 @@ final class RemoteWardrobeSync {
         WardrobeRuntime rt = WardrobeRuntime.get();
         if (rt == null) return "";
         var a = rt.appearance();
-        if (!a.showOtherPlayers && !a.shareWithOthers) {
-            return ja ? "同期OFF" : "Sync OFF";
+        String mode = syncMode(a);
+        if ("offline".equals(mode) || (!a.showOtherPlayers && !a.shareWithOthers)) {
+            return ja ? "ローカル専用" : "Local Only";
         }
-        if (connected) {
+        if ("lan".equals(mode)) {
+            int peers = REMOTE.size();
+            if (peers > 0) {
+                return ja ? "LAN自動共有 (" + peers + "人接続)" : "LAN Sync (" + peers + " peer" + (peers == 1 ? "" : "s") + ")";
+            }
+            return ja ? "LAN自動共有 (待機中)" : "LAN Auto-Sync (ready)";
+        }
+        // Optional external relay mode
+        String url = validatedBaseUrl(a.wardrobeSyncUrl);
+        if (url == null) {
+            return ja ? "リレー未設定" : "Relay URL not set";
+        }
+        if (relayConnected) {
             return ja
-                    ? "同期中 (" + REMOTE.size() + "人表示 / 全体" + serverOnlineCount + "人)"
-                    : "Synced (" + REMOTE.size() + " nearby / " + serverOnlineCount + " online)";
+                    ? "リレー共有中 (" + REMOTE.size() + "人 / 全体" + serverOnlineCount + "人)"
+                    : "Relay (" + REMOTE.size() + " nearby / " + serverOnlineCount + " online)";
         }
-        return ja ? "オフライン (サーバー待機中)" : "Offline (waiting for sync server)";
+        return ja ? "リレー待機中" : "Relay standby";
     }
 
     static void tick(Minecraft mc) {
         WardrobeRuntime rt = WardrobeRuntime.get();
         if (rt == null || mc.player == null || mc.level == null) return;
         SkyPilotConfig.Appearance a = rt.appearance();
-        String baseUrl = validatedBaseUrl(a.wardrobeSyncUrl);
-        if (baseUrl == null) {
-            connected = false;
-            return;
-        }
-
+        String mode = syncMode(a);
         UUID selfId = mc.player.getUUID();
         lastLocalUuid = selfId;
         long now = System.currentTimeMillis();
 
-        // 1. Push own cosmetics when changed (debounced 800ms) or heartbeat every 45s
+        if ("offline".equals(mode) || (!a.showOtherPlayers && !a.shareWithOthers)) {
+            stopLanListener();
+            relayConnected = false;
+            if (!REMOTE.isEmpty()) {
+                REMOTE.clear();
+                REMOTE_LAST_SEEN.clear();
+            }
+            return;
+        }
+
+        if ("lan".equals(mode)) {
+            relayConnected = false;
+            if (a.showOtherPlayers) ensureLanListener();
+            else {
+                stopLanListener();
+                if (!REMOTE.isEmpty()) {
+                    REMOTE.clear();
+                    REMOTE_LAST_SEEN.clear();
+                }
+            }
+
+            // Broadcast own cosmetics over LAN UDP on change (debounced 500ms) or every 3.5s
+            if (a.shareWithOthers) {
+                boolean needSend = (DIRTY.get() && now - lastLanBroadcastMs >= 500) || (now - lastLanBroadcastMs >= 3_500);
+                if (needSend) {
+                    DIRTY.set(false);
+                    lastLanBroadcastMs = now;
+                    String payload = LAN_MAGIC + buildSyncJson(selfId, a);
+                    EXEC.execute(() -> sendLanPacket(payload));
+                }
+            }
+
+            // Evict timed-out LAN peers
+            if (!REMOTE_LAST_SEEN.isEmpty()) {
+                for (var it = REMOTE_LAST_SEEN.entrySet().iterator(); it.hasNext(); ) {
+                    var e = it.next();
+                    if (now - e.getValue() > LAN_PEER_TTL_MS) {
+                        it.remove();
+                        REMOTE.remove(e.getKey());
+                    }
+                }
+            }
+            return;
+        }
+
+        // Optional external HTTP relay mode
+        stopLanListener();
+        String baseUrl = validatedBaseUrl(a.wardrobeSyncUrl);
+        if (baseUrl == null) {
+            relayConnected = false;
+            return;
+        }
+
         if (a.shareWithOthers) {
             boolean needPush = (DIRTY.get() && now - lastPushMs >= 800) || (now - lastPushMs >= 45_000);
             if (needPush && PUSH_IN_FLIGHT.compareAndSet(false, true)) {
@@ -114,7 +201,6 @@ final class RemoteWardrobeSync {
             }
         }
 
-        // 2. Poll visible nearby players every 4s
         if (a.showOtherPlayers && now - lastPollMs >= 4_000 && POLL_IN_FLIGHT.compareAndSet(false, true)) {
             lastPollMs = now;
             List<UUID> nearby = collectNearbyUuids(mc, selfId);
@@ -133,9 +219,15 @@ final class RemoteWardrobeSync {
         UUID selfId = lastLocalUuid;
         lastLocalUuid = null;
         REMOTE.clear();
+        REMOTE_LAST_SEEN.clear();
         DIRTY.set(true);
         WardrobeRuntime rt = WardrobeRuntime.get();
-        if (rt != null && selfId != null) {
+        if (rt == null || selfId == null) return;
+        String mode = syncMode(rt.appearance());
+        if ("lan".equals(mode)) {
+            String bye = LAN_MAGIC + "{\"uuid\":\"" + toCompactUuid(selfId) + "\",\"leave\":true}";
+            EXEC.execute(() -> sendLanPacket(bye));
+        } else if ("relay".equals(mode)) {
             String baseUrl = validatedBaseUrl(rt.appearance().wardrobeSyncUrl);
             if (baseUrl != null) {
                 String body = "{\"uuid\":\"" + toCompactUuid(selfId) + "\"}";
@@ -148,7 +240,7 @@ final class RemoteWardrobeSync {
         String base = validatedBaseUrl(rawUrl);
         if (base == null) {
             return CompletableFuture.completedFuture(ja
-                    ? "URL無効 (https:// またはローカル http:// を指定してください)"
+                    ? "URL無効 (https:// またはローカル http:// を指定)"
                     : "Invalid URL (use https:// or local/LAN http://)");
         }
         return CompletableFuture.supplyAsync(() -> {
@@ -161,14 +253,13 @@ final class RemoteWardrobeSync {
                 if (resp.statusCode() == 200) {
                     JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
                     int online = obj.has("online") ? obj.get("online").getAsInt() : 0;
-                    connected = true;
+                    relayConnected = true;
                     serverOnlineCount = online;
-                    lastError = "";
                     return ja ? "接続成功！ オンライン: " + online + "人" : "Connected! Online: " + online;
                 }
                 return "HTTP " + resp.statusCode();
             } catch (Exception e) {
-                connected = false;
+                relayConnected = false;
                 return (ja ? "接続失敗: " : "Failed: ") + shortMsg(e);
             }
         }, EXEC);
@@ -176,8 +267,96 @@ final class RemoteWardrobeSync {
 
     static void shutdown() {
         onDisconnect();
+        stopLanListener();
         EXEC.shutdown();
     }
+
+    // ---- Built-in Standalone UDP LAN Peer Sync ----
+
+    private static void ensureLanListener() {
+        if (!LAN_RUNNING.compareAndSet(false, true)) return;
+        Thread t = new Thread(() -> {
+            try (MulticastSocket sock = new MulticastSocket(null)) {
+                sock.setReuseAddress(true);
+                sock.bind(new InetSocketAddress(LAN_PORT));
+                InetAddress group = InetAddress.getByName(LAN_GROUP);
+                try {
+                    sock.joinGroup(new InetSocketAddress(group, LAN_PORT), null);
+                } catch (Exception ignored) {
+                    // Fallback: broadcast packets still arrive on LAN_PORT even if multicast join is restricted
+                }
+                lanSocket = sock;
+                lanReady = true;
+                byte[] buf = new byte[4096];
+                while (LAN_RUNNING.get() && !sock.isClosed()) {
+                    DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                    sock.receive(pkt);
+                    int len = pkt.getLength();
+                    if (len <= LAN_MAGIC.length()) continue;
+                    String msg = new String(pkt.getData(), pkt.getOffset(), len, StandardCharsets.UTF_8);
+                    if (!msg.startsWith(LAN_MAGIC)) continue;
+                    handleLanPayload(msg.substring(LAN_MAGIC.length()));
+                }
+            } catch (Exception ignored) {
+                // Socket closed during shutdown or LAN port busy; silently stay offline-safe
+            } finally {
+                lanSocket = null;
+                lanReady = false;
+                LAN_RUNNING.set(false);
+            }
+        }, "Wardrobe-LAN-Listener");
+        t.setDaemon(true);
+        lanThread = t;
+        t.start();
+    }
+
+    private static void stopLanListener() {
+        LAN_RUNNING.set(false);
+        lanReady = false;
+        MulticastSocket s = lanSocket;
+        lanSocket = null;
+        if (s != null) {
+            try { s.close(); } catch (Exception ignored) {}
+        }
+        Thread t = lanThread;
+        lanThread = null;
+        if (t != null) t.interrupt();
+    }
+
+    private static void sendLanPacket(String payload) {
+        byte[] data = payload.getBytes(StandardCharsets.UTF_8);
+        if (data.length > 3800) return;
+        try (DatagramSocket ds = new DatagramSocket()) {
+            ds.setBroadcast(true);
+            try {
+                InetAddress group = InetAddress.getByName(LAN_GROUP);
+                ds.send(new DatagramPacket(data, data.length, group, LAN_PORT));
+            } catch (Exception ignored) {}
+            try {
+                InetAddress bcast = InetAddress.getByName("255.255.255.255");
+                ds.send(new DatagramPacket(data, data.length, bcast, LAN_PORT));
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {}
+    }
+
+    private static void handleLanPayload(String json) {
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            if (!obj.has("uuid") || !obj.get("uuid").isJsonPrimitive()) return;
+            UUID uid = parseCompactUuid(obj.get("uuid").getAsString());
+            if (uid == null || uid.equals(lastLocalUuid)) return;
+            if (obj.has("leave") && obj.get("leave").getAsBoolean()) {
+                REMOTE.remove(uid);
+                REMOTE_LAST_SEEN.remove(uid);
+                return;
+            }
+            SkyPilotConfig.Appearance parsed = parseRemoteAppearance(obj);
+            REMOTE.put(uid, parsed);
+            REMOTE_LAST_SEEN.put(uid, System.currentTimeMillis());
+        } catch (Exception ignored) {}
+    }
+
+    // ---- Optional External HTTP Relay Sync ----
 
     private static List<UUID> collectNearbyUuids(Minecraft mc, UUID selfId) {
         List<UUID> ids = new ArrayList<>();
@@ -200,17 +379,14 @@ final class RemoteWardrobeSync {
                     .build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 200) {
-                connected = true;
-                lastError = "";
+                relayConnected = true;
                 JsonObject obj = JsonParser.parseString(resp.body()).getAsJsonObject();
                 if (obj.has("online")) serverOnlineCount = obj.get("online").getAsInt();
             } else {
-                connected = false;
-                lastError = "HTTP " + resp.statusCode();
+                relayConnected = false;
             }
         } catch (Exception e) {
-            connected = false;
-            lastError = shortMsg(e);
+            relayConnected = false;
         } finally {
             PUSH_IN_FLIGHT.set(false);
         }
@@ -233,8 +409,7 @@ final class RemoteWardrobeSync {
                     .build();
             HttpResponse<String> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 200) {
-                connected = true;
-                lastError = "";
+                relayConnected = true;
                 JsonObject root = JsonParser.parseString(resp.body()).getAsJsonObject();
                 if (root.has("online")) serverOnlineCount = root.get("online").getAsInt();
                 Set<UUID> seen = new HashSet<>();
@@ -248,14 +423,12 @@ final class RemoteWardrobeSync {
                         }
                     }
                 }
-                // Evict players who left range or unequipped sync
                 REMOTE.keySet().removeIf(u -> !seen.contains(u));
             } else {
-                connected = false;
+                relayConnected = false;
             }
         } catch (Exception e) {
-            connected = false;
-            lastError = shortMsg(e);
+            relayConnected = false;
         } finally {
             POLL_IN_FLIGHT.set(false);
         }
@@ -272,28 +445,47 @@ final class RemoteWardrobeSync {
         } catch (Exception ignored) {}
     }
 
+    // ---- Shared 10-Slot Serialization & Sanitization ----
+
     private static String buildSyncJson(UUID selfId, SkyPilotConfig.Appearance a) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("uuid", toCompactUuid(selfId));
-        m.put("cape", safeBundledId("cape", a.cape));
-        m.put("back", safeBundledId("back", a.back));
-        m.put("hat", safeBundledId("hat", a.hat));
-        m.put("aura", safeBundledId("aura", a.aura));
-        m.put("pet", safeBundledId("pet", a.pet));
-        m.put("companion", safeBundledId("companion", a.companion));
+        for (String slot : CosmeticCatalog.SLOTS) {
+            m.put(slot, safeBundledId(slot, CosmeticCatalog.equippedId(a, slot)));
+        }
         m.put("wingScale", a.wingScale);
         m.put("cosmeticGlow", a.cosmeticGlow);
         m.put("cosmeticParticles", a.cosmeticParticles);
         Map<String, SkyPilotConfig.SlotTransform> cleanTr = new LinkedHashMap<>();
         if (a.slotTransforms != null) {
             for (var e : a.slotTransforms.entrySet()) {
-                if (e.getValue() != null && !e.getValue().isIdentity()) {
+                if (CosmeticCatalog.SLOTS.contains(e.getKey()) && e.getValue() != null && !e.getValue().isIdentity()) {
                     cleanTr.put(e.getKey(), e.getValue());
                 }
             }
         }
-        m.put("slotTransforms", cleanTr);
+        if (!cleanTr.isEmpty()) m.put("slotTransforms", cleanTr);
+        if (a.vfx != null && WardrobeVfxCatalog.activeCount(a.vfx) > 0) {
+            Map<String, Object> vm = new LinkedHashMap<>();
+            vm.put("attack", safeBundledVfx(a.vfx.attack));
+            vm.put("kill", safeBundledVfx(a.vfx.kill));
+            vm.put("move", safeBundledVfx(a.vfx.move));
+            vm.put("jump", safeBundledVfx(a.vfx.jump));
+            vm.put("dash", safeBundledVfx(a.vfx.dash));
+            vm.put("projectile", safeBundledVfx(a.vfx.projectile));
+            vm.put("ambient", safeBundledVfx(a.vfx.ambient));
+            vm.put("scale", a.vfx.scale);
+            vm.put("intensity", a.vfx.intensity);
+            vm.put("customColorEnabled", a.vfx.customColorEnabled);
+            vm.put("customColor", a.vfx.customColor & 0xFFFFFF);
+            m.put("vfx", vm);
+        }
         return GSON.toJson(m);
+    }
+
+    private static String safeBundledVfx(String id) {
+        if (id == null || "none".equals(id) || id.startsWith("custom_")) return "none";
+        return WardrobeVfxCatalog.byId(id) != null ? id : "none";
     }
 
     private static String safeBundledId(String slot, String id) {
@@ -303,12 +495,9 @@ final class RemoteWardrobeSync {
 
     private static SkyPilotConfig.Appearance parseRemoteAppearance(JsonObject o) {
         SkyPilotConfig.Appearance a = new SkyPilotConfig.Appearance();
-        a.cape = validSlot(o, "cape");
-        a.back = validSlot(o, "back");
-        a.hat = validSlot(o, "hat");
-        a.aura = validSlot(o, "aura");
-        a.pet = validSlot(o, "pet");
-        a.companion = validSlot(o, "companion");
+        for (String slot : CosmeticCatalog.SLOTS) {
+            CosmeticCatalog.equip(a, slot, validSlot(o, slot));
+        }
         a.wingScale = o.has("wingScale") ? Math.max(0.6, Math.min(1.5, o.get("wingScale").getAsDouble())) : 1.0;
         a.cosmeticGlow = !o.has("cosmeticGlow") || o.get("cosmeticGlow").getAsBoolean();
         a.cosmeticParticles = !o.has("cosmeticParticles") || o.get("cosmeticParticles").getAsBoolean();
@@ -324,7 +513,30 @@ final class RemoteWardrobeSync {
                 } catch (Exception ignored) {}
             }
         }
+        if (o.has("vfx") && o.get("vfx").isJsonObject()) {
+            JsonObject vo = o.getAsJsonObject("vfx");
+            SkyPilotConfig.VfxSettings vs = new SkyPilotConfig.VfxSettings();
+            vs.attack = validVfx(vo, "attack");
+            vs.kill = validVfx(vo, "kill");
+            vs.move = vo.has("move") ? validVfx(vo, "move") : validVfx(vo, "moveVfx");
+            vs.jump = validVfx(vo, "jump");
+            vs.dash = validVfx(vo, "dash");
+            vs.projectile = validVfx(vo, "projectile");
+            vs.ambient = validVfx(vo, "ambient");
+            if (vo.has("scale")) vs.scale = vo.get("scale").getAsDouble();
+            if (vo.has("intensity")) vs.intensity = vo.get("intensity").getAsInt();
+            if (vo.has("customColorEnabled")) vs.customColorEnabled = vo.get("customColorEnabled").getAsBoolean();
+            if (vo.has("customColor")) vs.customColor = vo.get("customColor").getAsInt();
+            vs.sanitize();
+            a.vfx = vs;
+        }
         return a;
+    }
+
+    private static String validVfx(JsonObject o, String key) {
+        JsonElement el = o.get(key);
+        if (el == null || !el.isJsonPrimitive()) return "none";
+        return safeBundledVfx(el.getAsString());
     }
 
     private static String validSlot(JsonObject o, String slot) {
@@ -355,10 +567,22 @@ final class RemoteWardrobeSync {
         return id.toString().replace("-", "").toLowerCase(Locale.ROOT);
     }
 
+    private static UUID parseCompactUuid(String raw) {
+        if (raw == null) return null;
+        String s = raw.replace("-", "").trim();
+        if (s.length() != 32) return null;
+        try {
+            long msb = Long.parseUnsignedLong(s.substring(0, 16), 16);
+            long lsb = Long.parseUnsignedLong(s.substring(16, 32), 16);
+            return new UUID(msb, lsb);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private static String shortMsg(Exception e) {
         String m = e.getMessage();
         if (m == null || m.isBlank()) return e.getClass().getSimpleName();
         return m.length() > 48 ? m.substring(0, 45) + "..." : m;
     }
 }
-

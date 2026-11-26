@@ -108,6 +108,58 @@ public final class SkyPilotConfig {
 		}
 	}
 
+	public static final class VfxSettings {
+		public String attack = "none";
+		public String kill = "none";
+		public String move = "none";
+		public String jump = "none";
+		public String dash = "none";
+		public String projectile = "none";
+		public String ambient = "none";
+		/** Uniform VFX size multiplier (0.5 .. 2.0). */
+		public double scale = 1.0;
+		/** Density level: 1 = Low, 2 = Normal, 3 = High. */
+		public int intensity = 2;
+		/** Whether to show custom VFX in 1st-person view. */
+		public boolean firstPersonVfx = true;
+		/** Whether to render synced custom VFX on other Wardrobe mod players. */
+		public boolean otherPlayerVfx = true;
+		/** Optional custom color tint override instead of theme colors. */
+		public boolean customColorEnabled = false;
+		public int customColor = 0x55D6D2;
+
+		public VfxSettings copy() {
+			VfxSettings v = new VfxSettings();
+			v.attack = attack;
+			v.kill = kill;
+			v.move = move;
+			v.jump = jump;
+			v.dash = dash;
+			v.projectile = projectile;
+			v.ambient = ambient;
+			v.scale = scale;
+			v.intensity = intensity;
+			v.firstPersonVfx = firstPersonVfx;
+			v.otherPlayerVfx = otherPlayerVfx;
+			v.customColorEnabled = customColorEnabled;
+			v.customColor = customColor;
+			return v;
+		}
+
+		public void sanitize() {
+			if (!WardrobeVfxCatalog.validId(attack)) attack = "none";
+			if (!WardrobeVfxCatalog.validId(kill)) kill = "none";
+			if (!WardrobeVfxCatalog.validId(move)) move = "none";
+			if (!WardrobeVfxCatalog.validId(jump)) jump = "none";
+			if (!WardrobeVfxCatalog.validId(dash)) dash = "none";
+			if (!WardrobeVfxCatalog.validId(projectile)) projectile = "none";
+			if (!WardrobeVfxCatalog.validId(ambient)) ambient = "none";
+			scale = clampFinite(scale <= 0 ? 1.0 : scale, 0.5, 2.0, 1.0);
+			intensity = (int) clampFinite(intensity, 1, 3, 2);
+			customColor &= 0xFFFFFF;
+		}
+	}
+
 	public static final class Appearance {
 		public boolean richMenus = true;
 		public boolean skin3d = false;
@@ -115,6 +167,10 @@ public final class SkyPilotConfig {
 		public String accessory = "none"; // Legacy slot; migrated on load.
 		public String hat = "none";
 		public String back = "none";
+		public String face = "none";
+		public String shoulder = "none";
+		public String waist = "none";
+		public String feet = "none";
 		public String aura = "none";
 		public String pet = "none";
 		public String companion = "none";
@@ -129,14 +185,22 @@ public final class SkyPilotConfig {
 		public boolean firstPersonWings = false;
 		public boolean firstPersonCape = false;
 		public boolean firstPersonHat = false;
-		/** Multiplayer visibility & Hypixel-safe HTTP sync settings (zero MC server packets). */
+		public boolean firstPersonFace = false;
+		public boolean firstPersonShoulder = false;
+		public boolean firstPersonWaist = false;
+		public boolean firstPersonFeet = true;
+		/** Standalone multiplayer sync settings (zero SkyPilot server dependency; zero MC packets). */
 		public boolean showOtherPlayers = true;
 		public boolean shareWithOthers = true;
 		public boolean otherPlayerPets = true;
 		public boolean otherPlayerParticles = true;
-		public String wardrobeSyncUrl = "http://localhost:8080";
+		/** "lan" (zero-config built-in UDP LAN auto-sync), "offline" (local only), or "relay" (custom HTTP relay). */
+		public String wardrobeSyncMode = "lan";
+		public String wardrobeSyncUrl = "";
 		/** Per-slot fine transform adjustments (offset X/Y/Z, scale, tilt X/Y/Z). */
 		public java.util.Map<String, SlotTransform> slotTransforms = new java.util.LinkedHashMap<>();
+		/** Custom 3D VFX settings across 7 trigger slots (attack, kill, move, jump, dash, projectile, ambient). */
+		public VfxSettings vfx = new VfxSettings();
 		public int color = 0xA38BFA;
 		public java.util.List<String> favorites = new java.util.ArrayList<>();
 		public java.util.List<WardrobeTools.Outfit> outfits = new java.util.ArrayList<>();
@@ -170,6 +234,10 @@ public final class SkyPilotConfig {
 				case "back" -> firstPersonWings;
 				case "cape" -> firstPersonCape;
 				case "hat" -> firstPersonHat;
+				case "face" -> firstPersonFace;
+				case "shoulder" -> firstPersonShoulder;
+				case "waist" -> firstPersonWaist;
+				case "feet" -> firstPersonFeet;
 				default -> false;
 			};
 		}
@@ -183,6 +251,10 @@ public final class SkyPilotConfig {
 				case "back" -> firstPersonWings = value;
 				case "cape" -> firstPersonCape = value;
 				case "hat" -> firstPersonHat = value;
+				case "face" -> firstPersonFace = value;
+				case "shoulder" -> firstPersonShoulder = value;
+				case "waist" -> firstPersonWaist = value;
+				case "feet" -> firstPersonFeet = value;
 			}
 		}
 	}
@@ -389,14 +461,22 @@ public final class SkyPilotConfig {
 		if (!java.util.List.of("none", "crown", "halo", "wings").contains(appearance.accessory == null ? "" : appearance.accessory)) appearance.accessory = "none";
 		if (!CosmeticCatalog.valid("hat", appearance.hat)) appearance.hat = "none";
 		if (!CosmeticCatalog.valid("back", appearance.back)) appearance.back = "none";
+		if (!CosmeticCatalog.valid("face", appearance.face)) appearance.face = "none";
+		if (!CosmeticCatalog.valid("shoulder", appearance.shoulder)) appearance.shoulder = "none";
+		if (!CosmeticCatalog.valid("waist", appearance.waist)) appearance.waist = "none";
+		if (!CosmeticCatalog.valid("feet", appearance.feet)) appearance.feet = "none";
 		if (!CosmeticCatalog.valid("aura", appearance.aura)) appearance.aura = "none";
 		if (!CosmeticCatalog.valid("pet", appearance.pet)) appearance.pet = "none";
 		if (!CosmeticCatalog.valid("companion", appearance.companion)) appearance.companion = "none";
 		CosmeticCatalog.migrate(appearance);
 		appearance.wingScale = clamp(appearance.wingScale <= 0 ? 1.0 : appearance.wingScale, 0.6, 1.5);
 		appearance.color &= 0xFFFFFF;
-		if (appearance.wardrobeSyncUrl == null || appearance.wardrobeSyncUrl.isBlank()) {
-			appearance.wardrobeSyncUrl = "http://localhost:8080";
+		if (appearance.wardrobeSyncMode == null
+				|| !java.util.List.of("offline", "lan", "relay").contains(appearance.wardrobeSyncMode)) {
+			appearance.wardrobeSyncMode = "lan";
+		}
+		if (appearance.wardrobeSyncUrl == null || "http://localhost:8080".equals(appearance.wardrobeSyncUrl.strip())) {
+			appearance.wardrobeSyncUrl = "";
 		} else {
 			appearance.wardrobeSyncUrl = appearance.wardrobeSyncUrl.strip().replaceAll("/+$", "");
 		}
@@ -404,6 +484,8 @@ public final class SkyPilotConfig {
 		appearance.slotTransforms.entrySet().removeIf(e -> e.getKey() == null || !CosmeticCatalog.SLOTS.contains(e.getKey()) || e.getValue() == null);
 		for (var tr : appearance.slotTransforms.values()) tr.sanitize();
 		appearance.slotTransforms.entrySet().removeIf(e -> e.getValue().isIdentity());
+		if (appearance.vfx == null) appearance.vfx = new VfxSettings();
+		appearance.vfx.sanitize();
 		WardrobeTools.sanitize(appearance);
 		if(deskNotes==null)deskNotes="";
 		deskNotes=deskNotes.substring(0,Math.min(1400,deskNotes.length()));

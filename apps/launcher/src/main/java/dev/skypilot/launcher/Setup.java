@@ -56,10 +56,6 @@ public final class Setup {
 		FabricInstaller.install(mc, pins, fetch);
 		progress.accept(l.t("Installing the SkyPilot mod…", "SkyPilot MODをインストール中…"));
 		Mods.installSkyPilot(s.mods(), pins, Pins.bundledMod());
-		if (pins.hasWardrobe()) {
-			progress.accept(l.t("Installing the standalone Wardrobe mod…", "ワードローブ独立MODをインストール中…"));
-			Mods.installWardrobe(s.mods(), pins, Pins.bundledWardrobe());
-		}
 		if (!Mods.fabricApiInstalled(s.mods(), pins)) {
 			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
 			Mods.installFabricApi(s.mods(), pins, fetch);
@@ -91,10 +87,6 @@ public final class Setup {
 			progress.accept(l.t("Installing the SkyPilot mod…", "SkyPilot MODをインストール中…"));
 			Mods.installSkyPilot(s.mods(), pins, Pins.bundledMod());
 		}
-		if (pins.hasWardrobe() && !Mods.wardrobeInstalled(s.mods(), pins)) {
-			progress.accept(l.t("Installing the standalone Wardrobe mod…", "ワードローブ独立MODをインストール中…"));
-			Mods.installWardrobe(s.mods(), pins, Pins.bundledWardrobe());
-		}
 		if (!Mods.fabricApiInstalled(s.mods(), pins)) {
 			progress.accept(l.t("Downloading Fabric API " + pins.fabricApi() + " (Modrinth, SHA-512 checked)…", "Fabric API " + pins.fabricApi() + " をダウンロード中（Modrinth・SHA-512確認）…"));
 			Mods.installFabricApi(s.mods(), pins, fetch);
@@ -113,7 +105,6 @@ public final class Setup {
 	public static boolean directReady(LauncherSettings s, Pins pins) {
 		return FabricInstaller.installed(s.minecraft(), pins)
 				&& Mods.skyPilotInstalled(s.mods(), pins)
-				&& Mods.wardrobeInstalled(s.mods(), pins)
 				&& Mods.fabricApiInstalled(s.mods(), pins);
 	}
 

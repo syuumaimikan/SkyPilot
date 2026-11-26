@@ -123,28 +123,6 @@ public final class Mods {
 		switchOffOthers(modsDir, "skypilot", target);
 	}
 
-	/** The bundled standalone SkyPilot Wardrobe mod is installed (byte-identical) or disabled intentionally. */
-	public static boolean wardrobeInstalled(Path modsDir, Pins pins) {
-		if (!pins.hasWardrobe()) return true;
-		Path f = modsDir.resolve(pins.wardrobeFile());
-		try {
-			return Files.isRegularFile(f) && Net.sha256(Files.readAllBytes(f)).equals(pins.wardrobeSha256());
-		} catch (IOException e) {
-			return false;
-		}
-	}
-
-	public static void installWardrobe(Path modsDir, Pins pins, byte[] bundled) throws IOException {
-		if (!pins.hasWardrobe() || bundled == null) return;
-		if (!Net.sha256(bundled).equals(pins.wardrobeSha256())) throw new IOException("the bundled SkyPilot Wardrobe mod does not match its checksum");
-		Files.createDirectories(modsDir);
-		Path target = modsDir.resolve(pins.wardrobeFile());
-		Path tmp = modsDir.resolve(pins.wardrobeFile() + ".part");
-		Files.write(tmp, bundled);
-		Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-		switchOffOthers(modsDir, "skypilot_wardrobe", target);
-	}
-
 	/** The pinned API is enabled, either nested in the trusted SkyPilot jar or as a separate file. */
 	public static boolean fabricApiInstalled(Path modsDir, Pins pins) {
 		if (bundledFabricApiInstalled(modsDir, pins)) return true;

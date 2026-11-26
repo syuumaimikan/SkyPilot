@@ -9,7 +9,18 @@ use serde_json::{Value, json};
 use crate::error::{ApiResult, AppError};
 use crate::state::AppState;
 
-const ALLOWED_SLOTS: [&str; 6] = ["cape", "back", "hat", "aura", "pet", "companion"];
+const ALLOWED_SLOTS: [&str; 10] = [
+    "cape",
+    "back",
+    "hat",
+    "face",
+    "shoulder",
+    "waist",
+    "feet",
+    "aura",
+    "pet",
+    "companion",
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +73,53 @@ impl SlotTransformDto {
     }
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VfxDto {
+    #[serde(default = "default_none")]
+    pub attack: String,
+    #[serde(default = "default_none")]
+    pub kill: String,
+    #[serde(default = "default_none", rename = "move", alias = "moveVfx")]
+    pub move_vfx: String,
+    #[serde(default = "default_none")]
+    pub jump: String,
+    #[serde(default = "default_none")]
+    pub dash: String,
+    #[serde(default = "default_none")]
+    pub projectile: String,
+    #[serde(default = "default_none")]
+    pub ambient: String,
+    #[serde(default = "default_one")]
+    pub scale: f64,
+    #[serde(default = "default_intensity")]
+    pub intensity: i32,
+    #[serde(default)]
+    pub custom_color_enabled: bool,
+    #[serde(default)]
+    pub custom_color: i32,
+}
+
+fn default_intensity() -> i32 {
+    2
+}
+
+impl VfxDto {
+    fn sanitize(mut self) -> Self {
+        self.attack = sanitize_cosmetic_id(&self.attack);
+        self.kill = sanitize_cosmetic_id(&self.kill);
+        self.move_vfx = sanitize_cosmetic_id(&self.move_vfx);
+        self.jump = sanitize_cosmetic_id(&self.jump);
+        self.dash = sanitize_cosmetic_id(&self.dash);
+        self.projectile = sanitize_cosmetic_id(&self.projectile);
+        self.ambient = sanitize_cosmetic_id(&self.ambient);
+        self.scale = clamp_finite(if self.scale <= 0.0 { 1.0 } else { self.scale }, 0.5, 2.0, 1.0);
+        self.intensity = self.intensity.clamp(1, 3);
+        self.custom_color &= 0xFFFFFF;
+        self
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WardrobeProfile {
@@ -71,6 +129,14 @@ pub struct WardrobeProfile {
     pub back: String,
     #[serde(default = "default_none")]
     pub hat: String,
+    #[serde(default = "default_none")]
+    pub face: String,
+    #[serde(default = "default_none")]
+    pub shoulder: String,
+    #[serde(default = "default_none")]
+    pub waist: String,
+    #[serde(default = "default_none")]
+    pub feet: String,
     #[serde(default = "default_none")]
     pub aura: String,
     #[serde(default = "default_none")]
@@ -85,6 +151,8 @@ pub struct WardrobeProfile {
     pub cosmetic_particles: bool,
     #[serde(default)]
     pub slot_transforms: HashMap<String, SlotTransformDto>,
+    #[serde(default)]
+    pub vfx: Option<VfxDto>,
     #[serde(default)]
     pub updated_at_ms: i64,
 }
@@ -100,6 +168,14 @@ pub struct SyncRequest {
     #[serde(default = "default_none")]
     pub hat: String,
     #[serde(default = "default_none")]
+    pub face: String,
+    #[serde(default = "default_none")]
+    pub shoulder: String,
+    #[serde(default = "default_none")]
+    pub waist: String,
+    #[serde(default = "default_none")]
+    pub feet: String,
+    #[serde(default = "default_none")]
     pub aura: String,
     #[serde(default = "default_none")]
     pub pet: String,
@@ -113,6 +189,8 @@ pub struct SyncRequest {
     pub cosmetic_particles: bool,
     #[serde(default)]
     pub slot_transforms: HashMap<String, SlotTransformDto>,
+    #[serde(default)]
+    pub vfx: Option<VfxDto>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -172,6 +250,10 @@ pub async fn sync(State(state): State<Arc<AppState>>, Json(req): Json<SyncReques
         cape: sanitize_cosmetic_id(&req.cape),
         back: sanitize_cosmetic_id(&req.back),
         hat: sanitize_cosmetic_id(&req.hat),
+        face: sanitize_cosmetic_id(&req.face),
+        shoulder: sanitize_cosmetic_id(&req.shoulder),
+        waist: sanitize_cosmetic_id(&req.waist),
+        feet: sanitize_cosmetic_id(&req.feet),
         aura: sanitize_cosmetic_id(&req.aura),
         pet: sanitize_cosmetic_id(&req.pet),
         companion: sanitize_cosmetic_id(&req.companion),
@@ -179,6 +261,7 @@ pub async fn sync(State(state): State<Arc<AppState>>, Json(req): Json<SyncReques
         cosmetic_glow: req.cosmetic_glow,
         cosmetic_particles: req.cosmetic_particles,
         slot_transforms: clean_transforms,
+        vfx: req.vfx.map(VfxDto::sanitize),
         updated_at_ms: AppState::now_ms(),
     };
 

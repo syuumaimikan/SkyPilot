@@ -15,7 +15,9 @@ import java.util.*;
  * Auras (aura), Floating Pets (pet), and Ground Companions (companion).
  */
 public final class CosmeticCatalog {
-    public static final List<String> SLOTS = List.of("cape", "back", "hat", "aura", "pet", "companion");
+    public static final List<String> SLOTS = List.of(
+            "cape", "back", "hat", "face", "shoulder", "waist", "feet", "aura", "pet", "companion"
+    );
 
     public record Item(
             String id,
@@ -35,14 +37,7 @@ public final class CosmeticCatalog {
         public String detail(boolean japanese) { return japanese ? descriptionJa : description; }
 
         public void equip(SkyPilotConfig.Appearance a) {
-            switch (slot) {
-                case "cape" -> a.cape = id;
-                case "hat" -> a.hat = id;
-                case "back" -> a.back = id;
-                case "aura" -> a.aura = id;
-                case "pet" -> a.pet = id;
-                case "companion" -> a.companion = id;
-            }
+            CosmeticCatalog.equip(a, slot, id);
         }
 
         public void unequip(SkyPilotConfig.Appearance a) {
@@ -156,11 +151,32 @@ public final class CosmeticCatalog {
             case "cape" -> a.cape == null ? "none" : a.cape;
             case "hat" -> a.hat == null ? "none" : a.hat;
             case "back" -> a.back == null ? "none" : a.back;
+            case "face" -> a.face == null ? "none" : a.face;
+            case "shoulder" -> a.shoulder == null ? "none" : a.shoulder;
+            case "waist" -> a.waist == null ? "none" : a.waist;
+            case "feet" -> a.feet == null ? "none" : a.feet;
             case "aura" -> a.aura == null ? "none" : a.aura;
             case "pet" -> a.pet == null ? "none" : a.pet;
             case "companion" -> a.companion == null ? "none" : a.companion;
             default -> "none";
         };
+    }
+
+    public static void equip(SkyPilotConfig.Appearance a, String slot, String id) {
+        if (a == null || slot == null) return;
+        String val = (id == null || id.isBlank()) ? "none" : id;
+        switch (slot) {
+            case "cape" -> a.cape = val;
+            case "hat" -> a.hat = val;
+            case "back" -> a.back = val;
+            case "face" -> a.face = val;
+            case "shoulder" -> a.shoulder = val;
+            case "waist" -> a.waist = val;
+            case "feet" -> a.feet = val;
+            case "aura" -> a.aura = val;
+            case "pet" -> a.pet = val;
+            case "companion" -> a.companion = val;
+        }
     }
 
     public static void clearSlot(SkyPilotConfig.Appearance a, String slot) {
@@ -169,6 +185,10 @@ public final class CosmeticCatalog {
             case "cape" -> a.cape = "none";
             case "hat" -> a.hat = "none";
             case "back" -> a.back = "none";
+            case "face" -> a.face = "none";
+            case "shoulder" -> a.shoulder = "none";
+            case "waist" -> a.waist = "none";
+            case "feet" -> a.feet = "none";
             case "aura" -> a.aura = "none";
             case "pet" -> a.pet = "none";
             case "companion" -> a.companion = "none";
@@ -177,12 +197,16 @@ public final class CosmeticCatalog {
 
     public static String slotLabel(String slot, boolean japanese) {
         return switch (slot) {
-            case "cape" -> japanese ? "クローク" : "Cloak";
-            case "back" -> japanese ? "ウィング" : "Wings";
-            case "hat" -> japanese ? "ヘッド" : "Headwear";
+            case "cape" -> japanese ? "マント" : "Cloak";
+            case "back" -> japanese ? "翼・背面" : "Wings";
+            case "hat" -> japanese ? "頭・帽子" : "Head";
+            case "face" -> japanese ? "顔・アクセ" : "Face";
+            case "shoulder" -> japanese ? "肩・首飾り" : "Shoulder";
+            case "waist" -> japanese ? "腰・尻尾" : "Waist";
+            case "feet" -> japanese ? "足元・足羽根" : "Feet";
             case "aura" -> japanese ? "オーラ" : "Aura";
             case "pet" -> japanese ? "ペット" : "Pet";
-            case "companion" -> japanese ? "コンパニオン" : "Companion";
+            case "companion" -> japanese ? "相棒" : "Companion";
             default -> japanese ? "すべて" : "All";
         };
     }

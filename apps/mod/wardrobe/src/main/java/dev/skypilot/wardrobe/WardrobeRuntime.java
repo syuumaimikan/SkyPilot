@@ -27,6 +27,7 @@ public final class WardrobeRuntime {
     private WardrobeRuntime(Path configDir) {
         this.configDir = configDir;
         CustomCosmetics.reload(configDir);
+        CustomVfxLoader.reload(configDir);
         this.store = new WardrobeConfigStore(configDir);
         this.appearance = store.load();
     }
