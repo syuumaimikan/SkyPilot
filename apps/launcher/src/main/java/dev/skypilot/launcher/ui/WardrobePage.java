@@ -5,6 +5,8 @@ import dev.skypilot.launcher.Instance;
 import dev.skypilot.mod.core.CosmeticCatalog;
 import dev.skypilot.mod.core.CustomCosmetics;
 import dev.skypilot.mod.core.SkyPilotConfig;
+import dev.skypilot.mod.core.WardrobeConfigStore;
+import dev.skypilot.mod.core.WardrobeSearch;
 import dev.skypilot.mod.core.WardrobeTools;
 
 import javax.swing.*;
@@ -26,13 +28,16 @@ final class WardrobePage {
     private final JPanel root = Ui.page(), grid = new JPanel(new GridLayout(0, 3, 12, 12));
     private final JTextField search = new JTextField();
     private final JLabel notice = Ui.muted(""), count = Ui.muted(""), equipped = Ui.muted(""), scaleLabel = Ui.muted("");
-    private final JCheckBox menus = new JCheckBox(), skin3d = new JCheckBox(), glow = new JCheckBox(), firstPersonPet = new JCheckBox();
+    private final JCheckBox menus = new JCheckBox(), skin3d = new JCheckBox(), glow = new JCheckBox(), particles = new JCheckBox(), firstPersonPet = new JCheckBox();
     private final JSlider wingScale = new JSlider(60, 150, 100);
     private final JButton save;
     private final ArrayList<JButton> cards = new ArrayList<>();
     private SkyPilotConfig.Appearance draft = new SkyPilotConfig.Appearance();
     private final AvatarPreview preview = new AvatarPreview(() -> draft, true);
     private String filter = "all";
+    private String rarityFilter = "all";
+    private WardrobeSearch.SortOrder sortOrder = WardrobeSearch.SortOrder.DEFAULT;
+    private int presetIdx;
     private boolean favoritesOnly;
     private boolean customOnly;
     private boolean updatingControls;
@@ -44,8 +49,8 @@ final class WardrobePage {
         save.addActionListener(e -> save());
         root.add(Ui.header(
                 c.t("Your 3D wardrobe", "3D ワードローブ"),
-                c.t("168+ bundled .bbmodel designs across 6 slots + custom Blockbench import. Always free.",
-                        "168種以上の3D(.bbmodel)コレクション・6スロット同時装備・自作モデル読込対応。すべて無料。"),
+                c.t("300+ HD .bbmodel designs across 6 slots · standalone mod · multiplayer sync · always free.",
+                        "300種以上の高精細3D(.bbmodel)・独立MOD・マルチ共有・位置/傾き調整対応。すべて無料。"),
                 save), BorderLayout.NORTH);
 
         JPanel body = new JPanel(new BorderLayout(20, 0));
@@ -57,10 +62,39 @@ final class WardrobePage {
 
         JPanel toolbar = new JPanel(new BorderLayout(8, 8));
         toolbar.setOpaque(false);
-        search.putClientProperty("JTextField.placeholderText", c.t("Search 168+ 3D cosmetics…", "168種以上の3Dコスメを検索…"));
+        JPanel searchRow = new JPanel(new BorderLayout(6, 0));
+        searchRow.setOpaque(false);
+        search.putClientProperty("JTextField.placeholderText", c.t("Search 300+ (e.g. sakura wing, cute, mythic…)", "300種+検索（例: 桜 翼 / うーぱー / かわいい…）"));
         search.getAccessibleContext().setAccessibleName(c.t("Search collection", "コレクション検索"));
         search.setPreferredSize(new Dimension(200, 36));
-        toolbar.add(search, BorderLayout.NORTH);
+        searchRow.add(search, BorderLayout.CENTER);
+
+        JPanel searchExtras = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        searchExtras.setOpaque(false);
+        JButton clearSearch = new JButton("×");
+        clearSearch.setToolTipText(c.t("Clear search", "検索をクリア"));
+        clearSearch.addActionListener(e -> { search.setText(""); rarityFilter = "all"; sortOrder = WardrobeSearch.SortOrder.DEFAULT; rebuild(); });
+        searchExtras.add(clearSearch);
+
+        JButton rarityBtn = new JButton(WardrobeSearch.rarityLabel(rarityFilter, ja()));
+        rarityBtn.setToolTipText(c.t("Filter by rarity", "レア度フィルタ"));
+        rarityBtn.addActionListener(e -> {
+            rarityFilter = WardrobeSearch.nextRarity(rarityFilter);
+            rarityBtn.setText(WardrobeSearch.rarityLabel(rarityFilter, ja()));
+            rebuild();
+        });
+        searchExtras.add(rarityBtn);
+
+        JButton sortBtn = new JButton(sortOrder.label(ja()));
+        sortBtn.setToolTipText(c.t("Change sort order", "並び替え順を変更"));
+        sortBtn.addActionListener(e -> {
+            sortOrder = sortOrder.next();
+            sortBtn.setText(sortOrder.label(ja()));
+            rebuild();
+        });
+        searchExtras.add(sortBtn);
+        searchRow.add(searchExtras, BorderLayout.EAST);
+        toolbar.add(searchRow, BorderLayout.NORTH);
 
         // 7 Category tabs: All + 6 cosmetic slots
         JPanel tabs = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
@@ -137,16 +171,20 @@ final class WardrobePage {
         controls.setOpaque(false);
         controls.setLayout(new BoxLayout(controls, BoxLayout.Y_AXIS));
 
-        JPanel angles = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 0));
+        JPanel angles = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
         angles.setOpaque(false);
         JButton front = Widgets.button(c.t("Front", "正面"), "user");
         JButton back = Widgets.button(c.t("Back", "背面"), "user");
         JButton reset = Widgets.button(c.t("Clear outfit", "装備を外す"), "reset");
+        JButton adjustBtn = Widgets.button(c.t("Adjust", "位置調整"), "settings");
+        adjustBtn.setToolTipText(c.t("Adjust X/Y/Z position, scale & tilt per slot", "スロットごとの位置・大きさ・傾きを調整"));
+        adjustBtn.addActionListener(e -> openTransformDialog());
         front.addActionListener(e -> preview.front());
         back.addActionListener(e -> preview.back());
         reset.addActionListener(e -> { WardrobeTools.clear(draft); changed(); });
         angles.add(front);
         angles.add(back);
+        angles.add(adjustBtn);
         angles.add(reset);
         controls.add(angles);
         controls.add(Box.createVerticalStrut(6));
@@ -218,6 +256,16 @@ final class WardrobePage {
             changed();
         });
         actions.add(color);
+        JButton themeBtn = Widgets.button(c.t("✦ Theme", "✦ テーマ"), "refresh");
+        themeBtn.setToolTipText(c.t("Try 6 curated 6-slot theme outfits", "厳選6種のフルコーデテーマをワンクリック試着"));
+        themeBtn.addActionListener(e -> {
+            var preset = WardrobeTools.PRESETS.get(presetIdx % WardrobeTools.PRESETS.size());
+            presetIdx = (presetIdx + 1) % WardrobeTools.PRESETS.size();
+            preset.apply(draft);
+            changed();
+            notice.setText("✦ " + preset.label(ja()) + " · " + c.t("save to apply", "保存すると反映"));
+        });
+        actions.add(themeBtn);
         JButton export = Widgets.button(c.t("Save PNG", "画像保存"), "image");
         export.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -239,23 +287,28 @@ final class WardrobePage {
         controls.add(Box.createVerticalStrut(8));
 
         firstPersonPet.setText(c.t("Show pet in 1st-person", "一人称視点でペットを表示"));
+        particles.setText(c.t("Ambient cosmetic particles", "コスメ演出パーティクル"));
         glow.setText(c.t("Emissive glow effects", "エミッシブ発光エフェクト"));
         skin3d.setText(c.t("Extruded 3D skin pixels", "立体的な3Dスキン"));
         menus.setText(c.t("Rich dark game menus", "リッチなダークメニュー"));
-        for (JCheckBox b : java.util.List.of(firstPersonPet, glow, skin3d, menus)) {
+        for (JCheckBox b : java.util.List.of(firstPersonPet, particles, glow, skin3d, menus)) {
             b.setOpaque(false);
             b.setAlignmentX(Component.LEFT_ALIGNMENT);
             controls.add(b);
             b.addActionListener(e -> {
                 draft.firstPersonPet = firstPersonPet.isSelected();
+                draft.cosmeticParticles = particles.isSelected();
                 draft.cosmeticGlow = glow.isSelected();
                 draft.skin3d = skin3d.isSelected();
                 draft.richMenus = menus.isSelected();
                 changed();
             });
         }
-        controls.add(Box.createVerticalStrut(8));
-        controls.add(Ui.muted(c.t("Local 3D .bbmodel studio · custom models supported", "3D .bbmodel プレビュー · 自作モデル対応")));
+        JButton fineSettingsBtn = Widgets.button(c.t("1st-Person / Multiplayer Settings…", "一人称・マルチ共有詳細設定…"), "settings");
+        fineSettingsBtn.addActionListener(e -> openFineSettingsDialog());
+        controls.add(fineSettingsBtn);
+        controls.add(Box.createVerticalStrut(6));
+        controls.add(Ui.muted(c.t("Standalone Wardrobe mod · 300+ .bbmodel · multiplayer sync", "独立ワードローブMOD · 300種+ .bbmodel · マルチ共有対応")));
         controls.add(Box.createVerticalStrut(4));
         controls.add(notice);
         for (var component : controls.getComponents()) {
@@ -347,13 +400,10 @@ final class WardrobePage {
     private void rebuild() {
         grid.removeAll();
         cards.clear();
-        String query = search.getText().strip().toLowerCase(Locale.ROOT);
+        var filtered = WardrobeSearch.filterAndSort(
+                CosmeticCatalog.all(), draft, filter, rarityFilter, favoritesOnly, customOnly, false, search.getText(), sortOrder);
         int found = 0;
-        for (var item : CosmeticCatalog.all()) {
-            if (favoritesOnly && !draft.favorites.contains(item.id())) continue;
-            if (customOnly && !item.custom()) continue;
-            if (!"all".equals(filter) && !item.slot().equals(filter)) continue;
-            if (!(item.name() + " " + item.ja() + " " + item.slot() + " " + item.rarity()).toLowerCase(Locale.ROOT).contains(query)) continue;
+        for (var item : filtered) {
             found++;
 
             JButton card = new JButton();
@@ -361,7 +411,7 @@ final class WardrobePage {
             card.setPreferredSize(new Dimension(150, 198));
             card.setBackground(Theme.SURFACE);
             Color borderColor = item.equipped(draft) ? Theme.ACCENT
-                    : (item.custom() ? new Color(0x2DD4BF) : Theme.BORDER);
+                    : (item.custom() ? new Color(0x2DD4BF) : Theme.alpha(new Color(item.rarityColor()), 115));
             card.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(borderColor, item.equipped(draft) ? 2 : 1, true),
                     BorderFactory.createEmptyBorder(8, 8, 8, 8)));
@@ -457,6 +507,7 @@ final class WardrobePage {
         updatingControls = true;
         try {
             firstPersonPet.setSelected(draft.firstPersonPet);
+            particles.setSelected(draft.cosmeticParticles);
             glow.setSelected(draft.cosmeticGlow);
             skin3d.setSelected(draft.skin3d);
             menus.setSelected(draft.richMenus);
@@ -491,6 +542,93 @@ final class WardrobePage {
         preview.repaint();
     }
 
+    private void openTransformDialog() {
+        String[] slots = {"cape", "back", "hat", "aura", "pet", "companion"};
+        String[] labels = new String[slots.length];
+        for (int i = 0; i < slots.length; i++) labels[i] = CosmeticCatalog.slotLabel(slots[i], ja());
+        JComboBox<String> slotBox = new JComboBox<>(labels);
+        JSpinner ox = new JSpinner(new SpinnerNumberModel(0.0, -8.0, 8.0, 0.25));
+        JSpinner oy = new JSpinner(new SpinnerNumberModel(0.0, -8.0, 8.0, 0.25));
+        JSpinner oz = new JSpinner(new SpinnerNumberModel(0.0, -8.0, 8.0, 0.25));
+        JSpinner sc = new JSpinner(new SpinnerNumberModel(1.0, 0.4, 2.0, 0.05));
+        JSpinner rx = new JSpinner(new SpinnerNumberModel(0.0, -60.0, 60.0, 5.0));
+        JSpinner ry = new JSpinner(new SpinnerNumberModel(0.0, -180.0, 180.0, 5.0));
+        JSpinner rz = new JSpinner(new SpinnerNumberModel(0.0, -60.0, 60.0, 5.0));
+
+        Runnable loadSlot = () -> {
+            var tr = draft.transformOf(slots[slotBox.getSelectedIndex()]);
+            ox.setValue(tr.offsetX); oy.setValue(tr.offsetY); oz.setValue(tr.offsetZ);
+            sc.setValue(tr.scale); rx.setValue(tr.rotX); ry.setValue(tr.rotY); rz.setValue(tr.rotZ);
+        };
+        loadSlot.run();
+        slotBox.addActionListener(e -> loadSlot.run());
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 8, 6));
+        form.add(new JLabel(c.t("Slot", "スロット"))); form.add(slotBox);
+        form.add(new JLabel(c.t("Pos X (px)", "位置 X (px)"))); form.add(ox);
+        form.add(new JLabel(c.t("Pos Y (px)", "位置 Y (px)"))); form.add(oy);
+        form.add(new JLabel(c.t("Pos Z (px)", "位置 Z (px)"))); form.add(oz);
+        form.add(new JLabel(c.t("Scale", "サイズ倍率"))); form.add(sc);
+        form.add(new JLabel(c.t("Tilt X (°)", "傾き X (°)"))); form.add(rx);
+        form.add(new JLabel(c.t("Tilt Y (°)", "傾き Y (°)"))); form.add(ry);
+        form.add(new JLabel(c.t("Tilt Z (°)", "傾き Z (°)"))); form.add(rz);
+
+        int res = JOptionPane.showConfirmDialog(root, form,
+                c.t("Adjust Cosmetic Position / Scale / Tilt", "ワードローブ位置・サイズ・傾き調整"),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res == JOptionPane.OK_OPTION) {
+            var tr = draft.editTransform(slots[slotBox.getSelectedIndex()]);
+            tr.offsetX = ((Number) ox.getValue()).doubleValue();
+            tr.offsetY = ((Number) oy.getValue()).doubleValue();
+            tr.offsetZ = ((Number) oz.getValue()).doubleValue();
+            tr.scale = ((Number) sc.getValue()).doubleValue();
+            tr.rotX = ((Number) rx.getValue()).doubleValue();
+            tr.rotY = ((Number) ry.getValue()).doubleValue();
+            tr.rotZ = ((Number) rz.getValue()).doubleValue();
+            tr.sanitize();
+            changed();
+        }
+    }
+
+    private void openFineSettingsDialog() {
+        JCheckBox fpAura = new JCheckBox(c.t("1st-person Aura", "一人称でオーラを表示"), draft.firstPersonAura);
+        JCheckBox fpWings = new JCheckBox(c.t("1st-person Wings", "一人称で翼を表示"), draft.firstPersonWings);
+        JCheckBox fpCape = new JCheckBox(c.t("1st-person Cloak", "一人称でマントを表示"), draft.firstPersonCape);
+        JCheckBox fpHat = new JCheckBox(c.t("1st-person Headwear", "一人称で頭・帽子を表示"), draft.firstPersonHat);
+        JCheckBox fpPet = new JCheckBox(c.t("1st-person Floating Pet", "一人称で浮遊ペットを表示"), draft.firstPersonPet);
+        JCheckBox fpComp = new JCheckBox(c.t("1st-person Companion", "一人称で地上相棒を表示"), draft.firstPersonCompanion);
+        JCheckBox mpShow = new JCheckBox(c.t("Show other players' cosmetics", "他プレイヤーのワードローブを表示"), draft.showOtherPlayers);
+        JCheckBox mpShare = new JCheckBox(c.t("Share my wardrobe with others", "自分のワードローブを他プレイヤーへ共有"), draft.shareWithOthers);
+        JCheckBox mpPets = new JCheckBox(c.t("Show other players' pets", "他プレイヤーのペット・相棒も表示"), draft.otherPlayerPets);
+        JTextField urlField = new JTextField(draft.wardrobeSyncUrl == null ? "http://localhost:8080" : draft.wardrobeSyncUrl, 24);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        for (JCheckBox b : java.util.List.of(fpAura, fpWings, fpCape, fpHat, fpPet, fpComp, mpShow, mpShare, mpPets)) {
+            panel.add(b);
+        }
+        panel.add(Box.createVerticalStrut(6));
+        panel.add(new JLabel(c.t("Multiplayer Sync Server URL:", "マルチ同期サーバーURL:")));
+        panel.add(urlField);
+
+        int res = JOptionPane.showConfirmDialog(root, panel,
+                c.t("1st-Person & Multiplayer Wardrobe Settings", "一人称・マルチプレイ詳細設定"),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res == JOptionPane.OK_OPTION) {
+            draft.firstPersonAura = fpAura.isSelected();
+            draft.firstPersonWings = fpWings.isSelected();
+            draft.firstPersonCape = fpCape.isSelected();
+            draft.firstPersonHat = fpHat.isSelected();
+            draft.firstPersonPet = fpPet.isSelected();
+            draft.firstPersonCompanion = fpComp.isSelected();
+            draft.showOtherPlayers = mpShow.isSelected();
+            draft.shareWithOthers = mpShare.isSelected();
+            draft.otherPlayerPets = mpPets.isSelected();
+            draft.wardrobeSyncUrl = urlField.getText().strip();
+            changed();
+        }
+    }
+
     private void save() {
         if (GameWatcher.check(c.settings.instance(), 0).state() == GameWatcher.State.RUNNING) {
             reload();
@@ -500,6 +638,7 @@ final class WardrobePage {
         cfg.appearance = draft;
         try {
             Instance.saveConfig(c.settings.instance(), cfg);
+            new WardrobeConfigStore(configDir()).save(draft);
             notice.setText(c.t("Saved · ready for your next launch", "保存済み · 次回起動から反映"));
             c.ok(c.t("Style saved", "保存しました"), c.t("Ready for your next launch.", "次回起動から反映します。"));
         } catch (Exception e) {

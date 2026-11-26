@@ -18,13 +18,14 @@ import math
 from typing import Any
 
 ZONES: dict[str, list[float]] = {
-    "A": [1, 1, 31, 31],
-    "B": [33, 1, 63, 31],
-    "C": [1, 33, 31, 63],
-    "D_EYE": [36, 36, 44, 44],
-    "D_DARK": [50, 34, 62, 46],
-    "D_GOLD": [34, 50, 46, 62],
-    "D_TRIM": [50, 50, 62, 62],
+    "A": [2, 2, 62, 62],
+    "B": [66, 2, 126, 62],
+    "C": [2, 66, 62, 126],
+    "D_EYE": [68, 68, 92, 92],
+    "D_DARK": [98, 68, 124, 92],
+    "D_GOLD": [68, 98, 92, 124],
+    "D_TRIM": [98, 98, 124, 124],
+    "D_BLUSH": [98, 98, 124, 124],
 }
 
 
@@ -35,6 +36,11 @@ def face_map(rect: list[float]) -> dict[str, dict[str, Any]]:
 
 def _sx(side: int, a: float, b: float) -> list[float]:
     x0, x1 = side * a, side * b
+    return [min(x0, x1), max(x0, x1)]
+
+
+def _sx_at(ox: float, side: int, a: float, b: float) -> list[float]:
+    x0, x1 = ox + side * a, ox + side * b
     return [min(x0, x1), max(x0, x1)]
 
 
@@ -115,31 +121,29 @@ def build_cloak_bones(primary: int, secondary: int, accent: int, style: str = "s
     for seg in range(7, -1, -1):
         y_top = 23.6 - seg * seg_h
         y_bot = y_top - seg_h - 0.06
-        v0 = seg * 8.0
-        v1 = (seg + 1) * 8.0
-        flare = 1.0 + seg * (0.025 if style == "royal" else 0.018)
+        v0 = seg * 16.0
+        v1 = (seg + 1) * 16.0
+        flare = 1.0 + seg * (0.026 if style in ("royal", "ribbon") else 0.019)
         x0, x1 = -hw * flare, hw * flare
 
         def _panel_faces(u_lo: float = 0.0, u_hi: float = 40.0) -> dict[str, Any]:
             return {
-                "south": {"uv": [u_lo, v0, u_hi, v1], "rotation": 0},
-                "north": {"uv": [40, v0, 60, v1], "rotation": 0},
-                "east": {"uv": [60, v0, 64, v1], "rotation": 0},
-                "west": {"uv": [60, v0, 64, v1], "rotation": 0},
-                "up": {"uv": [60, v0, 64, min(64, v0 + 2)], "rotation": 0},
-                "down": {"uv": [60, max(0, v1 - 2), 64, v1], "rotation": 0},
+                "south": {"uv": [u_lo * 2.0, v0, u_hi * 2.0, v1], "rotation": 0},
+                "north": {"uv": [80.0, v0, 120.0, v1], "rotation": 0},
+                "east": {"uv": [120.0, v0, 128.0, v1], "rotation": 0},
+                "west": {"uv": [120.0, v0, 128.0, v1], "rotation": 0},
+                "up": {"uv": [120.0, v0, 128.0, min(128.0, v0 + 4.0)], "rotation": 0},
+                "down": {"uv": [120.0, max(0.0, v1 - 4.0), 128.0, v1], "rotation": 0},
             }
 
         cubes: list[dict[str, Any]] = []
-        # Themed lower hem cuts on segment 7 (and 6 for swallowtail)
+        # Themed lower hem cuts on segment 7
         if style == "swallowtail" and seg == 7:
-            # Split twin-tail hem!
             cubes.append(make_cube("cape_panel_7l", [x0, y_bot - 1.2, z0], [-0.9, y_top, z1],
                                    pivot=[0.0, y_top, z0], color=primary, faces=_panel_faces(0, 18)))
             cubes.append(make_cube("cape_panel_7r", [0.9, y_bot - 1.2, z0], [x1, y_top, z1],
                                    pivot=[0.0, y_top, z0], color=primary, faces=_panel_faces(22, 40)))
         elif style == "tattered" and seg == 7:
-            # Jagged asymmetrical shadow/reaper strips!
             strips = [(-5.4, -3.1, -1.6, 0, 10), (-2.6, -0.4, -0.4, 11, 20), (0.3, 2.7, -1.9, 21, 30), (3.2, 5.4, -0.8, 31, 40)]
             for idx, (sx0, sx1, drop, u0, u1) in enumerate(strips):
                 cubes.append(make_cube(f"cape_panel_7_{idx}", [sx0, y_bot + drop, z0], [sx1, y_top, z1],
@@ -151,14 +155,22 @@ def build_cloak_bones(primary: int, secondary: int, accent: int, style: str = "s
                 fx = -4.2 + k * 2.1
                 fh = 1.6 if k % 2 == 0 else 1.0
                 cubes.append(make_cube(f"ember_tip_{k}", [fx - 0.7, y_bot - fh, z0 + 0.08], [fx + 0.7, y_bot + 0.2, z1 - 0.05],
-                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([60, 48, 64, 60])))
+                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([120, 96, 128, 120])))
         elif style == "frost_crystal" and seg == 7:
             cubes.append(make_cube("cape_panel_7", [x0, y_bot, z0], [x1, y_top, z1],
                                    pivot=[0.0, y_top, z0], color=primary, faces=_panel_faces()))
             for k in range(4):
                 fx = -3.8 + k * 2.53
                 cubes.append(make_cube(f"ice_tip_{k}", [fx - 0.55, y_bot - 1.4, z0 + 0.1], [fx + 0.55, y_bot + 0.3, z1 + 0.15],
-                                       pivot=[fx, y_bot, z0 + 0.35], rot=[0, 0, 45], color=accent, emissive=True, faces=face_map([60, 0, 64, 8])))
+                                       pivot=[fx, y_bot, z0 + 0.35], rot=[0, 0, 45], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
+        elif style == "ribbon" and seg == 7:
+            # Scalloped pastel lace pearls along the bottom hem!
+            cubes.append(make_cube("cape_panel_7", [x0, y_bot, z0], [x1, y_top, z1],
+                                   pivot=[0.0, y_top, z0], color=primary, faces=_panel_faces()))
+            for k in range(6):
+                fx = -4.5 + k * 1.8
+                cubes.append(make_cube(f"lace_{k}", [fx - 0.7, y_bot - 0.85, z0 + 0.08], [fx + 0.7, y_bot + 0.25, z1 + 0.05],
+                                       pivot=[0.0, y_top, z0], color=0xFFF1F2, faces=face_map([120, 0, 128, 16])))
         else:
             cubes.append(make_cube(f"cape_panel_{seg}", [x0, y_bot, z0], [x1, y_top, z1],
                                    pivot=[0.0, y_top, z0], color=primary if seg % 2 == 0 else secondary, faces=_panel_faces()))
@@ -166,35 +178,43 @@ def build_cloak_bones(primary: int, secondary: int, accent: int, style: str = "s
         # Themed shoulder / collar 3D trim on segment 0 (all strictly z >= 2.65!)
         if seg == 0:
             if style == "royal":
-                # Wide fur-trimmed royal mantle collar + golden chain
                 cubes.append(make_cube("royal_fur", [-hw - 0.5, y_top - 1.1, z0], [hw + 0.5, y_top + 0.9, z1 + 0.75],
-                                       pivot=[0.0, y_top, z0], color=0xF8FAFC, faces=face_map([60, 0, 64, 8])))
+                                       pivot=[0.0, y_top, z0], color=0xF8FAFC, faces=face_map([120, 0, 128, 16])))
                 cubes.append(make_cube("royal_bar", [-3.8, y_top - 0.4, z1 + 0.5], [3.8, y_top + 0.3, z1 + 0.95],
-                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([60, 0, 64, 8])))
+                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
+            elif style == "ribbon":
+                # Ultra-cute sculpted 3D satin bow + cream ruffle collar on shoulder!
+                cubes.append(make_cube("rib_ruffle", [-hw - 0.3, y_top - 0.8, z0], [hw + 0.3, y_top + 0.6, z1 + 0.5],
+                                       pivot=[0.0, y_top, z0], color=0xFFF1F2, faces=face_map([120, 0, 128, 16])))
+                cubes.append(make_cube("rib_knot", [-1.1, y_top - 1.0, z1 + 0.2], [1.1, y_top + 0.6, z1 + 1.2],
+                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
+                for side in (-1, 1):
+                    cubes.append(make_cube(f"rib_loop_{side}", _sx(side, 0.8, 3.8), [y_top - 1.3, y_top + 1.0], [z1 + 0.1, z1 + 1.05],
+                                           pivot=[side * 1.0, y_top - 0.2, z1 + 0.5], rot=[0, 0, side * 14], color=primary, faces=face_map([120, 0, 128, 16])))
+                    cubes.append(make_cube(f"rib_tail_{side}", _sx(side, 1.0, 2.4), [y_top - 4.4, y_top - 0.8], [z1 + 0.15, z1 + 0.75],
+                                           pivot=[side * 1.2, y_top - 0.8, z1 + 0.4], rot=[0, 0, side * 18], color=primary, faces=face_map([120, 0, 128, 16])))
             elif style == "collared":
-                # Sculpted high noble vampire/gothic collar behind neck (z >= 2.85, clears head!)
                 cubes.append(make_cube("collar_b", [-4.6, y_top - 0.2, z0 + 0.2], [4.6, y_top + 2.8, z1 + 0.35],
-                                       pivot=[0.0, y_top, z0], rot=[-18, 0, 0], color=secondary, faces=face_map([60, 0, 64, 8])))
+                                       pivot=[0.0, y_top, z0], rot=[-18, 0, 0], color=secondary, faces=face_map([120, 0, 128, 16])))
                 for side in (-1, 1):
                     cubes.append(make_cube(f"collar_s_{side}", _sx(side, 3.8, 5.2), [y_top - 0.2, y_top + 2.4], [z0 + 0.1, z1 + 0.55],
-                                           pivot=[0.0, y_top, z0], rot=[-14, 0, -side * 16], color=accent, faces=face_map([60, 0, 64, 8])))
+                                           pivot=[0.0, y_top, z0], rot=[-14, 0, -side * 16], color=accent, faces=face_map([120, 0, 128, 16])))
             elif style == "armored":
-                # Metallic pauldron plates + glowing central crest
                 for side in (-1, 1):
                     cubes.append(make_cube(f"pauldron_{side}", _sx(side, 2.8, 5.8), [y_top - 1.4, y_top + 0.8], [z0, z1 + 0.9],
-                                           pivot=[0.0, y_top, z0], rot=[0, 0, -side * 12], color=secondary, faces=face_map([60, 0, 64, 8])))
+                                           pivot=[0.0, y_top, z0], rot=[0, 0, -side * 12], color=secondary, faces=face_map([120, 0, 128, 16])))
                     cubes.append(make_cube(f"p_glow_{side}", _sx(side, 3.4, 5.2), [y_top - 0.6, y_top + 0.2], [z1 + 0.65, z1 + 1.05],
-                                           pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([60, 0, 64, 8])))
+                                           pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
                 cubes.append(make_cube("tech_crest", [-1.4, y_top - 1.5, z1 + 0.1], [1.4, y_top + 0.4, z1 + 0.7],
-                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([60, 0, 64, 8])))
+                                       pivot=[0.0, y_top, z0], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
             elif style == "frost_crystal":
                 for side in (-1, 1):
                     cubes.append(make_cube(f"gem_clasp_{side}", _sx(side, 3.1, 4.9), [y_top - 1.2, y_top + 0.6], [z0, z1 + 0.65],
-                                           pivot=[side * 4.0, y_top - 0.3, z0 + 0.4], rot=[0, 0, 45], color=accent, emissive=True, faces=face_map([60, 0, 64, 8])))
+                                           pivot=[side * 4.0, y_top - 0.3, z0 + 0.4], rot=[0, 0, 45], color=accent, emissive=True, faces=face_map([120, 0, 128, 16])))
             else:
                 for side in (-1, 1):
                     cubes.append(make_cube(f"clasp_{side}", _sx(side, hw - 1.9, hw - 0.2), [y_top - 1.2, y_top + 0.4], [z0, z1 + 0.45],
-                                           pivot=[0.0, y_top, z0], color=accent, faces=face_map([60, 0, 64, 8])))
+                                           pivot=[0.0, y_top, z0], color=accent, faces=face_map([120, 0, 128, 16])))
 
         child = make_bone(
             f"cape_seg_{seg}",
@@ -214,10 +234,13 @@ def build_wings_bones(arch: str, p: int, s: int, a: int, emissive_tips: bool = T
         "astral_feathered": lambda: _wing_feathered(p, s, a, emissive_tips, style="astral"),
         "phoenix_plumes": lambda: _wing_feathered(p, s, a, True, style="phoenix"),
         "seraph_six": lambda: _wing_feathered(p, s, a, True, style="seraph_six"),
+        "twilight_seraph": lambda: _wing_feathered(p, s, a, True, style="twilight_seraph"),
         "raven_swept": lambda: _wing_feathered(p, s, a, False, style="raven"),
         "blossom_halo": lambda: _wing_feathered(p, s, a, True, style="blossom_halo"),
         "sunburst_arch": lambda: _wing_feathered(p, s, a, True, style="sunburst"),
         "crescent_sakura": lambda: _wing_feathered(p, s, a, True, style="crescent_sakura"),
+        "angel_ribbon": lambda: _wing_angel_ribbon(p, s, a),
+        "katana_halo": lambda: _back_katana_halo(p, s, a),
         "prism_neon_bars": lambda: _wing_prism_bars(p, s, a),
         "dragon_elder": lambda: _wing_dragon(p, s, a, emissive_tips, translucent, style="elder"),
         "demon_volcanic": lambda: _wing_dragon(p, s, a, True, False, style="volcanic"),
@@ -248,124 +271,163 @@ def build_wings_bones(arch: str, p: int, s: int, a: int, emissive_tips: bool = T
         "shield_crest": lambda: _back_shield(p, s, a),
         "solar_cloak": lambda: _back_solar_crest(p, s, a),
     }
-    return dispatch[arch]()
+    if arch in dispatch:
+        return dispatch[arch]()
+    from rig_builders_v2 import build_wings_v2
+    v2 = build_wings_v2(arch, p, s, a)
+    if v2 is not None:
+        return v2
+    raise KeyError(f"Unknown wing arch: {arch}")
 
 
 def _wing_feathered(p: int, s: int, a: int, glow: bool, style: str) -> list[dict[str, Any]]:
     bones: list[dict[str, Any]] = []
     Z = 3.5  # Safe back clearance (behind torso + armor + cloak stacking)
-    tiers = [0, 1, 2] if style == "seraph_six" else [0]
+    tiers = [0, 1, 2] if style in ("seraph_six", "twilight_seraph") else [0]
 
-    # Distinct centerpiece geometry per winged style
+    # Distinct sculpted centerpiece geometry per winged style
     if style == "sunburst":
         brooch = [
-            make_cube("sun_hub", [-2.2, 18.8, Z], [2.2, 23.2, Z + 1.2], rot=[0, 0, 45], zone="D_GOLD", color=a, emissive=True),
-            make_cube("sun_gem", [-1.1, 19.9, Z + 0.8], [1.1, 22.1, Z + 1.6], zone="C", color=0xFFFFFF, emissive=True),
+            make_cube("sun_hub", [-2.4, 18.6, Z], [2.4, 23.4, Z + 1.2], rot=[0, 0, 45], zone="D_GOLD", color=a, emissive=True),
+            make_cube("sun_gem", [-1.2, 19.8, Z + 0.8], [1.2, 22.2, Z + 1.7], zone="C", color=0xFFFFFF, emissive=True),
         ]
         bones.append(make_bone("sun_brooch", [0, 21.0, Z + 0.5], anim="gear_cw", anim_amp=0.35, cubes=brooch))
     elif style == "phoenix":
-        spine = [make_cube(f"ph_sp_{k}", [-0.8, 16.5 + k * 2.2, Z + 0.1], [0.8, 18.4 + k * 2.2, Z + 1.5],
-                           rot=[-20, 0, 0], zone="C", color=a, emissive=True) for k in range(3)]
+        spine = [make_cube(f"ph_sp_{k}", [-0.9, 16.0 + k * 2.2, Z + 0.1], [0.9, 18.5 + k * 2.2, Z + 1.6],
+                           rot=[-22, 0, 0], zone="C", color=a, emissive=True) for k in range(3)]
         bones.append(make_bone("phoenix_spine", [0, 20.0, Z + 0.6], anim="flame_pulse", anim_amp=0.95, cubes=spine))
     elif style == "crescent_sakura":
         moon = []
         for i in range(9):
             ang = -1.1 + i * 0.36
-            mx, my = math.cos(ang) * 5.0 - 1.1, 20.8 + math.sin(ang) * 5.0
-            moon.append(make_cube(f"m_{i}", [mx - 0.85, my - 0.85, Z + 0.3], [mx + 0.85, my + 0.85, Z + 1.3],
+            mx, my = math.cos(ang) * 5.2 - 1.1, 20.8 + math.sin(ang) * 5.2
+            moon.append(make_cube(f"m_{i}", [mx - 0.9, my - 0.9, Z + 0.3], [mx + 0.9, my + 0.9, Z + 1.3],
                                   zone="C", color=0xFFF1F2, emissive=True))
         bones.append(make_bone("crescent_crest", [0, 20.8, Z + 0.8], anim="wing_float", anim_amp=0.5, cubes=moon))
     elif style == "blossom_halo":
         halo = []
         for i in range(10):
             ang = i * math.tau / 10.0
-            hx, hz = math.cos(ang) * 4.6, math.sin(ang) * 4.6
-            halo.append(make_cube(f"h_{i}", [hx - 0.75, 35.6, hz - 0.75], [hx + 0.75, 36.6, hz + 0.75],
+            hx, hz = math.cos(ang) * 4.7, math.sin(ang) * 4.7
+            halo.append(make_cube(f"h_{i}", [hx - 0.8, 35.6, hz - 0.8], [hx + 0.8, 36.6, hz + 0.8],
                                   zone="D_GOLD", color=0xFDE047, emissive=True))
         bones.append(make_bone("wing_halo", [0, 36.0, 0], anim="halo_float", cubes=halo))
+    elif style == "twilight_seraph":
+        # Sacred tilted golden-and-violet dual-tone sigil ring behind shoulders!
+        ring = []
+        for i in range(12):
+            ang = i * math.tau / 12.0
+            rx, ry = math.cos(ang) * 6.0, 21.0 + math.sin(ang) * 6.0
+            light_half = rx >= 0
+            ring.append(make_cube(f"ts_r_{i}", [rx - 0.75, ry - 0.75, Z + 0.4], [rx + 0.75, ry + 0.75, Z + 1.2],
+                                  pivot=[rx, ry, Z + 0.8], rot=[0, 0, math.degrees(ang)],
+                                  zone="D_GOLD" if light_half else "C", color=0xFDE047 if light_half else a, emissive=True))
+        bones.append(make_bone("twilight_sigil", [0, 21.0, Z + 0.8], anim="gear_cw", anim_amp=0.35, cubes=ring))
 
-    # Distinct feather counts, arch heights, sweeps, and silhouettes per style!
+    # Sweeping, organic S-curved archangel plumage silhouettes (zero stiff vertical slats!)
     cfg = {
-        "astral":          (6, 6, 5, 1.00, 21.6, 25.0, 27.6, 18, 15, 0.0),
-        "phoenix":         (5, 7, 6, 1.12, 22.0, 26.8, 30.8, 28, 22, 0.4),
-        "seraph_six":      (5, 5, 4, 0.94, 22.4, 25.5, 27.8, 16, 14, 0.0),
-        "raven":           (7, 7, 6, 1.16, 21.2, 23.2, 22.2, 6, -10, -0.5),  # huge heavy downward raven sweep!
-        "blossom_halo":    (5, 6, 5, 0.96, 21.8, 25.6, 28.4, 22, 18, 0.2),
-        "sunburst":        (6, 6, 6, 1.08, 22.2, 27.4, 31.4, 30, 24, 0.3),   # high arched dawn wings!
-        "crescent_sakura": (5, 5, 5, 1.02, 21.0, 24.4, 26.8, 14, 10, 0.1),
+        "astral":          (6, 6, 5, 1.04, 21.8, 25.8, 28.6, 22, 16, 0.2),
+        "phoenix":         (6, 7, 6, 1.15, 22.0, 27.4, 31.6, 30, 22, 0.5),
+        "seraph_six":      (5, 5, 4, 0.98, 22.8, 26.2, 28.8, 20, 14, 0.15),
+        "twilight_seraph": (5, 5, 5, 1.02, 22.6, 26.8, 29.8, 24, 16, 0.25),
+        "raven":           (7, 7, 6, 1.18, 21.4, 23.6, 22.4, 8, -10, -0.45),
+        "blossom_halo":    (6, 6, 5, 1.00, 22.0, 26.2, 29.2, 24, 18, 0.3),
+        "sunburst":        (6, 6, 6, 1.12, 22.4, 28.0, 32.0, 32, 24, 0.4),
+        "crescent_sakura": (5, 6, 5, 1.04, 21.2, 25.0, 27.6, 16, 12, 0.2),
     }[style]
     n_cov, n_pri, n_tip, sc_base, y_r, y_m, y_t, ang_r, ang_m, flare_k = cfg
 
     for tier_idx, tier in enumerate(tiers):
-        y_off = -tier * 3.7
-        scale = sc_base * (1.0 - tier * 0.16)
+        y_off = -tier * 3.8
+        scale = sc_base * (1.0 - tier * 0.15)
         z_t = Z + tier * 0.65
         for side, tag in ((1, "l"), (-1, "r")):
-            root_piv = [side * 2.0, y_r + y_off, z_t]
-            mid_piv = [side * (2.0 + 8.4 * scale), y_m + y_off, z_t + 1.3]
-            tip_piv = [side * (2.0 + 16.4 * scale), y_t + y_off, z_t + 2.5]
+            # Twilight Seraph: left side = radiant gold/white, right side = abyssal obsidian/violet!
+            twilight_light = (style == "twilight_seraph" and side == 1)
+            twilight_dark = (style == "twilight_seraph" and side == -1)
+            p_col = 0xFFFBEB if twilight_light else (0x1E1033 if twilight_dark else p)
+            s_col = 0xFDE047 if twilight_light else (0x4C1D95 if twilight_dark else s)
+            a_col = 0xFEF08A if twilight_light else (0xC084FC if twilight_dark else a)
+            z_pri_zone = "D_GOLD" if twilight_light else ("B" if twilight_dark else "A")
+            z_tip_zone = "D_GOLD" if twilight_light else "C"
 
+            root_piv = [side * 1.9, y_r + y_off, z_t]
+            mid_piv = [side * (2.0 + 8.6 * scale), y_m + y_off, z_t + 1.3]
+            tip_piv = [side * (2.0 + 16.6 * scale), y_t + y_off, z_t + 2.5]
+
+            # Sculpted arched shoulder crest + layered diagonal overlapping coverts!
             root_cubes = [
-                make_cube("arm_in", _sx(side, 1.8, 1.8 + 8.2 * scale), [y_r - 0.6 + y_off, y_r + 2.4 + y_off], [z_t, z_t + 1.2],
-                          pivot=root_piv, rot=[0, -side * 16, side * ang_r], zone="B", color=s),
+                make_cube("arm_in", _sx(side, 1.8, 1.8 + 8.8 * scale), [y_r - 0.3 + y_off, y_r + 2.2 + y_off], [z_t, z_t + 1.15],
+                          pivot=root_piv, rot=[0, -side * 15, side * ang_r], zone="D_GOLD" if twilight_light else "B", color=s_col, emissive=twilight_light),
             ]
             for i in range(n_cov):
-                fx = 2.4 + i * (7.2 / max(1, n_cov - 1)) * scale
-                fl = (7.2 + i * 1.15 + (2.0 if style == "raven" else 0.0)) * scale
+                u = i / max(1, n_cov - 1)
+                fx = 2.2 + u * 7.6 * scale
+                arch_y = y_r + y_off + math.sin(u * 1.35) * 3.0 * scale
+                fl = (6.8 + u * 4.4 + (2.0 if style == "raven" else 0.0)) * scale
+                fan_z = -side * (8.0 + u * 14.0)
                 root_cubes.append(make_cube(
                     f"cov_{i}",
-                    _sx(side, fx, fx + 1.55 * scale),
-                    [y_r + y_off - fl + i * 0.55, y_r + 1.2 + y_off + i * 0.55],
-                    [z_t + 0.15 + (i % 2) * 0.25, z_t + 1.0 + (i % 2) * 0.25],
-                    pivot=[side * fx, y_r + 0.9 + y_off, z_t + 0.5],
-                    rot=[0, -side * (14 + i), -side * (12 - i * 1.4)],
-                    zone="A", color=p,
+                    _sx(side, fx, fx + 1.95 * scale),
+                    [arch_y - fl, arch_y + 1.0],
+                    [z_t + 0.15 + (i % 2) * 0.22, z_t + 0.95 + (i % 2) * 0.22],
+                    pivot=[side * fx, arch_y + 0.8, z_t + 0.5],
+                    rot=[0, -side * (14 + i), fan_z],
+                    zone=z_pri_zone, color=p_col, emissive=twilight_light and i >= n_cov - 2,
                 ))
 
             mid_cubes = [
-                make_cube("arm_mid", _sx(side, 2.0 + 7.4 * scale, 2.0 + 16.8 * scale), [y_m - 0.8 + y_off, y_m + 1.9 + y_off], [z_t + 0.8, z_t + 1.9],
-                          pivot=mid_piv, rot=[0, -side * 18, side * ang_m], zone="B", color=s),
+                make_cube("arm_mid", _sx(side, 2.0 + 7.6 * scale, 2.0 + 17.0 * scale), [y_m - 0.6 + y_off, y_m + 1.7 + y_off], [z_t + 0.8, z_t + 1.85],
+                          pivot=mid_piv, rot=[0, -side * 17, side * ang_m], zone="D_GOLD" if twilight_light else "B", color=s_col, emissive=twilight_light),
             ]
             for i in range(n_pri):
-                fx = 2.0 + (8.2 + i * (8.0 / max(1, n_pri - 1))) * scale
-                fl = (11.6 - i * 0.35 + (2.5 if style == "phoenix" and i % 2 == 0 else 0.0)) * scale
-                fy_top = y_m + 0.3 + y_off + i * (0.45 + flare_k) * scale
+                u = i / max(1, n_pri - 1)
+                fx = 2.0 + (8.2 + u * 8.4) * scale
+                fl = (11.8 + math.sin(u * math.pi) * 2.4 + (2.2 if style == "phoenix" and i % 2 == 0 else 0.0)) * scale
+                fy_top = y_m + 0.5 + y_off + u * (2.2 + flare_k * 2.0) * scale
+                fan_z = -side * (18.0 + u * 20.0)
+                em_f = (glow and i >= n_pri - 2) or twilight_light
                 mid_cubes.append(make_cube(
                     f"pri_{i}",
-                    _sx(side, fx, fx + 1.6 * scale),
-                    [fy_top - fl, fy_top],
-                    [z_t + 1.0 + (i % 2) * 0.2, z_t + 1.85 + (i % 2) * 0.2],
-                    pivot=[side * fx, fy_top, z_t + 1.4],
-                    rot=[0, -side * (16 + i * 1.2), -side * (6 + i * 2.4)],
-                    zone="A" if i < n_pri - 2 else "C", color=p if i < n_pri - 2 else a, emissive=glow and i >= n_pri - 2,
+                    _sx(side, fx, fx + 1.95 * scale),
+                    [fy_top - fl, fy_top + 0.4],
+                    [z_t + 0.95 + (i % 2) * 0.2, z_t + 1.75 + (i % 2) * 0.2],
+                    pivot=[side * fx, fy_top, z_t + 1.35],
+                    rot=[0, -side * (16 + i * 1.1), fan_z],
+                    zone=z_tip_zone if i >= n_pri - 2 else z_pri_zone,
+                    color=a_col if i >= n_pri - 2 else p_col,
+                    emissive=em_f,
                 ))
 
+            # Gracefully fanned, tapered outer sweeping primary pinions!
             tip_cubes = []
             for i in range(n_tip):
-                fx = 2.0 + (16.0 + i * (6.2 / max(1, n_tip - 1))) * scale
-                fl = (12.2 - i * 1.35 + (1.8 if style == "raven" and i % 2 == 1 else 0.0)) * scale
-                fy_top = y_t + 0.2 + y_off + (2.0 - abs(i - 1.5)) * 0.85 * scale
+                u = i / max(1, n_tip - 1)
+                fx = 2.0 + (16.0 + u * 6.4) * scale
+                fl = (13.4 - u * 4.4 + (1.8 if style == "raven" and i % 2 == 1 else 0.0)) * scale
+                fy_top = y_t + 0.4 + y_off + math.sin(u * math.pi * 0.8) * 1.6 * scale - u * 1.2 * scale
+                fan_z = -side * (32.0 + u * 26.0)
+                use_glow = (i >= n_tip - 3 or style in ("phoenix", "twilight_seraph"))
                 tip_cubes.append(make_cube(
                     f"tip_{i}",
-                    _sx(side, fx, fx + 1.5 * scale),
-                    [fy_top - fl, fy_top],
-                    [z_t + 1.8 + i * 0.12, z_t + 2.6 + i * 0.12],
-                    pivot=[side * fx, fy_top, z_t + 2.2],
-                    rot=[0, -side * (20 + i * 2), -side * (16 + i * 5.2)],
-                    zone="C" if (i >= n_tip - 3 or style == "phoenix") else "A",
-                    color=a if (i >= n_tip - 3 or style == "phoenix") else p,
-                    emissive=glow and (i >= n_tip - 3 or style == "phoenix"),
+                    _sx(side, fx, fx + (1.8 - u * 0.45) * scale),
+                    [fy_top - fl, fy_top + 0.3],
+                    [z_t + 1.7 + i * 0.12, z_t + 2.45 + i * 0.12],
+                    pivot=[side * fx, fy_top, z_t + 2.1],
+                    rot=[0, -side * (19 + i * 1.8), fan_z],
+                    zone=z_tip_zone if use_glow else z_pri_zone,
+                    color=a_col if use_glow else p_col,
+                    emissive=glow and use_glow,
                 ))
 
-            # Extra style-specific details
             if style == "phoenix":
-                tip_cubes.append(make_cube("flame_trail", _sx(side, 19.0 * scale, 22.0 * scale), [y_t - 15.0, y_t - 10.5], [z_t + 2.0, z_t + 3.0],
-                                           pivot=tip_piv, rot=[0, 0, -side * 24], zone="C", color=a, emissive=True))
+                tip_cubes.append(make_cube("flame_trail", _sx(side, 19.2 * scale, 22.4 * scale), [y_t - 14.5, y_t - 10.2], [z_t + 2.0, z_t + 3.0],
+                                           pivot=tip_piv, rot=[0, 0, -side * 28], zone="C", color=a, emissive=True))
             elif style == "astral":
-                tip_cubes.append(make_cube("astral_star", _sx(side, 18.2, 20.0), [y_t + 1.5, y_t + 3.3], [z_t + 2.2, z_t + 3.4],
-                                           pivot=[side * 19.1, y_t + 2.4, z_t + 2.8], rot=[0, 0, 45], zone="C", color=a, emissive=True))
+                tip_cubes.append(make_cube("astral_star", _sx(side, 18.6, 20.6), [y_t + 1.6, y_t + 3.6], [z_t + 2.2, z_t + 3.4],
+                                           pivot=[side * 19.6, y_t + 2.6, z_t + 2.8], rot=[0, 0, 45], zone="C", color=a, emissive=True))
             elif style == "blossom_halo":
-                mid_cubes.append(make_cube("bud", _sx(side, 12.0, 13.8), [y_m + 2.2, y_m + 3.8], [z_t + 1.5, z_t + 2.5],
+                mid_cubes.append(make_cube("bud", _sx(side, 12.2, 14.2), [y_m + 2.2, y_m + 4.0], [z_t + 1.5, z_t + 2.5],
                                            rot=[0, 0, 45], zone="C", color=a, emissive=True))
 
             tip_b = make_bone(f"wing_{tag}_t{tier_idx}_tip", tip_piv, anim=f"wing_{tag}_tip", anim_phase=tier * 0.45, cubes=tip_cubes)
@@ -373,6 +435,70 @@ def _wing_feathered(p: int, s: int, a: int, glow: bool, style: str) -> list[dict
             root_b = make_bone(f"wing_{tag}_t{tier_idx}_root", root_piv, rot=[0, side * 16, 0], anim=f"wing_{tag}_root", anim_phase=tier * 0.45, cubes=root_cubes, children=[mid_b])
             bones.append(root_b)
     return bones
+
+
+def _wing_angel_ribbon(p: int, s: int, a: int) -> list[dict[str, Any]]:
+    # Ultra-cute Sweetheart Cherub Wings: soft scalloped pastel feather clouds + big satin bow + floating glowing hearts!
+    bones: list[dict[str, Any]] = []
+    Z = 3.5
+    bow_cubes = [
+        make_cube("bow_knot", [-1.5, 19.2, Z], [1.5, 21.8, Z + 1.6], zone="D_GOLD", color=0xFEF08A, emissive=True),
+    ]
+    for side in (-1, 1):
+        bow_cubes.append(make_cube(f"bow_loop_{side}", _sx(side, 1.2, 5.4), [18.8, 22.6], [Z + 0.1, Z + 1.5],
+                                   pivot=[side * 1.4, 20.5, Z + 0.8], rot=[0, -side * 12, side * 16], zone="C", color=a, emissive=True))
+        bow_cubes.append(make_cube(f"bow_tail_{side}", _sx(side, 1.4, 3.2), [12.5, 19.4], [Z + 0.3, Z + 1.2],
+                                   pivot=[side * 1.6, 19.2, Z + 0.7], rot=[0, -side * 8, side * 22], zone="C", color=a, emissive=True))
+    bones.append(make_bone("ribbon_bow", [0, 20.5, Z + 0.8], anim="chain_swing", anim_amp=0.35, cubes=bow_cubes))
+
+    for side, tag in ((1, "l"), (-1, "r")):
+        piv = [side * 1.8, 21.0, Z + 0.3]
+        cubes = [
+            # Lush, softly arched overlapping pastel cherub feather-cloud silhouette!
+            make_cube("puff_1", _sx(side, 1.8, 8.6), [18.8, 24.8], [Z + 0.2, Z + 1.15], pivot=piv, rot=[0, -side * 15, side * 14], zone="A", color=p),
+            make_cube("puff_2", _sx(side, 6.2, 13.8), [20.4, 26.8], [Z + 0.45, Z + 1.4], pivot=piv, rot=[0, -side * 17, side * 18], zone="A", color=p),
+            make_cube("puff_3", _sx(side, 10.6, 17.4), [21.6, 27.6], [Z + 0.7, Z + 1.6], pivot=piv, rot=[0, -side * 19, side * 12], zone="C", color=a, emissive=True),
+            make_cube("puff_lo1", _sx(side, 2.8, 10.2), [14.2, 19.6], [Z + 0.3, Z + 1.15], pivot=piv, rot=[0, -side * 15, -side * 10], zone="B", color=s),
+            make_cube("puff_lo2", _sx(side, 7.6, 14.4), [15.4, 21.0], [Z + 0.55, Z + 1.35], pivot=piv, rot=[0, -side * 17, -side * 6], zone="A", color=p),
+            make_cube("puff_tip", _sx(side, 13.8, 19.0), [17.8, 22.8], [Z + 0.85, Z + 1.65], pivot=piv, rot=[0, -side * 20, -side * 14], zone="C", color=a, emissive=True),
+        ]
+        # Floating mini heart beside each wingtip!
+        hpiv = [side * 15.8, 29.8, Z + 1.5]
+        heart = make_bone(f"cherub_heart_{tag}", hpiv, anim="wing_float", anim_phase=side * 1.2, cubes=[
+            make_cube("hl", _sx(side, 14.8, 16.0), [29.6, 30.8], [Z + 1.1, Z + 1.9], rot=[0, 0, 22], zone="D_BLUSH", color=a, emissive=True),
+            make_cube("hr", _sx(side, 15.6, 16.8), [29.6, 30.8], [Z + 1.1, Z + 1.9], rot=[0, 0, -22], zone="C", color=a, emissive=True),
+            make_cube("hb", _sx(side, 15.0, 16.6), [28.7, 30.1], [Z + 1.15, Z + 1.85], rot=[0, 0, 45], zone="C", color=a, emissive=True),
+        ])
+        bones.append(make_bone(f"wing_{tag}_root", piv, rot=[0, side * 14, 0], anim=f"wing_{tag}_root", anim_amp=0.85, cubes=cubes, children=[heart]))
+    return bones
+
+
+def _back_katana_halo(p: int, s: int, a: int) -> list[dict[str, Any]]:
+    # Ultra-cool Mythic Spirit Blade Halo: 8 glowing spectral katanas radiating in a rotating sacred wheel behind back!
+    Z = 4.0
+    ring_cubes = [
+        make_cube("k_core", [-2.2, 18.3, Z], [2.2, 22.7, Z + 1.0], rot=[0, 0, 45], zone="C", color=a, emissive=True),
+    ]
+    for i in range(12):
+        ang = i * math.tau / 12.0
+        rx, ry = math.cos(ang) * 6.8, 20.5 + math.sin(ang) * 6.8
+        ring_cubes.append(make_cube(f"kr_{i}", [rx - 0.65, ry - 0.65, Z + 0.2], [rx + 0.65, ry + 0.65, Z + 0.9],
+                                    pivot=[rx, ry, Z + 0.55], rot=[0, 0, math.degrees(ang)], zone="D_GOLD", color=0xFDE047, emissive=True))
+    for k in range(8):
+        ang_deg = k * 45.0
+        ang = math.radians(ang_deg)
+        bx, by = math.cos(ang) * 7.2, 20.5 + math.sin(ang) * 7.2
+        piv = [bx, by, Z + 0.6]
+        rot_k = [0.0, 0.0, ang_deg - 90.0]
+        ring_cubes.append(make_cube(f"khilt_{k}", [bx - 0.45, by - 3.0, Z + 0.25], [bx + 0.45, by, Z + 0.95],
+                                    pivot=piv, rot=rot_k, zone="B", color=s))
+        ring_cubes.append(make_cube(f"ktsuba_{k}", [bx - 1.25, by - 0.2, Z + 0.15], [bx + 1.25, by + 0.55, Z + 1.05],
+                                    pivot=piv, rot=rot_k, zone="D_GOLD", color=0xFBBF24, emissive=True))
+        ring_cubes.append(make_cube(f"kblade_{k}", [bx - 0.55, by + 0.5, Z + 0.3], [bx + 0.55, by + 11.4, Z + 0.9],
+                                    pivot=piv, rot=rot_k, zone="A", color=p, emissive=True))
+        ring_cubes.append(make_cube(f"kedge_{k}", [bx - 0.25, by + 1.0, Z + 0.22], [bx + 0.25, by + 12.2, Z + 0.98],
+                                    pivot=piv, rot=rot_k, zone="C", color=a, emissive=True))
+    return [make_bone("katana_halo_wheel", [0, 20.5, Z + 0.6], anim="gear_cw", anim_amp=0.42, cubes=ring_cubes)]
 
 
 def _wing_prism_bars(p: int, s: int, a: int) -> list[dict[str, Any]]:
@@ -445,24 +571,25 @@ def _wing_dragon(p: int, s: int, a: int, glow: bool, trans: bool, style: str) ->
         tip_piv = [side * (18.5 * span), 28.4 + (1.8 if style == "frost" else 0.0), Z + 2.6]
 
         root_cubes = [
-            make_cube("humerus", _sx(side, 1.8, 9.8 * span), [20.2, 22.0], [Z, Z + 1.4], pivot=root_piv, rot=[0, -side * 16, side * 34], zone=bone_zone, color=bone_col),
-            make_cube("mem_in1", _sx(side, 2.4, 9.6 * span), [13.5, 22.4], [Z + 0.4, Z + 1.0], pivot=root_piv, rot=[0, -side * 16, side * 14], zone="A", color=p, translucent=trans),
-            make_cube("mem_in2", _sx(side, 3.2, 8.8 * span), [9.8, 15.5], [Z + 0.5, Z + 1.05], pivot=root_piv, rot=[0, -side * 16, side * 5], zone="A", color=p, translucent=trans),
+            make_cube("humerus", _sx(side, 1.8, 10.0 * span), [20.4, 22.3], [Z, Z + 1.4], pivot=root_piv, rot=[0, -side * 16, side * 34], zone=bone_zone, color=bone_col),
+            make_cube("mem_in1", _sx(side, 2.2, 10.8 * span), [12.8, 23.2], [Z + 0.45, Z + 1.05], pivot=root_piv, rot=[0, -side * 16, side * 14], zone="A", color=p, translucent=trans),
+            make_cube("mem_in2", _sx(side, 3.0, 9.8 * span), [9.4, 15.8], [Z + 0.5, Z + 1.05], pivot=root_piv, rot=[0, -side * 16, side * 5], zone="A", color=p, translucent=trans),
         ]
         mid_cubes = [
-            make_cube("elbow_claw", _sx(side, 8.8 * span, 10.6 * span), [26.0, 30.8 if style in ("vampire", "frost") else 29.8], [Z + 0.9, Z + 2.2],
+            make_cube("elbow_claw", _sx(side, 8.8 * span, 10.8 * span), [26.0, 31.4 if style in ("vampire", "frost") else 30.2], [Z + 0.9, Z + 2.2],
                       pivot=mid_piv, rot=[0, 0, -side * 18], zone="C" if glow else "D_GOLD", color=a, emissive=glow),
-            make_cube("radius", _sx(side, 9.2 * span, 19.2 * span), [25.6, 27.5], [Z + 1.0, Z + 2.3], pivot=mid_piv, rot=[0, -side * 18, side * 10], zone=bone_zone, color=bone_col),
-            make_cube("rib_1", _sx(side, 9.5 * span, 11.1 * span), [12.5, 26.2], [Z + 1.2, Z + 2.1], pivot=mid_piv, rot=[0, -side * 14, -side * 18], zone=bone_zone, color=bone_col),
-            make_cube("rib_2", _sx(side, 12.2 * span, 13.7 * span), [11.2, 26.8], [Z + 1.4, Z + 2.2], pivot=[side * 12.5 * span, 26.5, Z + 1.8], rot=[0, -side * 16, -side * 34], zone=bone_zone, color=bone_col),
-            make_cube("mem_mid1", _sx(side, 9.2 * span, 14.8 * span), [13.2, 26.0], [Z + 1.45, Z + 1.95], pivot=mid_piv, rot=[0, -side * 16, side * 4], zone="A", color=p, translucent=trans),
-            make_cube("mem_mid2", _sx(side, 13.6 * span, 18.8 * span), [14.2, 26.8], [Z + 1.7, Z + 2.15], pivot=mid_piv, rot=[0, -side * 18, -side * 4], zone="A", color=p, translucent=trans),
+            make_cube("radius", _sx(side, 9.0 * span, 19.4 * span), [25.7, 27.6], [Z + 1.0, Z + 2.3], pivot=mid_piv, rot=[0, -side * 18, side * 10], zone=bone_zone, color=bone_col),
+            make_cube("rib_1", _sx(side, 9.4 * span, 11.0 * span), [11.6, 26.4], [Z + 1.2, Z + 2.1], pivot=mid_piv, rot=[0, -side * 14, -side * 16], zone=bone_zone, color=bone_col),
+            make_cube("rib_2", _sx(side, 13.4 * span, 14.9 * span), [11.0, 27.0], [Z + 1.4, Z + 2.2], pivot=[side * 13.8 * span, 26.8, Z + 1.8], rot=[0, -side * 16, -side * 28], zone=bone_zone, color=bone_col),
+            make_cube("mem_mid1", _sx(side, 8.4 * span, 15.4 * span), [12.4, 26.6], [Z + 1.4, Z + 1.95], pivot=mid_piv, rot=[0, -side * 16, side * 4], zone="A", color=p, translucent=trans),
+            make_cube("mem_mid2", _sx(side, 13.2 * span, 19.8 * span), [13.8, 27.4], [Z + 1.65, Z + 2.15], pivot=mid_piv, rot=[0, -side * 18, -side * 4], zone="A", color=p, translucent=trans),
+            make_cube("mem_mid_glow", _sx(side, 10.0 * span, 18.0 * span), [12.2, 14.4], [Z + 1.55, Z + 2.05], pivot=mid_piv, rot=[0, -side * 17, 0], zone="C", color=a, emissive=glow, translucent=trans),
         ]
         tip_cubes = [
-            make_cube("outer_spar", _sx(side, 18.2 * span, 25.5 * span), [26.8, 28.4], [Z + 1.8, Z + 2.9], pivot=tip_piv, rot=[0, -side * 20, -side * 22], zone=bone_zone, color=bone_col),
-            make_cube("outer_claw", _sx(side, 24.4 * span, 27.4 * span), [23.8, 26.4], [Z + 2.0, Z + 2.9], pivot=tip_piv, rot=[0, -side * 20, -side * 36], zone="C", color=a, emissive=glow),
-            make_cube("mem_tip1", _sx(side, 18.0 * span, 24.4 * span), [16.5, 27.2], [Z + 2.0, Z + 2.5], pivot=tip_piv, rot=[0, -side * 20, -side * 16], zone="A", color=p, translucent=trans),
-            make_cube("mem_tip_glow", _sx(side, 19.0 * span, 23.6 * span), [14.6, 17.5], [Z + 2.05, Z + 2.55], pivot=tip_piv, rot=[0, -side * 20, -side * 20], zone="C", color=a, emissive=glow, translucent=trans),
+            make_cube("outer_spar", _sx(side, 18.0 * span, 26.2 * span), [26.8, 28.5], [Z + 1.8, Z + 2.9], pivot=tip_piv, rot=[0, -side * 20, -side * 20], zone=bone_zone, color=bone_col),
+            make_cube("outer_claw", _sx(side, 24.8 * span, 28.0 * span), [23.6, 26.4], [Z + 2.0, Z + 2.9], pivot=tip_piv, rot=[0, -side * 20, -side * 36], zone="C", color=a, emissive=glow),
+            make_cube("mem_tip1", _sx(side, 17.6 * span, 25.0 * span), [15.8, 27.6], [Z + 2.0, Z + 2.55], pivot=tip_piv, rot=[0, -side * 20, -side * 16], zone="A", color=p, translucent=trans),
+            make_cube("mem_tip_glow", _sx(side, 18.8 * span, 24.2 * span), [14.4, 17.2], [Z + 2.05, Z + 2.55], pivot=tip_piv, rot=[0, -side * 20, -side * 20], zone="C", color=a, emissive=glow, translucent=trans),
         ]
 
         # Unique sculpted accents per dragon/bat archetype!
@@ -545,7 +672,7 @@ def _wing_insect(p: int, s: int, a: int, glow: bool, trans: bool, style: str) ->
             up_cubes = [
                 make_cube("mo_in", _sx(side, 1.8, 13.0), [19.8, 30.0], [Z + 0.1, Z + 0.7], pivot=up_piv, rot=[0, -side * 18, side * 16], zone="A", color=p),
                 make_cube("mo_out", _sx(side, 11.0, 21.0), [22.8, 32.8], [Z + 0.4, Z + 1.0], pivot=up_piv, rot=[0, -side * 20, side * 8], zone="A", color=p),
-                make_cube("mo_eye", _sx(side, 12.2, 15.6), [25.6, 29.0], [Z + 0.35, Z + 1.15], pivot=up_piv, rot=[0, -side * 20, 45], zone="C", color=a, emissive=True),
+                make_cube("mo_eye", _sx(side, 13.6, 17.0), [26.2, 29.6], [Z + 0.35, Z + 1.15], pivot=up_piv, rot=[0, -side * 20, side * 8], zone="C", color=a, emissive=True),
                 make_cube("antenna", _sx(side, 2.2, 3.5), [28.0, 35.4], [Z + 0.1, Z + 0.9], pivot=[side * 2.5, 28.0, Z + 0.5], rot=[0, 0, -side * 28], zone="C", color=a, emissive=True),
             ]
             lo_cubes = [
@@ -558,24 +685,32 @@ def _wing_insect(p: int, s: int, a: int, glow: bool, trans: bool, style: str) ->
 
 
 def _wing_honeycomb(p: int, s: int, a: int) -> list[dict[str, Any]]:
-    # Hexagonal faceted stained-glass glacier wing panels!
+    # Connected stained-glass glacier wing lattice with central crystal hub & overlapping faceted hex panes!
     bones: list[dict[str, Any]] = []
     Z = 3.5
+    hub = [
+        make_cube("hex_hub", [-2.2, 18.4, Z], [2.2, 22.8, Z + 1.3], rot=[0, 0, 45], zone="C", color=a, emissive=True),
+        make_cube("hex_core", [-1.2, 19.4, Z + 0.6], [1.2, 21.8, Z + 1.6], zone="D_GOLD", color=0xFFFFFF, emissive=True),
+    ]
+    bones.append(make_bone("hex_spine", [0, 20.6, Z + 0.6], cubes=hub))
     hex_cells = [
-        (4.5, 23.0, 3.6), (9.0, 26.2, 4.0), (14.2, 28.6, 4.2), (19.0, 29.8, 3.4),
-        (5.5, 18.2, 3.2), (10.5, 20.6, 3.8), (15.8, 22.8, 3.5),
-        (6.8, 13.4, 3.0), (11.2, 15.2, 3.1),
+        (4.8, 23.2, 4.6), (9.4, 26.2, 5.2), (14.4, 28.6, 5.4), (19.4, 29.8, 4.4),
+        (5.6, 18.2, 4.4), (10.6, 20.8, 5.0), (15.8, 23.2, 4.6),
+        (6.8, 13.6, 4.0), (11.4, 15.6, 4.2),
     ]
     for side, tag in ((1, "l"), (-1, "r")):
         piv = [side * 2.0, 20.5, Z]
-        cubes = []
+        cubes = [
+            make_cube("hex_spar_top", _sx(side, 2.0, 19.6), [21.6, 22.8], [Z + 0.25, Z + 1.05], pivot=piv, rot=[0, -side * 16, side * 26], zone="B", color=s),
+            make_cube("hex_spar_mid", _sx(side, 2.2, 15.8), [17.8, 18.9], [Z + 0.35, Z + 1.05], pivot=piv, rot=[0, -side * 16, side * 8], zone="B", color=s),
+        ]
         for idx, (hx, hy, sz) in enumerate(hex_cells):
-            cz = Z + 0.2 + idx * 0.16
-            cubes.append(make_cube(f"hex_f_{idx}", _sx(side, hx - sz * 0.55, hx + sz * 0.55), [hy - sz * 0.55, hy + sz * 0.55], [cz, cz + 0.7],
-                                   pivot=[side * hx, hy, cz + 0.35], rot=[0, -side * 16, 30 if idx % 2 == 0 else 0],
+            cz = Z + 0.25 + idx * 0.14
+            cubes.append(make_cube(f"hex_f_{idx}", _sx(side, hx - sz * 0.54, hx + sz * 0.54), [hy - sz * 0.54, hy + sz * 0.54], [cz, cz + 0.72],
+                                   pivot=[side * hx, hy, cz + 0.36], rot=[0, -side * 16, 45 if idx % 2 == 0 else 15],
                                    zone="B", color=s))
-            cubes.append(make_cube(f"hex_g_{idx}", _sx(side, hx - sz * 0.42, hx + sz * 0.42), [hy - sz * 0.42, hy + sz * 0.42], [cz + 0.12, cz + 0.82],
-                                   pivot=[side * hx, hy, cz + 0.35], rot=[0, -side * 16, 30 if idx % 2 == 0 else 0],
+            cubes.append(make_cube(f"hex_g_{idx}", _sx(side, hx - sz * 0.42, hx + sz * 0.42), [hy - sz * 0.42, hy + sz * 0.42], [cz + 0.12, cz + 0.84],
+                                   pivot=[side * hx, hy, cz + 0.36], rot=[0, -side * 16, 45 if idx % 2 == 0 else 15],
                                    zone="C" if idx % 2 == 0 else "A", color=a if idx % 2 == 0 else p, emissive=True, translucent=True))
         bones.append(make_bone(f"wing_{tag}_root", piv, rot=[0, side * 14, 0], anim=f"wing_{tag}_root", cubes=cubes))
     return bones

@@ -104,6 +104,7 @@ public final class SkyPilot {
 		} catch (IOException e) {
 			LOG.warn("Could not save SkyPilot config: {}", e.getMessage());
 		}
+		WardrobeBridge.syncFromSkyPilot(config.appearance);
 	}
 
 	public Lang lang() {

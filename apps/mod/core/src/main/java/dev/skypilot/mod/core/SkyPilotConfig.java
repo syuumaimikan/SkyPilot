@@ -61,6 +61,53 @@ public final class SkyPilotConfig {
 			"skyblocker_solver", "skyblocker_dungeon", "skyblocker_puzzle", "skyblocker_hud", "skyblocker_party"
 	);
 
+	public static final class SlotTransform {
+		/** Offset in Blockbench pixels (-8.0 .. +8.0; 16 px = 1 block). */
+		public double offsetX = 0.0;
+		public double offsetY = 0.0;
+		public double offsetZ = 0.0;
+		/** Uniform scale multiplier (0.4 .. 2.0). */
+		public double scale = 1.0;
+		/** Pitch / Yaw / Roll tilt in degrees. */
+		public double rotX = 0.0;
+		public double rotY = 0.0;
+		public double rotZ = 0.0;
+
+		public boolean isIdentity() {
+			return Math.abs(offsetX) < 1e-4 && Math.abs(offsetY) < 1e-4 && Math.abs(offsetZ) < 1e-4
+					&& Math.abs(scale - 1.0) < 1e-4
+					&& Math.abs(rotX) < 1e-4 && Math.abs(rotY) < 1e-4 && Math.abs(rotZ) < 1e-4;
+		}
+
+		public SlotTransform copy() {
+			SlotTransform t = new SlotTransform();
+			t.offsetX = offsetX;
+			t.offsetY = offsetY;
+			t.offsetZ = offsetZ;
+			t.scale = scale;
+			t.rotX = rotX;
+			t.rotY = rotY;
+			t.rotZ = rotZ;
+			return t;
+		}
+
+		public void reset() {
+			offsetX = offsetY = offsetZ = 0.0;
+			scale = 1.0;
+			rotX = rotY = rotZ = 0.0;
+		}
+
+		public void sanitize() {
+			offsetX = clampFinite(offsetX, -8.0, 8.0, 0.0);
+			offsetY = clampFinite(offsetY, -8.0, 8.0, 0.0);
+			offsetZ = clampFinite(offsetZ, -8.0, 8.0, 0.0);
+			scale = clampFinite(scale <= 0 ? 1.0 : scale, 0.4, 2.0, 1.0);
+			rotX = clampFinite(rotX, -60.0, 60.0, 0.0);
+			rotY = clampFinite(rotY, -180.0, 180.0, 0.0);
+			rotZ = clampFinite(rotZ, -60.0, 60.0, 0.0);
+		}
+	}
+
 	public static final class Appearance {
 		public boolean richMenus = true;
 		public boolean skin3d = false;
@@ -73,11 +120,71 @@ public final class SkyPilotConfig {
 		public String companion = "none";
 		public double wingScale = 1.0;
 		public boolean cosmeticGlow = true;
-		/** Whether to show equipped wardrobe pet & companion in first-person view. */
+		/** Client-side ambient particles trailing equipped wings, cloaks, auras, and pets. */
+		public boolean cosmeticParticles = true;
+		/** Granular first-person visibility toggles per cosmetic slot. */
 		public boolean firstPersonPet = true;
+		public boolean firstPersonCompanion = true;
+		public boolean firstPersonAura = false;
+		public boolean firstPersonWings = false;
+		public boolean firstPersonCape = false;
+		public boolean firstPersonHat = false;
+		/** Multiplayer visibility & Hypixel-safe HTTP sync settings (zero MC server packets). */
+		public boolean showOtherPlayers = true;
+		public boolean shareWithOthers = true;
+		public boolean otherPlayerPets = true;
+		public boolean otherPlayerParticles = true;
+		public String wardrobeSyncUrl = "http://localhost:8080";
+		/** Per-slot fine transform adjustments (offset X/Y/Z, scale, tilt X/Y/Z). */
+		public java.util.Map<String, SlotTransform> slotTransforms = new java.util.LinkedHashMap<>();
 		public int color = 0xA38BFA;
 		public java.util.List<String> favorites = new java.util.ArrayList<>();
 		public java.util.List<WardrobeTools.Outfit> outfits = new java.util.ArrayList<>();
+
+		public SlotTransform transformOf(String slot) {
+			if (slotTransforms == null || slot == null) return new SlotTransform();
+			SlotTransform t = slotTransforms.get(slot);
+			return t == null ? new SlotTransform() : t;
+		}
+
+		public SlotTransform editTransform(String slot) {
+			if (slotTransforms == null) slotTransforms = new java.util.LinkedHashMap<>();
+			return slotTransforms.computeIfAbsent(slot, k -> new SlotTransform());
+		}
+
+		public void resetTransform(String slot) {
+			if (slotTransforms != null) slotTransforms.remove(slot);
+		}
+
+		public void resetAllTransforms() {
+			if (slotTransforms != null) slotTransforms.clear();
+			wingScale = 1.0;
+		}
+
+		public boolean firstPersonFor(String slot) {
+			if (slot == null) return false;
+			return switch (slot) {
+				case "pet" -> firstPersonPet;
+				case "companion" -> firstPersonCompanion;
+				case "aura" -> firstPersonAura;
+				case "back" -> firstPersonWings;
+				case "cape" -> firstPersonCape;
+				case "hat" -> firstPersonHat;
+				default -> false;
+			};
+		}
+
+		public void setFirstPersonFor(String slot, boolean value) {
+			if (slot == null) return;
+			switch (slot) {
+				case "pet" -> firstPersonPet = value;
+				case "companion" -> firstPersonCompanion = value;
+				case "aura" -> firstPersonAura = value;
+				case "back" -> firstPersonWings = value;
+				case "cape" -> firstPersonCape = value;
+				case "hat" -> firstPersonHat = value;
+			}
+		}
 	}
 
 
@@ -288,6 +395,15 @@ public final class SkyPilotConfig {
 		CosmeticCatalog.migrate(appearance);
 		appearance.wingScale = clamp(appearance.wingScale <= 0 ? 1.0 : appearance.wingScale, 0.6, 1.5);
 		appearance.color &= 0xFFFFFF;
+		if (appearance.wardrobeSyncUrl == null || appearance.wardrobeSyncUrl.isBlank()) {
+			appearance.wardrobeSyncUrl = "http://localhost:8080";
+		} else {
+			appearance.wardrobeSyncUrl = appearance.wardrobeSyncUrl.strip().replaceAll("/+$", "");
+		}
+		if (appearance.slotTransforms == null) appearance.slotTransforms = new java.util.LinkedHashMap<>();
+		appearance.slotTransforms.entrySet().removeIf(e -> e.getKey() == null || !CosmeticCatalog.SLOTS.contains(e.getKey()) || e.getValue() == null);
+		for (var tr : appearance.slotTransforms.values()) tr.sanitize();
+		appearance.slotTransforms.entrySet().removeIf(e -> e.getValue().isIdentity());
 		WardrobeTools.sanitize(appearance);
 		if(deskNotes==null)deskNotes="";
 		deskNotes=deskNotes.substring(0,Math.min(1400,deskNotes.length()));
@@ -322,6 +438,11 @@ public final class SkyPilotConfig {
 
 	private static double clamp(double v, double lo, double hi) {
 		if (Double.isNaN(v)) return lo;
+		return Math.max(lo, Math.min(hi, v));
+	}
+
+	private static double clampFinite(double v, double lo, double hi, double fallback) {
+		if (!Double.isFinite(v)) return fallback;
 		return Math.max(lo, Math.min(hi, v));
 	}
 }

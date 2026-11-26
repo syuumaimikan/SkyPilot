@@ -7,7 +7,27 @@ package dev.skypilot.mod.core;
  * shared simulation across in-game world rendering, in-game 3D studio, and Launcher preview.
  */
 public final class CosmeticAnimation {
+    private static final long START_NANOS = System.nanoTime();
+
     private CosmeticAnimation() {}
+
+    /**
+     * High-precision relative animation clock in seconds (starts at 0.0 on JVM start).
+     * Avoids both 32-bit int overflow and IEEE-754 trig precision loss from raw epoch timestamps.
+     */
+    public static double animationTimeSeconds() {
+        return (System.nanoTime() - START_NANOS) * 1e-9;
+    }
+
+    /**
+     * Overflow-safe animated texture strip frame index for any timestamp (including epoch seconds).
+     */
+    public static int frameIndex(double time, int animFps, int totalFrames) {
+        if (totalFrames <= 1) return 0;
+        int fps = Math.max(1, animFps);
+        long frame = (long) Math.floor(time * (double) fps);
+        return (int) Math.floorMod(frame, (long) totalFrames);
+    }
 
     /**
      * Incremental bone transform in Blockbench pixel & degree space.
@@ -170,28 +190,29 @@ public final class CosmeticAnimation {
             }
             // ---- Floating Pets ----
             case "pet_hover" -> {
-                double dy = Math.sin(t * 2.8 + phase) * 1.6 * a;
+                double dy = Math.sin(t * 2.8 + phase) * 1.65 * a + Math.sin(t * 5.6 + phase) * 0.22 * a;
                 double dx = Math.cos(t * 1.4 + phase) * 0.65 * a;
                 double dz = Math.min(3.0, speed * 9.0) + Math.sin(t * 1.9) * 0.5;
-                double pitch = Math.min(18.0, speed * 42.0) + Math.sin(t * 2.1) * 4.0;
-                double roll = Math.sin(t * 1.6 + phase) * 5.0;
-                return new BoneTransform(dx, dy, dz, pitch, Math.sin(t * 1.1) * 10.0, roll, 1, 1, 1, true);
+                double pitch = Math.min(18.0, speed * 42.0) + Math.sin(t * 2.1) * 4.5;
+                double roll = Math.sin(t * 1.6 + phase) * 5.5;
+                double breathe = 1.0 + Math.sin(t * 3.1 + phase) * 0.025;
+                return new BoneTransform(dx, dy, dz, pitch, Math.sin(t * 1.1) * 11.0, roll, 1.0 / Math.sqrt(breathe), breathe, 1.0 / Math.sqrt(breathe), true);
             }
             case "pet_wing_l", "pet_wing_r" -> {
                 double side = anim.equals("pet_wing_l") ? 1.0 : -1.0;
-                double freq = 10.0 * a;
-                double flap = Math.sin(t * freq + phase) * 34.0;
+                double freq = 10.5 * a;
+                double flap = Math.sin(t * freq + phase) * 36.0 + Math.sin(t * freq * 2.0 + phase) * 5.0;
                 return new BoneTransform(0, 0, 0, 0, 0, side * flap, 1, 1, 1, true);
             }
             case "pet_head" -> {
-                double rx = Math.sin(t * 1.7 + phase) * 7.0;
-                double ry = Math.sin(t * 1.1 + phase) * 14.0;
-                double rz = Math.cos(t * 1.3 + phase) * 5.0;
+                double rx = Math.sin(t * 1.7 + phase) * 7.5;
+                double ry = Math.sin(t * 1.1 + phase) * 15.0;
+                double rz = Math.cos(t * 1.3 + phase) * 7.5;
                 return new BoneTransform(0, 0, 0, rx, ry, rz, 1, 1, 1, true);
             }
             case "pet_tail" -> {
-                double ry = Math.sin(t * 6.0 + phase) * 18.0 * a;
-                double rx = Math.cos(t * 4.0 + phase) * 8.0 * a;
+                double ry = Math.sin(t * 6.2 + phase) * 20.0 * a;
+                double rx = Math.cos(t * 4.0 + phase) * 9.0 * a;
                 return new BoneTransform(0, 0, 0, rx, ry, 0, 1, 1, 1, true);
             }
             case "pet_spin" -> {
@@ -204,10 +225,11 @@ public final class CosmeticAnimation {
             // ---- Ground Companions ----
             case "comp_root" -> {
                 double move = Math.min(1.0, speed * 5.0);
-                double walkBob = Math.abs(Math.sin(t * 9.0)) * 0.9 * move;
-                double breathe = Math.sin(t * 2.4 + phase) * 0.25;
+                double walkBob = Math.abs(Math.sin(t * 9.0)) * 1.05 * move;
+                double breathe = Math.sin(t * 2.6 + phase) * 0.28;
+                double bScale = 1.0 + Math.sin(t * 2.6 + phase) * 0.022;
                 double dz = Math.min(3.5, speed * 10.0);
-                return new BoneTransform(0, walkBob + breathe, dz, 0, Math.sin(t * 0.9) * 4.0, Math.sin(t * 4.5) * 2.5 * move, 1, 1, 1, true);
+                return new BoneTransform(0, walkBob + breathe, dz, 0, Math.sin(t * 0.9) * 4.5, Math.sin(t * 4.5) * 3.0 * move, 1.0 / Math.sqrt(bScale), bScale, 1.0, true);
             }
             case "comp_hop" -> {
                 double freq = speed > 0.05 ? 7.5 : 2.6;
@@ -399,7 +421,7 @@ public final class CosmeticAnimation {
             }
             case "prism" -> {
                 double band = (row + col * 0.8 - time * 3.0);
-                int idx = Math.floorMod((int) Math.floor(band / 2.5), 4);
+                int idx = (int) Math.floorMod((long) Math.floor(band / 2.5), 4L);
                 int[] colors = {0x5FD6CD, 0x6A9EE5, 0x9C82DB, 0xDC90BD};
                 return colors[idx];
             }
@@ -434,7 +456,7 @@ public final class CosmeticAnimation {
                 return clampRgb((int) (210 + 45 * pulse), (int) (150 + 60 * pulse), 30);
             }
             case "cyberpunk" -> {
-                int scanRow = (int) (time * 12.0) % 16;
+                int scanRow = (int) Math.floorMod((long) Math.floor(time * 12.0), 16L);
                 if (row == scanRow || row == (scanRow + 1) % 16) return 0x38BDF8;
                 return (col % 2 == 0 && row % 2 == 0) ? 0x0284C7 : 0x0F172A;
             }
@@ -490,23 +512,26 @@ public final class CosmeticAnimation {
         return breath;
     }
 
-    /** Wing flapping angle (radians) based on player motion state. */
+    /** Wing flapping angle (radians) based on player motion state, with organic asymmetric downstroke. */
     public static double wingFlap(double time, double speed, boolean falling, boolean flying) {
         if (falling || flying) {
-            return Math.toRadians(32.0) + Math.sin(time * 3.2) * Math.toRadians(8.0);
+            double sweep = Math.sin(time * 3.4) * Math.toRadians(9.0) + Math.sin(time * 6.8) * Math.toRadians(2.2);
+            return Math.toRadians(34.0) + sweep;
         }
         if (speed > 0.08) {
             double freq = 6.5 + Math.min(6.0, speed * 12.0);
-            double amplitude = Math.toRadians(18.0 + Math.min(18.0, speed * 35.0));
-            return Math.toRadians(14.0) + Math.sin(time * freq) * amplitude;
+            double amplitude = Math.toRadians(19.0 + Math.min(18.0, speed * 35.0));
+            double wave = Math.sin(time * freq) + 0.18 * Math.sin(time * freq * 2.0 - 0.5);
+            return Math.toRadians(15.0) + wave * amplitude;
         }
-        return Math.toRadians(10.0) + Math.sin(time * 2.0) * Math.toRadians(7.5);
+        double gentle = Math.sin(time * 2.1) + 0.16 * Math.sin(time * 4.2 - 0.4);
+        return Math.toRadians(11.0) + gentle * Math.toRadians(8.0);
     }
 
-    /** Wing secondary joint lag angle (radians) for organic feather/pinion flexion. */
+    /** Wing secondary joint lag angle (radians) for sweeping organic feather/pinion flexion. */
     public static double wingTipLag(double time, double speed) {
-        double freq = speed > 0.08 ? 7.0 : 2.0;
-        return Math.sin(time * freq - 0.45) * Math.toRadians(12.0);
+        double freq = speed > 0.08 ? 7.2 : 2.1;
+        return Math.sin(time * freq - 0.52) * Math.toRadians(14.5);
     }
 
     /** Steampunk gear continuous rotation angle (radians). */

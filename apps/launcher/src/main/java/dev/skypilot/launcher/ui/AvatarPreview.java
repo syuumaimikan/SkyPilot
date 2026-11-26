@@ -130,7 +130,7 @@ final class AvatarPreview extends JPanel {
         }
 
         Graphics2D g = Widgets.smooth(graphics);
-        double time = GraphicsEnvironment.isHeadless() ? 1.25 : (System.currentTimeMillis() / 1000.0);
+        double time = GraphicsEnvironment.isHeadless() ? 1.25 : CosmeticAnimation.animationTimeSeconds();
         renderScene(g, w, h, appearance.get(), time);
         g.dispose();
     }
@@ -150,14 +150,15 @@ final class AvatarPreview extends JPanel {
 
         double slotZoom = 1.0;
         double shiftX = 0.0, shiftY = 0.0;
+        boolean soloCard = !studio && ("pet".equals(cardSlot) || "companion".equals(cardSlot));
         if (!studio && cardSlot != null) {
             switch (cardSlot) {
-                case "hat" -> { slotZoom = 1.32; shiftY = -0.35; }
-                case "pet" -> { slotZoom = 0.84; shiftX = -0.25; shiftY = -0.15; }
-                case "companion" -> { slotZoom = 0.80; shiftX = 0.30; shiftY = 0.20; }
-                case "aura" -> { slotZoom = 0.78; shiftY = 0.05; }
-                case "back" -> { slotZoom = 0.78; shiftY = 0.02; }
-                default -> { slotZoom = 1.0; }
+                case "hat" -> { slotZoom = 1.48; shiftY = -0.46; }
+                case "pet" -> { slotZoom = 1.65; shiftX = 0.0; shiftY = -0.35; }
+                case "companion" -> { slotZoom = 1.28; shiftX = 0.0; shiftY = -0.10; }
+                case "aura" -> { slotZoom = 0.80; shiftY = 0.05; }
+                case "back" -> { slotZoom = 0.82; shiftY = 0.02; }
+                default -> { slotZoom = 1.02; }
             }
         } else if (studio) {
             boolean wide = !"none".equals(a.back) || !"none".equals(a.pet) || !"none".equals(a.companion) || !"none".equals(a.aura);
@@ -168,23 +169,27 @@ final class AvatarPreview extends JPanel {
         double cx = w / 2.0 + shiftX * scale;
         double base = (studio ? h - 62 : h - 10) - shiftY * scale;
 
-        g.setColor(new Color(0, 0, 0, 48));
-        g.fillOval((int) (cx - scale * .65), (int) (base - 5), (int) (scale * 1.3), 12);
+        if (!soloCard) {
+            g.setColor(new Color(0, 0, 0, 48));
+            g.fillOval((int) (cx - scale * .65), (int) (base - 5), (int) (scale * 1.3), 12);
+        }
 
         ArrayList<Face> faces = new ArrayList<>(512);
-        // Original neutral mannequin
         Mat4 id = Mat4.identity();
-        addMannequinBox(faces, 0, 1.65, 0, .49, .49, .49, 0x9CAABC);
-        addMannequinBox(faces, 0, 1.08, 0, .50, .65, .25, 0x394961);
-        addMannequinBox(faces, -.39, 1.08, 0, .24, .65, .25, 0x455673);
-        addMannequinBox(faces, .39, 1.08, 0, .24, .65, .25, 0x455673);
-        addMannequinBox(faces, -.13, .43, 0, .24, .65, .25, 0x253247);
-        addMannequinBox(faces, .13, .43, 0, .24, .65, .25, 0x253247);
-        addMannequinBox(faces, -.13, .07, .04, .25, .13, .33, 0x172031);
-        addMannequinBox(faces, .13, .07, .04, .25, .13, .33, 0x172031);
-        addMannequinBox(faces, -.12, 1.68, .249, .065, .045, .009, 0x253247);
-        addMannequinBox(faces, .12, 1.68, .249, .065, .045, .009, 0x253247);
-        addMannequinBox(faces, 0, 1.27, .13, .10, .12, .015, 0x55D6D2);
+        if (!soloCard) {
+            // Original neutral mannequin (hidden on solo Pet & Companion cards so the 3D pet fills the card!)
+            addMannequinBox(faces, 0, 1.65, 0, .49, .49, .49, 0x9CAABC);
+            addMannequinBox(faces, 0, 1.08, 0, .50, .65, .25, 0x394961);
+            addMannequinBox(faces, -.39, 1.08, 0, .24, .65, .25, 0x455673);
+            addMannequinBox(faces, .39, 1.08, 0, .24, .65, .25, 0x455673);
+            addMannequinBox(faces, -.13, .43, 0, .24, .65, .25, 0x253247);
+            addMannequinBox(faces, .13, .43, 0, .24, .65, .25, 0x253247);
+            addMannequinBox(faces, -.13, .07, .04, .25, .13, .33, 0x172031);
+            addMannequinBox(faces, .13, .07, .04, .25, .13, .33, 0x172031);
+            addMannequinBox(faces, -.12, 1.68, .249, .065, .045, .009, 0x253247);
+            addMannequinBox(faces, .12, 1.68, .249, .065, .045, .009, 0x253247);
+            addMannequinBox(faces, 0, 1.27, .13, .10, .12, .015, 0x55D6D2);
+        }
 
         double wingScale = Math.max(0.6, Math.min(1.5, a.wingScale <= 0 ? 1.0 : a.wingScale));
         boolean hasCape = !"none".equals(a.cape);
@@ -195,17 +200,42 @@ final class AvatarPreview extends JPanel {
             if (model == null) continue;
             BufferedImage tex = loadTexture(model, false);
             BufferedImage glowTex = a.cosmeticGlow ? loadTexture(model, true) : null;
-            int frameIdx = model.animFrames > 1 ? Math.floorMod((int) Math.floor(time * model.animFps), model.animFrames) : 0;
+            int frameIdx = CosmeticAnimation.frameIndex(time, model.animFps, model.animFrames);
 
             Mat4 rootMat = id;
+            if (soloCard && !model.bones.isEmpty() && model.bones.get(0).pivot != null && model.bones.get(0).pivot.length >= 3) {
+                double[] pv = model.bones.get(0).pivot;
+                double targetY = "pet".equals(slot) ? 9.5 : 1.0;
+                rootMat = Mat4.translate(-pv[0], targetY - pv[1], -pv[2]);
+            }
             if ("back".equals(slot) && hasCape) {
-                // Stack wings/backwear cleanly behind equipped cloak (matches live Minecraft CosmeticLayer!)
-                rootMat = Mat4.translate(0, 0, 1.65);
+                rootMat = rootMat.mul(Mat4.translate(0, 0, 1.65));
             }
             if (model.scalable && Math.abs(wingScale - 1.0) > 0.005) {
                 rootMat = rootMat.mul(Mat4.translate(0, 21.0, 3.5))
                         .mul(Mat4.scale(wingScale, wingScale, wingScale))
                         .mul(Mat4.translate(0, -21.0, -3.5));
+            }
+            if (!soloCard) {
+                SkyPilotConfig.SlotTransform tr = a.transformOf(slot);
+                if (tr != null && !tr.isIdentity()) {
+                    double[] pv = switch (slot) {
+                        case "hat" -> new double[]{0, 28, 0};
+                        case "cape", "back" -> new double[]{0, 21, 3.5};
+                        case "aura" -> new double[]{0, 16, 0};
+                        case "pet" -> new double[]{15, 25.5, 2};
+                        case "companion" -> new double[]{-16.5, 4, 2.5};
+                        default -> new double[]{0, 16, 0};
+                    };
+                    rootMat = rootMat
+                            .mul(Mat4.translate(tr.offsetX, tr.offsetY, tr.offsetZ))
+                            .mul(Mat4.translate(pv[0], pv[1], pv[2]))
+                            .mul(Mat4.rotY(tr.rotY))
+                            .mul(Mat4.rotX(tr.rotX))
+                            .mul(Mat4.rotZ(tr.rotZ))
+                            .mul(Mat4.scale(tr.scale, tr.scale, tr.scale))
+                            .mul(Mat4.translate(-pv[0], -pv[1], -pv[2]));
+                }
             }
             for (CosmeticRig.Bone bone : model.bones) {
                 emitBone(faces, model, bone, rootMat, tex, glowTex, frameIdx, time, a.cosmeticGlow);

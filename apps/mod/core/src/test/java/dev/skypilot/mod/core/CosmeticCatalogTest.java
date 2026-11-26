@@ -122,6 +122,13 @@ class CosmeticCatalogTest {
         c.sanitize();
         assertFalse(c.appearance.firstPersonPet);
         assertEquals(6, WardrobeTools.equippedCount(c.appearance));
+        assertTrue(c.appearance.cosmeticParticles);
+        for (var preset : WardrobeTools.PRESETS) {
+            var pCfg = new SkyPilotConfig();
+            preset.apply(pCfg.appearance);
+            pCfg.sanitize();
+            assertEquals(6, WardrobeTools.equippedCount(pCfg.appearance), "Invalid preset item in " + preset.id());
+        }
 
         int combined = CosmeticMesh.build(c.appearance).size();
         c.appearance.companion = "none";

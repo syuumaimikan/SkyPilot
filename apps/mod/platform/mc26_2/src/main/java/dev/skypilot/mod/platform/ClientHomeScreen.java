@@ -16,7 +16,7 @@ final class ClientHomeScreen extends Screen {
         int x = width / 2 - 100, y = Math.max(72, height / 2 - 35);
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Singleplayer", "シングルプレイ")), b -> minecraft.gui.setScreen(new SelectWorldScreen(this))).bounds(x,y,200,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Multiplayer", "マルチプレイ")), b -> minecraft.gui.setScreen(new JoinMultiplayerScreen(this))).bounds(x,y+24,200,20).build());
-        addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe", "ワードローブ")), b -> minecraft.gui.setScreen(new AppearanceScreen(this))).bounds(x,y+48,98,20).build());
+        addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe", "ワードローブ")), b -> WardrobeBridge.openWardrobe(this)).bounds(x,y+48,98,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Tool desk", "ツールデスク")), b -> minecraft.gui.setScreen(new DeskScreen(this))).bounds(x+102,y+48,98,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Visual studio", "演出スタジオ")), b -> minecraft.gui.setScreen(new VisualScreen(this))).bounds(x,y+72,98,20).build());
         addRenderableWidget(ClientButton.create(Component.literal(l.t("Options", "設定")), b -> minecraft.gui.setScreen(new OptionsScreen(this,minecraft.options,false))).bounds(x+102,y+72,98,20).build());

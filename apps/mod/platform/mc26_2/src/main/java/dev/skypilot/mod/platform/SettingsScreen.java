@@ -385,11 +385,11 @@ final class SettingsScreen extends Screen {
 		}
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Mods…", "MOD管理…")), b -> minecraft.gui.setScreen(new ModManagerScreen(this)))
 				.bounds(x, y + ROW, colW, 20).build());
-		addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe…", "ワードローブ…")), b -> minecraft.gui.setScreen(new AppearanceScreen(this))).bounds(right, y + ROW * 2, colW, 20).build());
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe…", "ワードローブ…")), b -> WardrobeBridge.openWardrobe(this)).bounds(right, y + ROW * 2, colW, 20).build());
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Performance…", "軽量化…")), b -> minecraft.gui.setScreen(new PerformanceScreen(this)))
 				.bounds(x, y + ROW * 2, colW, 20).build());
-		toggle(x, y + ROW * 3, pw, onOff(l, l.t("1st-Person Wardrobe Pet", "一人称視点でペットを表示"), c.appearance.firstPersonPet),
-				b -> c.appearance.firstPersonPet = !c.appearance.firstPersonPet);
+		addRenderableWidget(ClientButton.create(Component.literal(l.t("Wardrobe 1st-Person / Multiplayer…", "ワードローブ一人称・マルチ設定…")), b -> WardrobeBridge.openSettings(this))
+				.bounds(x, y + ROW * 3, pw, 20).build());
 		addRenderableWidget(ClientButton.create(Component.literal(l.t("Refresh data", "データを再取得")), b -> {
 			if (sp.api() != null) sp.api().clearCache();
 			sp.translator().clearCache();

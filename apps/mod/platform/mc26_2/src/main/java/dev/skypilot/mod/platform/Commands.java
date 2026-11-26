@@ -41,7 +41,7 @@ final class Commands {
 
 	static void register(CommandDispatcher<FabricClientCommandSource> d) {
 		LiteralArgumentBuilder<FabricClientCommandSource> root = literal("skypilot").executes(c -> help());
-		root.then(literal("wardrobe").executes(c -> { Minecraft.getInstance().gui.setScreen(new AppearanceScreen(null)); return 1; }));
+		root.then(literal("wardrobe").executes(c -> { WardrobeBridge.openWardrobe(null); return 1; }));
 		root.then(literal("keys").executes(c -> { Minecraft.getInstance().gui.setScreen(new KeySettingsScreen(null)); return 1; }));
 		root.then(literal("utility").executes(c -> { Minecraft.getInstance().gui.setScreen(new UtilityScreen(null)); return 1; }));
 		root.then(literal("visual").executes(c -> { Minecraft.getInstance().gui.setScreen(new VisualScreen(null)); return 1; }));

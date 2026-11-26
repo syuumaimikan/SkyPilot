@@ -1,0 +1,58 @@
+plugins {
+	id 'net.fabricmc.fabric-loom'
+}
+
+base {
+	archivesName = 'skypilot-wardrobe'
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	include "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	implementation project(':core')
+	include project(':core')
+	implementation project(':wardrobe-assets')
+	include project(':wardrobe-assets')
+}
+
+processResources {
+	from(project(':core').file('src/main/resources/assets')) { into 'assets' }
+	from(project(':wardrobe-assets').file('src/main/resources/assets')) { into 'assets' }
+	def version = project.version
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+java {
+	withSourcesJar()
+}
+
+def releaseJar = tasks.named('jar').flatMap { it.archiveFile }
+def checksum = tasks.register('checksum') {
+	description = 'Writes the SHA-256 checksum of the standalone Wardrobe mod jar.'
+	group = 'build'
+	dependsOn 'jar'
+	def input = releaseJar
+	inputs.file(input)
+	outputs.file(input.map { it.asFile.absolutePath + '.sha256' })
+	doLast {
+		def f = input.get().asFile
+		def md = java.security.MessageDigest.getInstance('SHA-256')
+		f.withInputStream { s ->
+			byte[] buf = new byte[65536]
+			int n
+			while ((n = s.read(buf)) > 0) md.update(buf, 0, n)
+		}
+		new File(f.absolutePath + '.sha256').text = md.digest().encodeHex().toString() + '  ' + f.name + '\n'
+	}
+}
+
+tasks.named('build') {
+	dependsOn checksum
+}
+

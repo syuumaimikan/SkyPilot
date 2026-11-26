@@ -141,8 +141,10 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
 				check(cfg.perf.videoBackup != null, "rich graphics are reversible");
 				VideoPreset.restore(mc, cfg);
 			});
-			ctx.setScreen(() -> new AppearanceScreen(null)); ctx.waitTicks(3);
-			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-wardrobe"));
+			if (WardrobeBridge.isInstalled()) {
+				ctx.setScreen(() -> WardrobeBridge.createWardrobeScreen(null)); ctx.waitTicks(3);
+				ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-wardrobe"));
+			}
 			ctx.setScreen(() -> new DeskScreen(null));ctx.waitTicks(3);
             ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-tool-desk"));
             ctx.runOnClient(mc -> {var desk=(DeskScreen)mc.gui.screen();for(var child:desk.children())if(child instanceof net.minecraft.client.gui.components.EditBox box)box.setValue("1");for(var child:desk.children())if(child instanceof net.minecraft.client.gui.components.Button button&&button.getMessage().getString().equals("Start"))button.onPress(new net.minecraft.client.input.KeyEvent(257,0,0));check(DeskRuntime.FOCUS.running(),"focus starts through GUI");DeskRuntime.FOCUS.reset();});
@@ -151,13 +153,15 @@ public final class SkyPilotClientGameTest implements FabricClientGameTest {
                 ctx.waitTicks(3);ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-desk-"+tabName.toLowerCase(java.util.Locale.ROOT)));
             }
             ctx.runOnClient(mc->{var desk=(DeskScreen)mc.gui.screen();for(int key:new int[]{263,265,262,264})desk.keyPressed(new net.minecraft.client.input.KeyEvent(key,0,0));check(java.util.Arrays.stream(DeskRuntime.TILES.cells()).filter(v->v>0).count()>2,"2048 arrow keys update game");});
-            ctx.setScreen(() -> new OutfitScreen(null));ctx.waitTicks(3);
-            ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-saved-outfits"));
+            if (WardrobeBridge.isInstalled()) {
+				ctx.setScreen(() -> WardrobeBridge.createOutfitScreen(null));ctx.waitTicks(3);
+				ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-saved-outfits"));
+			}
             ctx.setScreen(() -> new PuzzleScreen(null)); ctx.waitTicks(3);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-puzzle-lab"));
 			ctx.setScreen(() -> null);
 			ctx.runOnClient(mc -> mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK));
-			ctx.waitFor(mc -> PixelSkinLayer.submittedPixels > 0 && CosmeticLayer.submittedVoxels > 160, 100);
+			ctx.waitFor(mc -> PixelSkinLayer.submittedPixels > 0 && (!WardrobeBridge.isInstalled() || WardrobeBridge.submittedVoxels() > 160), 100);
 			ctx.takeScreenshot(TestScreenshotOptions.of("skypilot-local-cosmetics"));
 			ctx.runOnClient(mc -> { mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON); SkyPilot.get().config().appearance.cape = "none"; SkyPilot.get().config().appearance.back = "none"; SkyPilot.get().config().appearance.hat = "none"; SkyPilot.get().config().appearance.skin3d = false; });
 

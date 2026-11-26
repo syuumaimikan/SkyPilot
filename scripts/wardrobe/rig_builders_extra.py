@@ -12,26 +12,82 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from rig_builders import _sx, make_bone, make_cube
+from rig_builders import _sx, _sx_at, make_bone, make_cube
 
 
 # ==============================================================================
 # 3. HEADWEAR & HALOS — ALL 24 DESIGNS 100% UNIQUE, ZERO HEAD CLIPPING!
 # ==============================================================================
 def build_hat_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
+    if arch.startswith("v2_"):
+        from rig_builders_v2 import build_hat_v2
+        v2 = build_hat_v2(arch, p, s, a)
+        if v2 is not None:
+            return v2
     # All cubes stay strictly OUTSIDE head+hat-overlay box [-4.5..4.5, 23.5..32.5, -4.5..4.5]
     if arch == "crown":
-        cubes = []
+        cubes = [
+            # Plush royal velvet inner dome cleanly above head top (y >= 32.6)
+            make_cube("velvet_dome", [-3.8, 32.65, -3.8], [3.8, 34.4, 3.8], zone="B", color=0x991B1B),
+            make_cube("arch_x", [-4.6, 34.2, -0.65], [4.6, 35.1, 0.65], zone="D_GOLD", color=p),
+            make_cube("arch_z", [-0.65, 34.2, -4.6], [0.65, 35.1, 4.6], zone="D_GOLD", color=p),
+            make_cube("orb", [-0.9, 35.0, -0.9], [0.9, 36.8, 0.9], zone="C", color=a, emissive=True),
+            make_cube("cross_v", [-0.3, 36.7, -0.3], [0.3, 38.0, 0.3], zone="D_GOLD", color=p, emissive=True),
+            make_cube("cross_h", [-0.8, 37.1, -0.3], [0.8, 37.6, 0.3], zone="D_GOLD", color=p, emissive=True),
+        ]
         for i in range(12):
             ang = i * math.tau / 12.0
             cx, cz = math.cos(ang) * 4.85, math.sin(ang) * 4.85
-            h = 2.8 if i % 2 == 0 else 1.5
+            h = 3.0 if i % 2 == 0 else 1.7
             cubes.append(make_cube(f"c_{i}", [cx - 0.85, 32.6, cz - 0.85], [cx + 0.85, 32.6 + h, cz + 0.85],
                                    pivot=[cx, 32.8, cz], rot=[0, -math.degrees(ang), 0], zone="A", color=p))
             if i % 3 == 0:
-                cubes.append(make_cube(f"g_{i}", [cx - 0.5, 33.1, cz - 0.5], [cx + 0.5, 34.2, cz + 0.5],
+                cubes.append(make_cube(f"g_{i}", [cx - 0.55, 33.1, cz - 0.55], [cx + 0.55, 34.3, cz + 0.55],
                                        zone="C", color=a, emissive=True))
         return [make_bone("crown_root", [0, 32.6, 0], cubes=cubes)]
+
+    if arch == "empress_diadem":
+        # Mythic multi-tier Starlight Empress Imperial Diadem + 4 orbiting constellation micro-stars!
+        cubes = [
+            make_cube("ed_f", [-4.9, 32.6, -5.2], [4.9, 33.6, -4.6], zone="D_GOLD", color=p, emissive=True),
+            make_cube("ed_l", [4.6, 32.6, -4.9], [5.2, 33.5, 2.2], zone="D_GOLD", color=p),
+            make_cube("ed_r", [-5.2, 32.6, -4.9], [-4.6, 33.5, 2.2], zone="D_GOLD", color=p),
+            make_cube("ed_spire_c", [-1.1, 33.5, -5.35], [1.1, 38.8, -4.6], zone="D_GOLD", color=p, emissive=True),
+            make_cube("ed_gem_c", [-0.95, 34.8, -5.65], [0.95, 36.7, -4.8], rot=[0, 0, 45], zone="C", color=a, emissive=True),
+        ]
+        for side in (-1, 1):
+            cubes.append(make_cube(f"ed_sp1_{side}", _sx(side, 1.6, 2.9), [33.5, 37.2], [-5.25, -4.6], rot=[0, 0, -side * 12], zone="D_GOLD", color=p, emissive=True))
+            cubes.append(make_cube(f"ed_g1_{side}", _sx(side, 1.9, 2.8), [34.4, 35.3], [-5.5, -4.85], rot=[0, 0, 45], zone="C", color=a, emissive=True))
+            cubes.append(make_cube(f"ed_sp2_{side}", _sx(side, 3.3, 4.5), [33.5, 35.8], [-5.1, -4.55], rot=[0, 0, -side * 24], zone="A", color=s, emissive=True))
+            cubes.append(make_cube(f"ed_wing_{side}", _sx(side, 4.8, 7.6), [33.2, 35.4], [-3.8, -1.0], rot=[0, -side * 18, -side * 26], zone="C", color=a, emissive=True))
+        stars = [make_bone(f"emp_star_{i}", [0, 38.2, 0], anim=f"head_orbit_{i}", cubes=[
+            make_cube(f"es_{i}", [6.8, 37.6, -0.55], [7.9, 38.7, 0.55], rot=[45, 45, 0], zone="C", color=a, emissive=True)
+        ]) for i in range(4)]
+        return [make_bone("empress_root", [0, 32.8, 0], cubes=cubes, children=stars)]
+
+    if arch == "bunny_beret":
+        # Ultra-cute tilted cream plush beret with drooping pastel bunny ears, satin ribbon bow & gold pin!
+        piv = [0.0, 32.8, 0.0]
+        beret = [
+            make_cube("beret_band", [-4.9, 32.6, -4.9], [4.9, 33.8, 4.9], zone="B", color=s),
+            make_cube("beret_puff", [-5.8, 33.4, -5.8], [5.8, 36.2, 5.8], pivot=piv, rot=[-6, 0, -9], zone="A", color=p),
+            make_cube("beret_top", [-4.6, 35.6, -4.6], [4.6, 37.0, 4.6], pivot=piv, rot=[-6, 0, -9], zone="A", color=p),
+            make_cube("beret_stem", [-0.5, 36.6, -0.5], [0.5, 38.2, 0.5], pivot=piv, rot=[-6, 0, -9], zone="B", color=s),
+            make_cube("beret_pin", [2.6, 33.8, -5.6], [4.0, 35.2, -4.8], rot=[0, 0, 45], zone="D_GOLD", color=0xFDE047, emissive=True),
+            # Cute front satin ribbon bow!
+            make_cube("bbow_c", [-0.7, 33.2, -5.55], [0.7, 34.4, -4.75], zone="C", color=a, emissive=True),
+            make_cube("bbow_l", [0.5, 33.0, -5.5], [2.4, 34.6, -4.8], rot=[0, 0, -14], zone="C", color=a, emissive=True),
+            make_cube("bbow_r", [-2.4, 33.0, -5.5], [-0.5, 34.6, -4.8], rot=[0, 0, 14], zone="C", color=a, emissive=True),
+        ]
+        ears = []
+        for side, tag in ((1, "l"), (-1, "r")):
+            epiv = [side * 3.4, 35.8, -0.4]
+            ears.append(make_bone(f"ear_{tag}", epiv, anim=f"ear_{tag}", cubes=[
+                make_cube("be_up", _sx(side, 2.2, 4.5), [35.6, 39.2], [-1.2, 0.8], pivot=epiv, rot=[0, 0, -side * 24], zone="A", color=p),
+                make_cube("be_in", _sx(side, 2.6, 4.1), [36.0, 38.7], [-1.35, -0.8], pivot=epiv, rot=[0, 0, -side * 24], zone="D_BLUSH", color=a),
+                make_cube("be_tip", _sx(side, 3.8, 5.8), [37.4, 40.6], [-1.0, 0.6], pivot=[side * 4.4, 39.0, -0.2], rot=[0, 0, -side * 54], zone="A", color=p),
+            ]))
+        return [make_bone("beret_root", piv, cubes=beret, children=ears)]
 
     if arch == "halo":
         ring = [make_cube(f"h_{i}", [math.cos(i * math.tau / 14) * 5.2 - 1.0, 35.6, math.sin(i * math.tau / 14) * 5.2 - 0.55],
@@ -98,28 +154,30 @@ def build_hat_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
         return [make_bone("cyber_halo_root", [0, 35.8, 0], anim="halo_spin_cw", cubes=cubes)]
 
     if arch == "ears":
-        # Short rounded plush cat ears sitting cleanly at y >= 32.6!
+        # Plush rounded cat ears with fluffy fur tufts & soft pink inner ear cavities (y >= 32.6)!
         bones = []
         for side, tag in ((1, "l"), (-1, "r")):
             piv = [side * 2.9, 32.6, -0.3]
             bones.append(make_bone(f"ear_{tag}", piv, anim=f"ear_{tag}", cubes=[
-                make_cube("outer", _sx(side, 1.8, 4.4), [32.6, 35.6], [-1.0, 0.6], pivot=piv, rot=[0, 0, -side * 10], zone="A", color=p),
-                make_cube("tip", _sx(side, 2.4, 3.8), [35.3, 36.5], [-0.8, 0.4], pivot=piv, rot=[0, 0, -side * 12], zone="B", color=s),
-                make_cube("inner", _sx(side, 2.3, 3.9), [32.9, 35.0], [-1.2, -0.6], pivot=piv, rot=[0, 0, -side * 10], zone="C", color=a),
+                make_cube("outer", _sx(side, 1.7, 4.5), [32.6, 35.8], [-1.0, 0.7], pivot=piv, rot=[0, 0, -side * 10], zone="A", color=p),
+                make_cube("tip", _sx(side, 2.3, 3.9), [35.4, 36.8], [-0.8, 0.5], pivot=piv, rot=[0, 0, -side * 12], zone="B", color=s),
+                make_cube("tuft", _sx(side, 4.1, 4.9), [33.4, 35.0], [-0.7, 0.4], pivot=piv, rot=[0, 0, -side * 24], zone="A", color=p),
+                make_cube("inner", _sx(side, 2.2, 4.0), [32.9, 35.2], [-1.2, -0.65], pivot=piv, rot=[0, 0, -side * 10], zone="D_BLUSH", color=a),
             ]))
         return bones
 
     if arch == "fox_ears":
-        # Tall fluffy fox ears with outer fur tufts + hanging crimson temple bells!
+        # Tall fluffy fox ears with outer fur tufts, rosy pink inner ears + hanging crimson temple bells!
         bones = []
         for side, tag in ((1, "l"), (-1, "r")):
             piv = [side * 2.9, 32.6, -0.3]
             bones.append(make_bone(f"ear_{tag}", piv, anim=f"ear_{tag}", cubes=[
-                make_cube("f_base", _sx(side, 1.6, 4.5), [32.6, 36.2], [-1.1, 0.8], pivot=piv, rot=[0, 0, -side * 14], zone="A", color=p),
-                make_cube("f_mid", _sx(side, 2.1, 4.1), [35.8, 38.2], [-0.9, 0.6], pivot=piv, rot=[0, 0, -side * 18], zone="A", color=p),
-                make_cube("f_tip", _sx(side, 2.6, 3.7), [37.9, 39.4], [-0.7, 0.4], pivot=piv, rot=[0, 0, -side * 20], zone="B", color=s),
-                make_cube("f_in", _sx(side, 2.2, 3.8), [33.1, 36.8], [-1.3, -0.7], pivot=piv, rot=[0, 0, -side * 14], zone="C", color=a),
-                make_cube("bell", _sx(side, 4.2, 5.2), [32.7, 33.8], [-1.3, -0.3], zone="D_GOLD", color=0xFBBF24, emissive=True),
+                make_cube("f_base", _sx(side, 1.6, 4.6), [32.6, 36.4], [-1.1, 0.8], pivot=piv, rot=[0, 0, -side * 14], zone="A", color=p),
+                make_cube("f_mid", _sx(side, 2.1, 4.2), [35.9, 38.4], [-0.9, 0.6], pivot=piv, rot=[0, 0, -side * 18], zone="A", color=p),
+                make_cube("f_tip", _sx(side, 2.6, 3.8), [38.0, 39.6], [-0.7, 0.4], pivot=piv, rot=[0, 0, -side * 20], zone="B", color=s),
+                make_cube("f_tuft", _sx(side, 4.2, 5.2), [33.8, 35.6], [-0.8, 0.5], pivot=piv, rot=[0, 0, -side * 28], zone="A", color=p),
+                make_cube("f_in", _sx(side, 2.2, 3.9), [33.0, 37.0], [-1.3, -0.7], pivot=piv, rot=[0, 0, -side * 14], zone="D_BLUSH", color=a),
+                make_cube("bell", _sx(side, 4.2, 5.3), [32.7, 33.9], [-1.3, -0.2], zone="D_GOLD", color=0xFBBF24, emissive=True),
             ]))
         return bones
 
@@ -354,6 +412,11 @@ def build_hat_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
 # 4. AURAS — ALL 26 DESIGNS 100% UNIQUE, ALL ORBITS r >= 11.8 px!
 # ==============================================================================
 def build_aura_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
+    if arch.startswith("v2_"):
+        from rig_builders_v2 import build_aura_v2
+        v2 = build_aura_v2(arch, p, s, a)
+        if v2 is not None:
+            return v2
     R = 12.2  # Safe orbit radius cleanly outside arms + armor + cloak!
 
     if arch == "gale_ribbons":
@@ -715,6 +778,38 @@ def build_aura_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
             bones.append(make_bone(f"void_{i}", [0, y, 0], anim="aura_orbit_ccw" if i % 2 == 0 else "aura_orbit_cw", anim_phase=i * 0.7, cubes=c))
         return bones
 
+    if arch == "starfall_blades":
+        # Mythic Starfall Spirit Swords: 6 radiant astral blades orbiting point-downward with glowing runes!
+        bones = []
+        for i in range(6):
+            r = R + 1.0 + (i % 2) * 1.4
+            y = 18.0 + (i % 3) * 3.2
+            c = [
+                make_cube(f"sb_blade_{i}", [r - 0.55, y - 6.8, -0.35], [r + 0.55, y + 1.4, 0.35], zone="A", color=p, emissive=True),
+                make_cube(f"sb_edge_{i}", [r - 0.25, y - 7.8, -0.42], [r + 0.25, y + 1.2, 0.42], zone="C", color=a, emissive=True),
+                make_cube(f"sb_guard_{i}", [r - 1.5, y + 1.2, -0.5], [r + 1.5, y + 2.0, 0.5], zone="D_GOLD", color=0xFDE047, emissive=True),
+                make_cube(f"sb_hilt_{i}", [r - 0.45, y + 2.0, -0.45], [r + 0.45, y + 4.4, 0.45], zone="B", color=s),
+                make_cube(f"sb_pom_{i}", [r - 0.65, y + 4.3, -0.65], [r + 0.65, y + 5.4, 0.65], rot=[0, 45, 0], zone="C", color=a, emissive=True),
+            ]
+            bones.append(make_bone(f"star_blade_{i}", [0, y, 0], anim="aura_orbit_cw", anim_amp=0.85, anim_phase=i * math.tau / 6.0, cubes=c))
+        return bones
+
+    if arch == "bubble_prism":
+        # Iridescent pastel translucent soap bubbles & twinkling mini stars floating blissfully upward!
+        bones = []
+        for i in range(9):
+            r = R + 0.4 + (i % 3) * 1.6
+            y = 14.0
+            sz = 1.4 + (i % 3) * 0.55
+            c = [
+                make_cube(f"bub_{i}", [r - sz, y - sz, -sz], [r + sz, y + sz, sz], zone="A" if i % 2 == 0 else "C",
+                          color=p if i % 2 == 0 else a, emissive=True, translucent=True),
+                make_cube(f"bub_hi_{i}", [r - sz * 0.6, y + sz * 0.25, -sz * 1.05], [r - sz * 0.1, y + sz * 0.72, -sz * 0.6],
+                          zone="D_GOLD", color=0xFFFFFF, emissive=True),
+            ]
+            bones.append(make_bone(f"bubble_{i}", [0, y, 0], anim="aura_spiral_up", anim_amp=0.72, anim_phase=i / 9.0, cubes=c))
+        return bones
+
     # crosses (abyssal_cross_aura)
     bones = []
     for i in range(6):
@@ -733,25 +828,37 @@ def build_aura_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
 #    Studio anchor: (ox=15.0, oy=25.5, oz=2.0) — World physics cancels anchor automatically!
 # ==============================================================================
 def build_pet_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
+    if arch.startswith("v2_"):
+        from rig_builders_v2 import build_pet_v2
+        v2 = build_pet_v2(arch, p, s, a)
+        if v2 is not None:
+            return v2
     ox, oy, oz = 15.0, 25.5, 2.0
 
     if arch == "bumblebee":
         body = [
-            make_cube("bee_body", [ox - 2.7, oy - 2.2, oz - 3.6], [ox + 2.7, oy + 2.2, oz + 3.6], zone="A", color=p),
-            make_cube("stinger", [ox - 0.45, oy - 0.6, oz + 3.5], [ox + 0.45, oy + 0.2, oz + 4.8], zone="D_DARK", color=0x18181B),
-            make_cube("eye_l", [ox + 1.0, oy - 0.2, oz - 3.85], [ox + 2.2, oy + 1.0, oz - 3.3], zone="D_EYE", color=0x1E293B),
-            make_cube("eye_r", [ox - 2.2, oy - 0.2, oz - 3.85], [ox - 1.0, oy + 1.0, oz - 3.3], zone="D_EYE", color=0x1E293B),
-            make_cube("ant_l", [ox + 0.8, oy + 1.6, oz - 5.3], [ox + 1.4, oy + 2.2, oz - 3.5], rot=[-18, 0, 0], zone="D_DARK", color=0x18181B),
-            make_cube("ant_r", [ox - 1.4, oy + 1.6, oz - 5.3], [ox - 0.8, oy + 2.2, oz - 3.5], rot=[-18, 0, 0], zone="D_DARK", color=0x18181B),
+            make_cube("bee_body", [ox - 2.8, oy - 2.2, oz - 3.6], [ox + 2.8, oy + 2.3, oz + 3.6], zone="A", color=p),
+            make_cube("bee_fluff", [ox - 2.4, oy - 2.45, oz - 2.6], [ox + 2.4, oy - 1.5, oz + 2.6], zone="D_GOLD", color=0xFEF08A),
+            make_cube("stinger", [ox - 0.45, oy - 0.5, oz + 3.5], [ox + 0.45, oy + 0.2, oz + 4.9], zone="D_DARK", color=0x18181B),
+            make_cube("eye_l", [ox + 1.0, oy - 0.1, oz - 3.9], [ox + 2.25, oy + 1.15, oz - 3.3], zone="D_EYE", color=0x1E293B),
+            make_cube("eye_r", [ox - 2.25, oy - 0.1, oz - 3.9], [ox - 1.0, oy + 1.15, oz - 3.3], zone="D_EYE", color=0x1E293B),
+            make_cube("blush_l", [ox + 1.85, oy - 0.85, oz - 3.85], [ox + 2.75, oy - 0.25, oz - 3.4], zone="D_BLUSH", color=0xF472B6),
+            make_cube("blush_r", [ox - 2.75, oy - 0.85, oz - 3.85], [ox - 1.85, oy - 0.25, oz - 3.4], zone="D_BLUSH", color=0xF472B6),
+            make_cube("ant_l", [ox + 0.8, oy + 1.7, oz - 5.3], [ox + 1.4, oy + 2.3, oz - 3.5], rot=[-18, 0, 0], zone="D_DARK", color=0x18181B),
+            make_cube("ant_r", [ox - 1.4, oy + 1.7, oz - 5.3], [ox - 0.8, oy + 2.3, oz - 3.5], rot=[-18, 0, 0], zone="D_DARK", color=0x18181B),
             make_cube("leg1", [ox - 1.8, oy - 3.0, oz - 1.8], [ox - 1.1, oy - 2.1, oz - 1.1], zone="D_DARK", color=0x18181B),
             make_cube("leg2", [ox + 1.1, oy - 3.0, oz - 1.8], [ox + 1.8, oy - 2.1, oz - 1.1], zone="D_DARK", color=0x18181B),
             make_cube("leg3", [ox - 1.8, oy - 3.0, oz + 1.1], [ox - 1.1, oy - 2.1, oz + 1.8], zone="D_DARK", color=0x18181B),
             make_cube("leg4", [ox + 1.1, oy - 3.0, oz + 1.1], [ox + 1.8, oy - 2.1, oz + 1.8], zone="D_DARK", color=0x18181B),
         ]
-        wl = make_bone("pet_wl", [ox + 1.8, oy + 2.2, oz], anim="pet_wing_l", anim_amp=1.6, cubes=[
-            make_cube("wl", [ox + 1.6, oy + 2.2, oz - 1.8], [ox + 6.5, oy + 2.7, oz + 1.6], zone="C", color=a, translucent=True, emissive=True)])
-        wr = make_bone("pet_wr", [ox - 1.8, oy + 2.2, oz], anim="pet_wing_r", anim_amp=1.6, cubes=[
-            make_cube("wr", [ox - 6.5, oy + 2.2, oz - 1.8], [ox - 1.6, oy + 2.7, oz + 1.6], zone="C", color=a, translucent=True, emissive=True)])
+        wl = make_bone("pet_wl", [ox + 1.8, oy + 2.3, oz], anim="pet_wing_l", anim_amp=1.6, cubes=[
+            make_cube("wl", [ox + 1.6, oy + 2.25, oz - 1.9], [ox + 6.8, oy + 2.75, oz + 1.2], zone="C", color=a, translucent=True, emissive=True),
+            make_cube("wl2", [ox + 1.6, oy + 2.1, oz + 0.8], [ox + 5.2, oy + 2.55, oz + 2.7], zone="C", color=a, translucent=True, emissive=True),
+        ])
+        wr = make_bone("pet_wr", [ox - 1.8, oy + 2.3, oz], anim="pet_wing_r", anim_amp=1.6, cubes=[
+            make_cube("wr", [ox - 6.8, oy + 2.25, oz - 1.9], [ox - 1.6, oy + 2.75, oz + 1.2], zone="C", color=a, translucent=True, emissive=True),
+            make_cube("wr2", [ox - 5.2, oy + 2.1, oz + 0.8], [ox - 1.6, oy + 2.55, oz + 2.7], zone="C", color=a, translucent=True, emissive=True),
+        ])
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[wl, wr])]
 
     if arch == "shadow_wyvern":
@@ -1011,20 +1118,34 @@ def build_pet_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head, tail])]
 
     if arch == "mochi_loaf_cat":
-        # Super round chubby loaf cat with tucked paws & cute whiskers!
+        # Super adorable chubby mochi loaf cat with forehead tabby stripes, pink inner ears, rosy cheeks & tucked paws!
         body = [
-            make_cube("loaf", [ox - 3.4, oy - 2.0, oz - 3.8], [ox + 3.4, oy + 2.8, oz + 3.6], zone="A", color=p),
-            make_cube("belly", [ox - 2.8, oy - 2.2, oz - 3.2], [ox + 2.8, oy - 1.0, oz + 2.8], zone="B", color=s),
-            make_cube("el", [ox + 1.2, oy + 2.7, oz - 3.2], [ox + 2.8, oy + 4.5, oz - 1.8], zone="A", color=p),
-            make_cube("er", [ox - 2.8, oy + 2.7, oz - 3.2], [ox - 1.2, oy + 4.5, oz - 1.8], zone="A", color=p),
-            make_cube("eye1", [ox + 1.0, oy + 0.6, oz - 4.0], [ox + 2.0, oy + 1.6, oz - 3.6], zone="D_EYE", color=0x18181B),
-            make_cube("eye2", [ox - 2.0, oy + 0.6, oz - 4.0], [ox - 1.0, oy + 1.6, oz - 3.6], zone="D_EYE", color=0x18181B),
-            make_cube("nose", [ox - 0.5, oy + 0.1, oz - 4.1], [ox + 0.5, oy + 0.7, oz - 3.6], zone="C", color=a),
-            make_cube("wh1", [ox + 3.2, oy + 0.0, oz - 3.5], [ox + 4.5, oy + 0.4, oz - 3.1], zone="D_DARK", color=0x475569),
-            make_cube("wh2", [ox - 4.5, oy + 0.0, oz - 3.5], [ox - 3.2, oy + 0.4, oz - 3.1], zone="D_DARK", color=0x475569),
+            make_cube("loaf", [ox - 3.5, oy - 2.0, oz - 3.8], [ox + 3.5, oy + 2.9, oz + 3.6], zone="A", color=p),
+            make_cube("belly", [ox - 2.9, oy - 2.25, oz - 3.2], [ox + 2.9, oy - 1.0, oz + 2.8], zone="B", color=s),
+            # Cute tucked front loaf paws!
+            make_cube("paw_l", [ox + 1.0, oy - 2.45, oz - 4.0], [ox + 2.4, oy - 1.25, oz - 2.6], zone="B", color=s),
+            make_cube("paw_r", [ox - 2.4, oy - 2.45, oz - 4.0], [ox - 1.0, oy - 1.25, oz - 2.6], zone="B", color=s),
+            # Ears + rosy pink inner ears
+            make_cube("el", [ox + 1.3, oy + 2.7, oz - 3.3], [ox + 3.0, oy + 4.7, oz - 1.8], rot=[0, 0, -10], zone="A", color=p),
+            make_cube("el_in", [ox + 1.7, oy + 3.0, oz - 3.45], [ox + 2.6, oy + 4.2, oz - 2.9], rot=[0, 0, -10], zone="D_BLUSH", color=a),
+            make_cube("er", [ox - 3.0, oy + 2.7, oz - 3.3], [ox - 1.3, oy + 4.7, oz - 1.8], rot=[0, 0, 10], zone="A", color=p),
+            make_cube("er_in", [ox - 2.6, oy + 3.0, oz - 3.45], [ox - 1.7, oy + 4.2, oz - 2.9], rot=[0, 0, 10], zone="D_BLUSH", color=a),
+            # 3 cute tabby forehead stripes!
+            make_cube("st_c", [ox - 0.35, oy + 1.9, oz - 3.92], [ox + 0.35, oy + 2.8, oz - 3.6], zone="B", color=s),
+            make_cube("st_l", [ox + 0.75, oy + 2.0, oz - 3.92], [ox + 1.35, oy + 2.8, oz - 3.6], zone="B", color=s),
+            make_cube("st_r", [ox - 1.35, oy + 2.0, oz - 3.92], [ox - 0.75, oy + 2.8, oz - 3.6], zone="B", color=s),
+            # Sparkling kawaii eyes + rosy cheeks + pink nose + whiskers!
+            make_cube("eye1", [ox + 1.05, oy + 0.55, oz - 4.05], [ox + 2.15, oy + 1.65, oz - 3.6], zone="D_EYE", color=0x18181B),
+            make_cube("eye2", [ox - 2.15, oy + 0.55, oz - 4.05], [ox - 1.05, oy + 1.65, oz - 3.6], zone="D_EYE", color=0x18181B),
+            make_cube("blush_l", [ox + 2.15, oy - 0.15, oz - 3.98], [ox + 3.1, oy + 0.45, oz - 3.6], zone="D_BLUSH", color=0xF472B6),
+            make_cube("blush_r", [ox - 3.1, oy - 0.15, oz - 3.98], [ox - 2.15, oy + 0.45, oz - 3.6], zone="D_BLUSH", color=0xF472B6),
+            make_cube("nose", [ox - 0.5, oy + 0.05, oz - 4.15], [ox + 0.5, oy + 0.65, oz - 3.6], zone="D_BLUSH", color=a),
+            make_cube("wh1", [ox + 3.3, oy + 0.15, oz - 3.5], [ox + 4.7, oy + 0.5, oz - 3.1], rot=[0, 0, 8], zone="D_DARK", color=0x475569),
+            make_cube("wh2", [ox - 4.7, oy + 0.15, oz - 3.5], [ox - 3.3, oy + 0.5, oz - 3.1], rot=[0, 0, -8], zone="D_DARK", color=0x475569),
         ]
-        tail = make_bone("pet_tail", [ox, oy - 0.4, oz + 3.5], anim="pet_tail", cubes=[
-            make_cube("ct", [ox - 0.7, oy - 0.8, oz + 3.4], [ox + 0.7, oy + 0.6, oz + 6.4], rot=[26, 0, 0], zone="B", color=s)
+        tail = make_bone("pet_tail", [ox, oy - 0.3, oz + 3.5], anim="pet_tail", cubes=[
+            make_cube("ct", [ox - 0.7, oy - 0.7, oz + 3.4], [ox + 0.7, oy + 0.7, oz + 6.5], rot=[28, 0, 0], zone="B", color=s),
+            make_cube("ct_tip", [ox - 0.6, oy + 0.4, oz + 5.7], [ox + 0.6, oy + 1.8, oz + 7.2], zone="A", color=p),
         ])
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[tail])]
 
@@ -1052,26 +1173,30 @@ def build_pet_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head, tail])]
 
     if arch == "yuzu_capybara":
-        # Blocky-snout Chill Capybara balancing a glowing orange YUZU fruit on its head!
+        # Super chill adorable Capybara with round ears, rosy blush, glowing YUZU + twin leaves + warm onsen vibe!
         body = [
-            make_cube("cap_b", [ox - 2.6, oy - 2.2, oz - 2.8], [ox + 2.6, oy + 2.2, oz + 3.4], zone="A", color=p),
-            make_cube("f1", [ox - 2.2, oy - 3.6, oz - 2.4], [ox - 1.0, oy - 2.0, oz - 1.2], zone="B", color=s),
-            make_cube("f2", [ox + 1.0, oy - 3.6, oz - 2.4], [ox + 2.2, oy - 2.0, oz - 1.2], zone="B", color=s),
-            make_cube("f3", [ox - 2.2, oy - 3.6, oz + 1.4], [ox - 1.0, oy - 2.0, oz + 2.6], zone="B", color=s),
-            make_cube("f4", [ox + 1.0, oy - 3.6, oz + 1.4], [ox + 2.2, oy - 2.0, oz + 2.6], zone="B", color=s),
+            make_cube("cap_b", [ox - 2.7, oy - 2.2, oz - 2.8], [ox + 2.7, oy + 2.2, oz + 3.5], zone="A", color=p),
+            make_cube("cap_belly", [ox - 2.2, oy - 2.35, oz - 2.2], [ox + 2.2, oy - 1.2, oz + 2.8], zone="B", color=s),
+            make_cube("f1", [ox - 2.3, oy - 3.6, oz - 2.4], [ox - 1.0, oy - 2.0, oz - 1.1], zone="B", color=s),
+            make_cube("f2", [ox + 1.0, oy - 3.6, oz - 2.4], [ox + 2.3, oy - 2.0, oz - 1.1], zone="B", color=s),
+            make_cube("f3", [ox - 2.3, oy - 3.6, oz + 1.4], [ox - 1.0, oy - 2.0, oz + 2.7], zone="B", color=s),
+            make_cube("f4", [ox + 1.0, oy - 3.6, oz + 1.4], [ox + 2.3, oy - 2.0, oz + 2.7], zone="B", color=s),
         ]
         head = make_bone("pet_head", [ox, oy + 1.8, oz - 2.6], anim="pet_head", cubes=[
-            # Classic long flat rectangular capybara head/snout!
-            make_cube("cap_h", [ox - 2.0, oy + 0.6, oz - 7.4], [ox + 2.0, oy + 4.0, oz - 2.0], zone="A", color=p),
-            make_cube("snout_dark", [ox - 1.8, oy + 0.6, oz - 7.6], [ox + 1.8, oy + 2.6, oz - 6.6], zone="B", color=s),
-            # Half-closed chill eyes!
-            make_cube("ce1", [ox + 1.6, oy + 2.6, oz - 5.2], [ox + 2.2, oy + 3.1, oz - 4.0], zone="D_EYE", color=0x18181B),
-            make_cube("ce2", [ox - 2.2, oy + 2.6, oz - 5.2], [ox - 1.6, oy + 3.1, oz - 4.0], zone="D_EYE", color=0x18181B),
-            make_cube("ear1", [ox + 1.4, oy + 3.8, oz - 3.4], [ox + 2.2, oy + 4.7, oz - 2.5], zone="B", color=s),
-            make_cube("ear2", [ox - 2.2, oy + 3.8, oz - 3.4], [ox - 1.4, oy + 4.7, oz - 2.5], zone="B", color=s),
-            # Cute glowing orange YUZU + green leaf perched on top of head!
-            make_cube("yuzu", [ox - 1.2, oy + 4.0, oz - 5.8], [ox + 1.2, oy + 6.2, oz - 3.4], zone="C", color=a, emissive=True),
-            make_cube("leaf", [ox - 0.4, oy + 6.1, oz - 4.9], [ox + 0.8, oy + 6.8, oz - 4.1], rot=[0, 0, 18], zone="D_TRIM", color=0x22C55E),
+            make_cube("cap_h", [ox - 2.1, oy + 0.5, oz - 7.4], [ox + 2.1, oy + 4.1, oz - 2.0], zone="A", color=p),
+            make_cube("snout_dark", [ox - 1.9, oy + 0.5, oz - 7.65], [ox + 1.9, oy + 2.5, oz - 6.6], zone="B", color=s),
+            make_cube("nostril", [ox - 0.9, oy + 1.6, oz - 7.75], [ox + 0.9, oy + 2.2, oz - 7.45], zone="D_DARK", color=0x18181B),
+            # Half-closed chill kawaii eyes + warm rosy blush!
+            make_cube("ce1", [ox + 1.7, oy + 2.6, oz - 5.3], [ox + 2.3, oy + 3.2, oz - 4.0], zone="D_DARK", color=0x18181B),
+            make_cube("ce2", [ox - 2.3, oy + 2.6, oz - 5.3], [ox - 1.7, oy + 3.2, oz - 4.0], zone="D_DARK", color=0x18181B),
+            make_cube("cbl1", [ox + 1.75, oy + 1.85, oz - 5.8], [ox + 2.25, oy + 2.45, oz - 4.8], zone="D_BLUSH", color=0xF472B6),
+            make_cube("cbl2", [ox - 2.25, oy + 1.85, oz - 5.8], [ox - 1.75, oy + 2.45, oz - 4.8], zone="D_BLUSH", color=0xF472B6),
+            make_cube("ear1", [ox + 1.5, oy + 3.9, oz - 3.5], [ox + 2.4, oy + 4.9, oz - 2.4], rot=[0, 0, -14], zone="B", color=s),
+            make_cube("ear2", [ox - 2.4, oy + 3.9, oz - 3.5], [ox - 1.5, oy + 4.9, oz - 2.4], rot=[0, 0, 14], zone="B", color=s),
+            # Glowing orange YUZU + twin leaves perched on top!
+            make_cube("yuzu", [ox - 1.35, oy + 4.0, oz - 5.9], [ox + 1.35, oy + 6.4, oz - 3.3], zone="C", color=a, emissive=True),
+            make_cube("leaf1", [ox - 0.2, oy + 6.3, oz - 5.0], [ox + 1.1, oy + 7.1, oz - 4.1], rot=[0, 0, 22], zone="D_GOLD", color=0x22C55E),
+            make_cube("leaf2", [ox - 1.1, oy + 6.2, oz - 4.8], [ox - 0.1, oy + 6.9, oz - 4.0], rot=[0, 0, -24], zone="D_GOLD", color=0x22C55E),
         ])
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head])]
 
@@ -1136,69 +1261,161 @@ def build_pet_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[wl, wr])]
 
     if arch == "fluffy_lamb":
-        # Sculpted cloud-wool fleece puffs + drooping ears + tiny hooves!
+        # Sculpted cloud-wool fleece puffs + rosy cheeks + pink neck bell + drooping ears + tiny hooves!
         body = [
-            make_cube("wool_c", [ox - 2.8, oy - 2.0, oz - 3.0], [ox + 2.8, oy + 2.4, oz + 3.2], zone="A", color=p),
-            make_cube("wool_top", [ox - 2.2, oy + 2.0, oz - 2.2], [ox + 2.2, oy + 3.2, oz + 2.4], zone="A", color=p),
-            make_cube("wool_l", [ox + 2.4, oy - 1.4, oz - 2.0], [ox + 3.5, oy + 1.6, oz + 2.0], zone="A", color=p),
-            make_cube("wool_r", [ox - 3.5, oy - 1.4, oz - 2.0], [ox - 2.4, oy + 1.6, oz + 2.0], zone="A", color=p),
-            make_cube("puff_t", [ox - 1.1, oy - 0.5, oz + 3.0], [ox + 1.1, oy + 1.5, oz + 4.4], zone="A", color=p),
+            make_cube("wool_c", [ox - 2.9, oy - 2.0, oz - 3.0], [ox + 2.9, oy + 2.5, oz + 3.2], zone="A", color=p),
+            make_cube("wool_top", [ox - 2.3, oy + 2.1, oz - 2.3], [ox + 2.3, oy + 3.4, oz + 2.4], zone="A", color=p),
+            make_cube("wool_l", [ox + 2.4, oy - 1.4, oz - 2.0], [ox + 3.6, oy + 1.7, oz + 2.0], zone="A", color=p),
+            make_cube("wool_r", [ox - 3.6, oy - 1.4, oz - 2.0], [ox - 2.4, oy + 1.7, oz + 2.0], zone="A", color=p),
+            make_cube("puff_t", [ox - 1.2, oy - 0.5, oz + 3.0], [ox + 1.2, oy + 1.6, oz + 4.5], zone="A", color=p),
+            make_cube("rib_neck", [ox - 2.1, oy + 0.1, oz - 3.25], [ox + 2.1, oy + 0.9, oz - 2.3], zone="D_BLUSH", color=a),
+            make_cube("rib_bell", [ox - 0.55, oy - 0.6, oz - 3.55], [ox + 0.55, oy + 0.4, oz - 2.65], zone="D_GOLD", color=0xFDE047, emissive=True),
             make_cube("h1", [ox - 2.0, oy - 3.4, oz - 2.0], [ox - 1.0, oy - 1.8, oz - 1.0], zone="B", color=s),
             make_cube("h2", [ox + 1.0, oy - 3.4, oz - 2.0], [ox + 2.0, oy - 1.8, oz - 1.0], zone="B", color=s),
             make_cube("h3", [ox - 2.0, oy - 3.4, oz + 1.2], [ox - 1.0, oy - 1.8, oz + 2.2], zone="B", color=s),
             make_cube("h4", [ox + 1.0, oy - 3.4, oz + 1.2], [ox + 2.0, oy - 1.8, oz + 2.2], zone="B", color=s),
         ]
         head = make_bone("pet_head", [ox, oy + 1.8, oz - 2.6], anim="pet_head", cubes=[
-            make_cube("l_face", [ox - 1.9, oy + 0.4, oz - 5.6], [ox + 1.9, oy + 3.6, oz - 2.2], zone="B", color=s),
-            make_cube("l_cap", [ox - 2.2, oy + 3.0, oz - 5.2], [ox + 2.2, oy + 4.6, oz - 2.0], zone="A", color=p),
-            make_cube("droop_l", [ox + 1.7, oy + 1.0, oz - 4.4], [ox + 2.9, oy + 3.4, oz - 3.0], rot=[0, 0, -24], zone="B", color=s),
-            make_cube("droop_r", [ox - 2.9, oy + 1.0, oz - 4.4], [ox - 1.7, oy + 3.4, oz - 3.0], rot=[0, 0, 24], zone="B", color=s),
-            make_cube("le1", [ox + 0.6, oy + 1.8, oz - 5.8], [ox + 1.4, oy + 2.6, oz - 5.4], zone="D_EYE", color=0x18181B),
-            make_cube("le2", [ox - 1.4, oy + 1.8, oz - 5.8], [ox - 0.6, oy + 2.6, oz - 5.4], zone="D_EYE", color=0x18181B),
+            make_cube("l_face", [ox - 2.0, oy + 0.4, oz - 5.6], [ox + 2.0, oy + 3.7, oz - 2.2], zone="B", color=s),
+            make_cube("l_cap", [ox - 2.3, oy + 3.0, oz - 5.3], [ox + 2.3, oy + 4.8, oz - 2.0], zone="A", color=p),
+            make_cube("droop_l", [ox + 1.7, oy + 1.0, oz - 4.4], [ox + 3.0, oy + 3.5, oz - 3.0], rot=[0, 0, -24], zone="B", color=s),
+            make_cube("droop_r", [ox - 3.0, oy + 1.0, oz - 4.4], [ox - 1.7, oy + 3.5, oz - 3.0], rot=[0, 0, 24], zone="B", color=s),
+            make_cube("le1", [ox + 0.65, oy + 1.8, oz - 5.85], [ox + 1.55, oy + 2.7, oz - 5.4], zone="D_EYE", color=0x18181B),
+            make_cube("le2", [ox - 1.55, oy + 1.8, oz - 5.85], [ox - 0.65, oy + 2.7, oz - 5.4], zone="D_EYE", color=0x18181B),
+            make_cube("lbl1", [ox + 1.25, oy + 1.05, oz - 5.78], [ox + 1.95, oy + 1.6, oz - 5.4], zone="D_BLUSH", color=0xF472B6),
+            make_cube("lbl2", [ox - 1.95, oy + 1.05, oz - 5.78], [ox - 1.25, oy + 1.6, oz - 5.4], zone="D_BLUSH", color=0xF472B6),
         ])
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head])]
 
     if arch == "axolotl":
-        # Wide-headed floating axolotl with 6 glowing frilly gills & finned salamander tail!
+        # Wide-headed floating axolotl with sparkling kawaii eyes, rosy cheeks, smile, 6 side + 2 top gills & finned tail!
         body = [
             make_cube("ax_b", [ox - 2.0, oy - 1.6, oz - 2.4], [ox + 2.0, oy + 1.2, oz + 3.2], zone="A", color=p),
+            make_cube("ax_belly", [ox - 1.6, oy - 1.75, oz - 2.0], [ox + 1.6, oy - 0.85, oz + 2.6], zone="B", color=0xFFF1F2),
             make_cube("ax_fin", [ox - 0.3, oy + 1.0, oz - 1.4], [ox + 0.3, oy + 2.4, oz + 3.2], zone="C", color=a, emissive=True),
-            make_cube("f1", [ox - 3.0, oy - 2.2, oz - 1.8], [ox - 1.8, oy - 0.8, oz - 0.6], rot=[0, 0, 26], zone="B", color=s),
-            make_cube("f2", [ox + 1.8, oy - 2.2, oz - 1.8], [ox + 3.0, oy - 0.8, oz - 0.6], rot=[0, 0, -26], zone="B", color=s),
-            make_cube("f3", [ox - 3.0, oy - 2.2, oz + 1.2], [ox - 1.8, oy - 0.8, oz + 2.4], rot=[0, 0, 26], zone="B", color=s),
-            make_cube("f4", [ox + 1.8, oy - 2.2, oz + 1.2], [ox + 3.0, oy - 0.8, oz + 2.4], rot=[0, 0, -26], zone="B", color=s),
+            make_cube("f1", [ox - 2.9, oy - 2.2, oz - 1.8], [ox - 1.7, oy - 0.8, oz - 0.6], rot=[0, 0, -24], zone="B", color=s),
+            make_cube("f2", [ox + 1.7, oy - 2.2, oz - 1.8], [ox + 2.9, oy - 0.8, oz - 0.6], rot=[0, 0, 24], zone="B", color=s),
+            make_cube("f3", [ox - 2.9, oy - 2.2, oz + 1.2], [ox - 1.7, oy - 0.8, oz + 2.4], rot=[0, 0, -24], zone="B", color=s),
+            make_cube("f4", [ox + 1.7, oy - 2.2, oz + 1.2], [ox + 2.9, oy - 0.8, oz + 2.4], rot=[0, 0, 24], zone="B", color=s),
         ]
         head_c = [
             make_cube("ax_h", [ox - 2.9, oy - 0.6, oz - 6.0], [ox + 2.9, oy + 2.8, oz - 2.0], zone="A", color=p),
-            make_cube("e1", [ox + 1.1, oy + 0.8, oz - 6.2], [ox + 2.1, oy + 1.7, oz - 5.8], zone="D_EYE", color=0x18181B),
-            make_cube("e2", [ox - 2.1, oy + 0.8, oz - 6.2], [ox - 1.1, oy + 1.7, oz - 5.8], zone="D_EYE", color=0x18181B),
+            make_cube("e1", [ox + 1.05, oy + 0.85, oz - 6.22], [ox + 2.05, oy + 1.85, oz - 5.8], zone="D_EYE", color=0x18181B),
+            make_cube("e2", [ox - 2.05, oy + 0.85, oz - 6.22], [ox - 1.05, oy + 1.85, oz - 5.8], zone="D_EYE", color=0x18181B),
+            make_cube("ax_blush_l", [ox + 1.85, oy + 0.15, oz - 6.18], [ox + 2.7, oy + 0.72, oz - 5.8], zone="D_BLUSH", color=0xF472B6),
+            make_cube("ax_blush_r", [ox - 2.7, oy + 0.15, oz - 6.18], [ox - 1.85, oy + 0.72, oz - 5.8], zone="D_BLUSH", color=0xF472B6),
+            make_cube("ax_mouth", [ox - 0.85, oy - 0.05, oz - 6.16], [ox + 0.85, oy + 0.35, oz - 5.85], zone="C", color=a),
         ]
         for side in (-1, 1):
             for g in range(3):
-                head_c.append(make_cube(f"g_{side}_{g}", _sx(side, 2.8, 5.2), [oy + 0.2 + g * 1.1, oy + 1.0 + g * 1.1], [oz - 4.2, oz - 3.4],
-                                        rot=[0, 0, -side * (18 - g * 18)], zone="C", color=a, emissive=True))
+                gy0 = oy - 0.05 + g * 1.05
+                gy1 = gy0 + 0.75
+                head_c.append(make_cube(
+                    f"g_{side}_{g}",
+                    _sx_at(ox, side, 2.65, 5.15),
+                    [gy0, gy1],
+                    [oz - 4.2, oz - 3.4],
+                    pivot=[ox + side * 2.8, (gy0 + gy1) * 0.5, oz - 3.8],
+                    rot=[0, 0, side * (-20 + g * 20)],
+                    zone="C", color=a, emissive=True,
+                ))
+            head_c.append(make_cube(
+                f"gt_{side}",
+                _sx_at(ox, side, 0.7, 1.9),
+                [oy + 2.6, oy + 4.3],
+                [oz - 4.2, oz - 3.4],
+                pivot=[ox + side * 1.3, oy + 2.7, oz - 3.8],
+                rot=[0, 0, -side * 14],
+                zone="C", color=a, emissive=True,
+            ))
         head = make_bone("pet_head", [ox, oy + 1.0, oz - 2.2], anim="pet_head", cubes=head_c)
         tail = make_bone("pet_tail", [ox, oy, oz + 3.0], anim="pet_tail", cubes=[
-            make_cube("ax_t", [ox - 0.5, oy - 1.2, oz + 3.0], [ox + 0.5, oy + 1.8, oz + 9.2], zone="C", color=a, emissive=True)
+            make_cube("ax_t", [ox - 0.5, oy - 1.1, oz + 3.0], [ox + 0.5, oy + 1.8, oz + 9.0], zone="C", color=a, emissive=True)
         ])
         return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head, tail])]
 
-    # ribbon_bunny: snowy bunny with tall ears, big glowing sakura bow & cotton puff tail!
+    if arch == "celestial_kitsune":
+        # Mythic floating snow-white & gold Nine-Tail Spirit Fox with 5 fanned luminous tails & foxfire wisps!
+        body = [
+            make_cube("kx_body", [ox - 2.1, oy - 1.8, oz - 2.4], [ox + 2.1, oy + 1.6, oz + 2.8], zone="A", color=p),
+            make_cube("kx_ruff", [ox - 2.4, oy - 1.2, oz - 2.8], [ox + 2.4, oy + 1.8, oz - 0.8], zone="A", color=p),
+            make_cube("kx_collar", [ox - 2.35, oy + 0.8, oz - 2.9], [ox + 2.35, oy + 1.7, oz - 1.2], zone="B", color=s),
+            make_cube("kx_bell", [ox - 0.65, oy - 0.1, oz - 3.3], [ox + 0.65, oy + 1.1, oz - 2.3], zone="D_GOLD", color=0xFDE047, emissive=True),
+            make_cube("kx_p1", [ox - 1.8, oy - 2.9, oz - 2.4], [ox - 0.7, oy - 1.6, oz - 1.0], zone="B", color=s),
+            make_cube("kx_p2", [ox + 0.7, oy - 2.9, oz - 2.4], [ox + 1.8, oy - 1.6, oz - 1.0], zone="B", color=s),
+        ]
+        head = make_bone("pet_head", [ox, oy + 1.8, oz - 2.2], anim="pet_head", cubes=[
+            make_cube("kx_h", [ox - 2.4, oy + 0.8, oz - 5.4], [ox + 2.4, oy + 4.6, oz - 1.4], zone="A", color=p),
+            make_cube("kx_sn", [ox - 1.15, oy + 0.9, oz - 6.7], [ox + 1.15, oy + 2.3, oz - 5.1], zone="A", color=p),
+            make_cube("kx_nose", [ox - 0.45, oy + 1.75, oz - 6.9], [ox + 0.45, oy + 2.35, oz - 6.4], zone="D_DARK", color=0x18181B),
+            make_cube("kx_mark", [ox - 0.45, oy + 3.0, oz - 5.58], [ox + 0.45, oy + 4.1, oz - 5.25], rot=[0, 0, 45], zone="B", color=s, emissive=True),
+            make_cube("kx_e1", [ox + 0.8, oy + 2.2, oz - 5.6], [ox + 1.9, oy + 3.2, oz - 5.15], zone="D_EYE", color=a, emissive=True),
+            make_cube("kx_e2", [ox - 1.9, oy + 2.2, oz - 5.6], [ox - 0.8, oy + 3.2, oz - 5.15], zone="D_EYE", color=a, emissive=True),
+            make_cube("kx_bl1", [ox + 1.5, oy + 1.4, oz - 5.55], [ox + 2.3, oy + 2.0, oz - 5.15], zone="D_BLUSH", color=0xF472B6),
+            make_cube("kx_bl2", [ox - 2.3, oy + 1.4, oz - 5.55], [ox - 1.5, oy + 2.0, oz - 5.15], zone="D_BLUSH", color=0xF472B6),
+            # Tall regal shrine fox ears!
+            make_cube("kx_el", [ox + 1.0, oy + 4.4, oz - 3.6], [ox + 2.6, oy + 7.6, oz - 2.2], rot=[0, 0, -14], zone="A", color=p),
+            make_cube("kx_el_in", [ox + 1.35, oy + 4.7, oz - 3.75], [ox + 2.25, oy + 6.8, oz - 3.2], rot=[0, 0, -14], zone="D_BLUSH", color=0xF472B6),
+            make_cube("kx_el_t", [ox + 1.3, oy + 7.2, oz - 3.4], [ox + 2.3, oy + 8.4, oz - 2.4], rot=[0, 0, -16], zone="B", color=s),
+            make_cube("kx_er", [ox - 2.6, oy + 4.4, oz - 3.6], [ox - 1.0, oy + 7.6, oz - 2.2], rot=[0, 0, 14], zone="A", color=p),
+            make_cube("kx_er_in", [ox - 2.25, oy + 4.7, oz - 3.75], [ox - 1.35, oy + 6.8, oz - 3.2], rot=[0, 0, 14], zone="D_BLUSH", color=0xF472B6),
+            make_cube("kx_er_t", [ox - 2.3, oy + 7.2, oz - 3.4], [ox - 1.3, oy + 8.4, oz - 2.4], rot=[0, 0, 16], zone="B", color=s),
+        ])
+        # 5 glorious fanned golden-tipped kitsune spirit tails!
+        tail_bones = []
+        for k, (yaw_a, pitch_a) in enumerate([(-36, 22), (-18, 34), (0, 42), (18, 34), (36, 22)]):
+            tpiv = [ox, oy + 0.4, oz + 2.7]
+            tail_bones.append(make_bone(f"kx_tail_{k}", tpiv, rot=[pitch_a, yaw_a, 0], anim="pet_tail", anim_amp=0.65, anim_phase=k * 0.65, cubes=[
+                make_cube(f"kt_b_{k}", [ox - 0.8, oy - 0.4, oz + 2.6], [ox + 0.8, oy + 1.3, oz + 7.4], zone="A", color=p),
+                make_cube(f"kt_t_{k}", [ox - 0.7, oy - 0.3, oz + 7.0], [ox + 0.7, oy + 1.2, oz + 9.4], zone="C", color=a, emissive=True),
+            ]))
+        return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head] + tail_bones)]
+
+    if arch == "star_slime":
+        # Ultra-cute translucent glossy pastel Starry Mochi Slime with glowing star inside & tiny tilted gold crown!
+        body = [
+            # Outer glossy pastel translucent jelly shell
+            make_cube("sl_outer", [ox - 3.4, oy - 2.4, oz - 3.4], [ox + 3.4, oy + 3.2, oz + 3.4], zone="A", color=p, translucent=True),
+            make_cube("sl_top", [ox - 2.6, oy + 2.8, oz - 2.6], [ox + 2.6, oy + 4.0, oz + 2.6], zone="A", color=p, translucent=True),
+            # Inner glowing star suspended magically inside the slime!
+            make_cube("sl_star1", [ox - 1.3, oy - 0.3, oz - 0.45], [ox + 1.3, oy + 0.9, oz + 0.45], rot=[0, 0, 45], zone="D_GOLD", color=0xFEF08A, emissive=True),
+            make_cube("sl_star2", [ox - 0.45, oy - 1.1, oz - 0.45], [ox + 0.45, oy + 1.7, oz + 0.45], rot=[0, 45, 0], zone="C", color=a, emissive=True),
+            # Big sparkling kawaii eyes + rosy cheeks + cute tiny smile!
+            make_cube("sl_e1", [ox + 0.95, oy + 0.35, oz - 3.65], [ox + 2.15, oy + 1.6, oz - 3.2], zone="D_EYE", color=0x18181B),
+            make_cube("sl_e2", [ox - 2.15, oy + 0.35, oz - 3.65], [ox - 0.95, oy + 1.6, oz - 3.2], zone="D_EYE", color=0x18181B),
+            make_cube("sl_bl1", [ox + 1.9, oy - 0.35, oz - 3.6], [ox + 2.9, oy + 0.25, oz - 3.2], zone="D_BLUSH", color=0xF472B6),
+            make_cube("sl_bl2", [ox - 2.9, oy - 0.35, oz - 3.6], [ox - 1.9, oy + 0.25, oz - 3.2], zone="D_BLUSH", color=0xF472B6),
+            make_cube("sl_smile", [ox - 0.65, oy - 0.35, oz - 3.62], [ox + 0.65, oy + 0.05, oz - 3.2], zone="C", color=a),
+            # Tiny jaunty golden mini crown perched on top!
+            make_cube("sl_cr_b", [ox - 1.5, oy + 3.8, oz - 1.5], [ox + 1.5, oy + 4.8, oz + 1.5], rot=[0, 0, -12], zone="D_GOLD", color=0xFDE047, emissive=True),
+            make_cube("sl_cr_1", [ox - 1.4, oy + 4.7, oz - 1.4], [ox - 0.6, oy + 5.7, oz - 0.6], rot=[0, 0, -12], zone="D_GOLD", color=0xFDE047, emissive=True),
+            make_cube("sl_cr_2", [ox + 0.6, oy + 4.7, oz - 1.4], [ox + 1.4, oy + 5.7, oz - 0.6], rot=[0, 0, -12], zone="D_GOLD", color=0xFDE047, emissive=True),
+            make_cube("sl_cr_g", [ox - 0.45, oy + 4.7, oz - 1.55], [ox + 0.45, oy + 5.6, oz - 0.7], rot=[0, 0, -12], zone="C", color=a, emissive=True),
+        ]
+        return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body)]
+
+    # ribbon_bunny: snowy plush bunny with pink inner ears, rosy cheeks, tiny pink nose & big glowing sakura bow!
     body = [
-        make_cube("bn_b", [ox - 2.3, oy - 2.2, oz - 2.4], [ox + 2.3, oy + 1.8, oz + 2.8], zone="A", color=p),
-        make_cube("puff", [ox - 1.1, oy - 0.8, oz + 2.6], [ox + 1.1, oy + 1.2, oz + 4.2], zone="A", color=p),
-        make_cube("p1", [ox - 2.0, oy - 3.0, oz - 2.4], [ox - 0.8, oy - 1.8, oz - 0.8], zone="B", color=s),
-        make_cube("p2", [ox + 0.8, oy - 3.0, oz - 2.4], [ox + 2.0, oy - 1.8, oz - 0.8], zone="B", color=s),
+        make_cube("bn_b", [ox - 2.4, oy - 2.2, oz - 2.4], [ox + 2.4, oy + 1.9, oz + 2.9], zone="A", color=p),
+        make_cube("bn_belly", [ox - 1.9, oy - 2.3, oz - 2.0], [ox + 1.9, oy - 0.8, oz + 2.2], zone="B", color=s),
+        make_cube("puff", [ox - 1.2, oy - 0.8, oz + 2.7], [ox + 1.2, oy + 1.4, oz + 4.5], zone="A", color=p),
+        make_cube("p1", [ox - 2.0, oy - 3.0, oz - 2.5], [ox - 0.75, oy - 1.8, oz - 0.8], zone="B", color=s),
+        make_cube("p2", [ox + 0.75, oy - 3.0, oz - 2.5], [ox + 2.0, oy - 1.8, oz - 0.8], zone="B", color=s),
     ]
     head = make_bone("pet_head", [ox, oy + 2.0, oz - 2.0], anim="pet_head", cubes=[
-        make_cube("bn_h", [ox - 2.4, oy + 0.8, oz - 5.0], [ox + 2.4, oy + 4.8, oz - 1.0], zone="A", color=p),
-        make_cube("ear_l", [ox + 0.6, oy + 4.7, oz - 3.6], [ox + 2.0, oy + 8.8, oz - 2.4], rot=[0, 0, -10], zone="A", color=p),
-        make_cube("ear_r", [ox - 2.0, oy + 4.7, oz - 3.6], [ox - 0.6, oy + 8.8, oz - 2.4], rot=[0, 0, 10], zone="A", color=p),
-        make_cube("bow_c", [ox - 0.7, oy + 4.4, oz - 4.7], [ox + 0.7, oy + 5.6, oz - 3.6], zone="C", color=a, emissive=True),
-        make_cube("bow_l", [ox + 0.5, oy + 4.2, oz - 4.6], [ox + 2.5, oy + 5.8, oz - 3.7], rot=[0, 0, -14], zone="C", color=a, emissive=True),
-        make_cube("bow_r", [ox - 2.5, oy + 4.2, oz - 4.6], [ox - 0.5, oy + 5.8, oz - 3.7], rot=[0, 0, 14], zone="C", color=a, emissive=True),
-        make_cube("e1", [ox + 0.8, oy + 2.3, oz - 5.2], [ox + 1.8, oy + 3.2, oz - 4.8], zone="D_EYE", color=a, emissive=True),
-        make_cube("e2", [ox - 1.8, oy + 2.3, oz - 5.2], [ox - 0.8, oy + 3.2, oz - 4.8], zone="D_EYE", color=a, emissive=True),
+        make_cube("bn_h", [ox - 2.5, oy + 0.8, oz - 5.1], [ox + 2.5, oy + 4.9, oz - 1.0], zone="A", color=p),
+        make_cube("ear_l", [ox + 0.65, oy + 4.7, oz - 3.6], [ox + 2.15, oy + 9.0, oz - 2.3], rot=[0, 0, -10], zone="A", color=p),
+        make_cube("ear_l_in", [ox + 1.0, oy + 5.1, oz - 3.78], [ox + 1.8, oy + 8.3, oz - 3.2], rot=[0, 0, -10], zone="D_BLUSH", color=a),
+        make_cube("ear_r", [ox - 2.15, oy + 4.7, oz - 3.6], [ox - 0.65, oy + 9.0, oz - 2.3], rot=[0, 0, 10], zone="A", color=p),
+        make_cube("ear_r_in", [ox - 1.8, oy + 5.1, oz - 3.78], [ox - 1.0, oy + 8.3, oz - 3.2], rot=[0, 0, 10], zone="D_BLUSH", color=a),
+        make_cube("bow_c", [ox - 0.75, oy + 4.4, oz - 4.85], [ox + 0.75, oy + 5.7, oz - 3.6], zone="D_GOLD", color=0xFEF08A, emissive=True),
+        make_cube("bow_l", [ox + 0.55, oy + 4.2, oz - 4.75], [ox + 2.7, oy + 5.9, oz - 3.7], rot=[0, 0, -16], zone="C", color=a, emissive=True),
+        make_cube("bow_r", [ox - 2.7, oy + 4.2, oz - 4.75], [ox - 0.55, oy + 5.9, oz - 3.7], rot=[0, 0, 16], zone="C", color=a, emissive=True),
+        make_cube("e1", [ox + 0.85, oy + 2.35, oz - 5.32], [ox + 1.9, oy + 3.4, oz - 4.85], zone="D_EYE", color=a, emissive=True),
+        make_cube("e2", [ox - 1.9, oy + 2.35, oz - 5.32], [ox - 0.85, oy + 3.4, oz - 4.85], zone="D_EYE", color=a, emissive=True),
+        make_cube("bn_bl1", [ox + 1.55, oy + 1.55, oz - 5.26], [ox + 2.35, oy + 2.15, oz - 4.85], zone="D_BLUSH", color=0xF472B6),
+        make_cube("bn_bl2", [ox - 2.35, oy + 1.55, oz - 5.26], [ox - 1.55, oy + 2.15, oz - 4.85], zone="D_BLUSH", color=0xF472B6),
+        make_cube("bn_nose", [ox - 0.45, oy + 1.75, oz - 5.36], [ox + 0.45, oy + 2.25, oz - 4.9], zone="D_BLUSH", color=a),
     ])
     return [make_bone("pet_root", [ox, oy, oz], anim="pet_hover", cubes=body, children=[head])]
 
@@ -1208,6 +1425,11 @@ def build_pet_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
 #    Studio anchor: (ox=-16.5, y=0.0, oz=2.5) — World physics snaps feet cleanly to terrain!
 # ==============================================================================
 def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, Any]]:
+    if arch.startswith("v2_"):
+        from rig_builders_v2 import build_companion_v2
+        v2 = build_companion_v2(arch, p, s, a)
+        if v2 is not None:
+            return v2
     ox, oz = -16.5, 2.5
 
     # 6 100% distinct dog breeds!
@@ -1299,10 +1521,14 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             hc.append(make_cube("ear_l", [ox + hw * 0.18, hy + hh - 0.1, hz - hw * 0.35], [ox + hw * 0.44, hy + hh + 2.4, hz + 0.15], zone="A", color=p))
             hc.append(make_cube("ear_r", [ox - hw * 0.44, hy + hh - 0.1, hz - hw * 0.35], [ox - hw * 0.18, hy + hh + 2.4, hz + 0.15], zone="A", color=p))
         elif breed == "shiba":
-            # Wide fluffy Shiba cheeks + small triangular ears!
-            hc.append(make_cube("cheeks", [ox - hw * 0.62, hy + 0.1, hz - hw * 0.72], [ox + hw * 0.62, hy + hh * 0.55, hz + 0.1], zone="B", color=s))
-            hc.append(make_cube("ear_l", [ox + hw * 0.2, hy + hh - 0.1, hz - hw * 0.38], [ox + hw * 0.52, hy + hh + 1.4, hz + 0.15], rot=[0, 0, -14], zone="A", color=p))
-            hc.append(make_cube("ear_r", [ox - hw * 0.52, hy + hh - 0.1, hz - hw * 0.38], [ox - hw * 0.2, hy + hh + 1.4, hz + 0.15], rot=[0, 0, 14], zone="A", color=p))
+            # Wide fluffy Shiba cream cheeks + iconic maro-mayu cream eyebrows + pink inner ears!
+            hc.append(make_cube("cheeks", [ox - hw * 0.66, hy + 0.05, hz - hw * 0.78], [ox + hw * 0.66, hy + hh * 0.52, hz + 0.12], zone="B", color=s))
+            hc.append(make_cube("maro_l", [ox + hw * 0.16, hy + hh * 0.80, hz - hw * 0.94], [ox + hw * 0.36, hy + hh * 0.95, hz - hw * 0.76], zone="B", color=s))
+            hc.append(make_cube("maro_r", [ox - hw * 0.36, hy + hh * 0.80, hz - hw * 0.94], [ox - hw * 0.16, hy + hh * 0.95, hz - hw * 0.76], zone="B", color=s))
+            hc.append(make_cube("ear_l", [ox + hw * 0.2, hy + hh - 0.1, hz - hw * 0.38], [ox + hw * 0.52, hy + hh + 1.45, hz + 0.15], rot=[0, 0, -14], zone="A", color=p))
+            hc.append(make_cube("ear_li", [ox + hw * 0.26, hy + hh + 0.1, hz - hw * 0.44], [ox + hw * 0.46, hy + hh + 1.1, hz - hw * 0.25], rot=[0, 0, -14], zone="D_BLUSH", color=0xF472B6))
+            hc.append(make_cube("ear_r", [ox - hw * 0.52, hy + hh - 0.1, hz - hw * 0.38], [ox - hw * 0.2, hy + hh + 1.45, hz + 0.15], rot=[0, 0, 14], zone="A", color=p))
+            hc.append(make_cube("ear_ri", [ox - hw * 0.46, hy + hh + 0.1, hz - hw * 0.44], [ox - hw * 0.26, hy + hh + 1.1, hz - hw * 0.25], rot=[0, 0, 14], zone="D_BLUSH", color=0xF472B6))
         elif breed == "collie":
             # Half-tipped folded border collie ears!
             hc.append(make_cube("ear_l", [ox + hw * 0.2, hy + hh - 0.1, hz - hw * 0.4], [ox + hw * 0.5, hy + hh + 1.2, hz + 0.1], zone="A", color=p))
@@ -1442,10 +1668,11 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             make_cube("ear_r", [ox - hw * 0.48, hy + hh - 0.1, hz - hw * 0.38], [ox - hw * 0.16, hy + hh + ear_h, hz + 0.15], rot=[0, 0, 14 if kind == "siamese" else 0], zone="B" if kind == "siamese" else "A", color=s if kind == "siamese" else p),
         ]
         if kind == "tuxedo":
-            # Jaunty mini top hat on Tuxedo Cat!
-            hc.append(make_cube("hat_b", [ox - 1.5, hy + hh, hz - 1.8], [ox + 1.5, hy + hh + 0.35, hz + 0.4], zone="D_DARK", color=0x18181B))
-            hc.append(make_cube("hat_t", [ox - 0.95, hy + hh + 0.35, hz - 1.4], [ox + 0.95, hy + hh + 1.9, hz], zone="D_DARK", color=0x18181B))
-            hc.append(make_cube("hat_r", [ox - 1.0, hy + hh + 0.35, hz - 1.45], [ox + 1.0, hy + hh + 0.75, hz + 0.05], zone="C", color=a))
+            # Crisp tuxedo white bib + jaunty gold-banded mini top hat + cute whiskers!
+            hc.append(make_cube("nose_p", [ox - 0.35, hy + 0.6, hz - hw * 1.12], [ox + 0.35, hy + 1.0, hz - hw * 0.95], zone="D_BLUSH", color=0xF472B6))
+            hc.append(make_cube("hat_b", [ox - 1.65, hy + hh, hz - 1.9], [ox + 1.65, hy + hh + 0.38, hz + 0.45], zone="D_DARK", color=0x18181B))
+            hc.append(make_cube("hat_t", [ox - 1.05, hy + hh + 0.38, hz - 1.45], [ox + 1.05, hy + hh + 2.0, hz + 0.05], zone="D_DARK", color=0x18181B))
+            hc.append(make_cube("hat_r", [ox - 1.12, hy + hh + 0.38, hz - 1.52], [ox + 1.12, hy + hh + 0.82, hz + 0.12], zone="D_GOLD", color=0xFDE047, emissive=True))
         head = make_bone("comp_head", [ox, hy + 1.0, hz], anim="comp_head", cubes=hc)
         return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs + [head, tail])]
 
@@ -1456,17 +1683,26 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             make_cube("torso", [ox - bw * 0.5, by, oz - bl * 0.5], [ox + bw * 0.5, by + bh, oz + bl * 0.5], zone="A", color=p),
             make_cube("chest", [ox - bw * 0.42, by, oz - bl * 0.52], [ox + bw * 0.42, by + bh * 0.65, oz + bl * 0.3], zone="B", color=s),
         ]
+        if arch == "unicorn":
+            # Cute glowing mini fairy-pegasus wing tufts + golden star flank mark!
+            body.append(make_cube("uw_l", [ox + bw * 0.48, by + 2.0, oz - 1.8], [ox + bw * 0.48 + 2.6, by + 4.4, oz + 2.0], rot=[0, -14, 24], zone="C", color=a, emissive=True))
+            body.append(make_cube("uw_r", [ox - bw * 0.48 - 2.6, by + 2.0, oz - 1.8], [ox - bw * 0.48, by + 4.4, oz + 2.0], rot=[0, 14, -24], zone="C", color=a, emissive=True))
+            body.append(make_cube("u_star", [ox - bw * 0.54, by + 1.6, oz + 1.4], [ox + bw * 0.54, by + 3.0, oz + 2.8], rot=[45, 0, 0], zone="D_GOLD", color=0xFDE047, emissive=True))
         legs = [make_bone(tag, [lx, by, lz], anim=tag, cubes=[
             make_cube(tag, [lx - 0.72, 0.0, lz - 0.72], [lx + 0.72, by + 0.4, lz + 0.72], zone="A", color=p),
-            make_cube(f"{tag}_paw", [lx - 0.78, 0.0, lz - 0.9], [lx + 0.78, 1.1, lz + 0.7], zone="B", color=s),
+            make_cube(f"{tag}_paw", [lx - 0.78, 0.0, lz - 0.9], [lx + 0.78, 1.15, lz + 0.7], zone="D_GOLD" if arch == "unicorn" else "B", color=0xFDE047 if arch == "unicorn" else s, emissive=arch == "unicorn"),
         ]) for tag, lx, lz in [
             ("comp_leg_fl", ox + bw * 0.32, oz - bl * 0.34), ("comp_leg_fr", ox - bw * 0.32, oz - bl * 0.34),
             ("comp_leg_bl", ox + bw * 0.32, oz + bl * 0.34), ("comp_leg_br", ox - bw * 0.32, oz + bl * 0.34),
         ]]
-        tail = make_bone("comp_tail", [ox, by + bh * 0.75, oz + bl * 0.48], anim="comp_tail", cubes=[
-            make_cube("tail", [ox - 0.75, by + bh * 0.3, oz + bl * 0.45], [ox + 0.75, by + bh * 0.95, oz + bl * 0.45 + 5.2],
-                      pivot=[ox, by + bh * 0.7, oz + bl * 0.45], rot=[24, 0, 0], zone="C" if arch == "unicorn" else "B", color=a if arch == "unicorn" else s, emissive=arch == "unicorn")
-        ])
+        tail_cubes = [
+            make_cube("tail", [ox - 0.85, by + bh * 0.3, oz + bl * 0.45], [ox + 0.85, by + bh * 1.0, oz + bl * 0.45 + 5.6],
+                      pivot=[ox, by + bh * 0.7, oz + bl * 0.45], rot=[22, 0, 0], zone="C" if arch == "unicorn" else "B", color=a if arch == "unicorn" else s, emissive=arch == "unicorn")
+        ]
+        if arch == "unicorn":
+            tail_cubes.append(make_cube("tail_plume", [ox - 0.65, by + bh * 0.05, oz + bl * 0.45 + 3.4], [ox + 0.65, by + bh * 0.7, oz + bl * 0.45 + 7.2],
+                                        pivot=[ox, by + bh * 0.7, oz + bl * 0.45], rot=[12, 0, 0], zone="D_GOLD", color=0xFEF08A, emissive=True))
+        tail = make_bone("comp_tail", [ox, by + bh * 0.75, oz + bl * 0.48], anim="comp_tail", cubes=tail_cubes)
         head_offsets = [(-1.85, "comp_head"), (1.85, "comp_head_2")] if arch == "cerberus" else [(0.0, "comp_head")]
         heads = []
         for hx_off, h_anim in head_offsets:
@@ -1474,14 +1710,17 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             hc = [
                 make_cube("head", [hx - 1.8, hy, hz - 3.1], [hx + 1.8, hy + 3.6, hz + 0.5], zone="A", color=p),
                 make_cube("snout", [hx - 1.0, hy, hz - 4.5], [hx + 1.0, hy + 1.7, hz - 2.8], zone="B", color=s),
-                make_cube("el", [hx + 0.6, hy + 2.0, hz - 3.3], [hx + 1.5, hy + 2.8, hz - 2.8], zone="D_EYE", color=a, emissive=True),
-                make_cube("er", [hx - 1.5, hy + 2.0, hz - 3.3], [hx - 0.6, hy + 2.8, hz - 2.8], zone="D_EYE", color=a, emissive=True),
-                make_cube("ear_l", [hx + 0.6, hy + 3.4, hz - 1.4], [hx + 1.7, hy + 5.1, hz + 0.2], zone="A", color=p),
-                make_cube("ear_r", [hx - 1.7, hy + 3.4, hz - 1.4], [hx - 0.6, hy + 5.1, hz + 0.2], zone="A", color=p),
+                make_cube("el", [hx + 0.6, hy + 2.0, hz - 3.3], [hx + 1.55, hy + 2.9, hz - 2.8], zone="D_EYE", color=a, emissive=True),
+                make_cube("er", [hx - 1.55, hy + 2.0, hz - 3.3], [hx - 0.6, hy + 2.9, hz - 2.8], zone="D_EYE", color=a, emissive=True),
+                make_cube("ear_l", [hx + 0.6, hy + 3.4, hz - 1.4], [hx + 1.7, hy + 5.2, hz + 0.2], zone="A", color=p),
+                make_cube("ear_r", [hx - 1.7, hy + 3.4, hz - 1.4], [hx - 0.6, hy + 5.2, hz + 0.2], zone="A", color=p),
             ]
             if arch == "unicorn":
-                hc.append(make_cube("u_horn", [hx - 0.45, hy + 3.5, hz - 3.1], [hx + 0.45, hy + 8.0, hz - 1.8], rot=[-28, 0, 0], zone="D_GOLD", color=0xFDE047, emissive=True))
-                hc.append(make_cube("mane", [hx - 0.7, hy + 0.6, hz - 0.2], [hx + 0.7, hy + 4.4, hz + 2.6], zone="C", color=a, emissive=True))
+                hc.append(make_cube("u_horn", [hx - 0.45, hy + 3.5, hz - 3.1], [hx + 0.45, hy + 8.4, hz - 1.8], rot=[-28, 0, 0], zone="D_GOLD", color=0xFDE047, emissive=True))
+                hc.append(make_cube("mane", [hx - 0.75, hy + 0.6, hz - 0.2], [hx + 0.75, hy + 4.8, hz + 3.2], zone="C", color=a, emissive=True))
+                hc.append(make_cube("mane_fore", [hx - 0.7, hy + 2.9, hz - 3.5], [hx + 0.7, hy + 4.4, hz - 1.8], rot=[18, 0, 0], zone="C", color=a, emissive=True))
+                hc.append(make_cube("u_bl1", [hx + 1.15, hy + 1.25, hz - 3.25], [hx + 1.75, hy + 1.75, hz - 2.8], zone="D_BLUSH", color=0xF472B6))
+                hc.append(make_cube("u_bl2", [hx - 1.75, hy + 1.25, hz - 3.25], [hx - 1.15, hy + 1.75, hz - 2.8], zone="D_BLUSH", color=0xF472B6))
             heads.append(make_bone(h_anim, [hx, hy + 1.0, hz], anim=h_anim, cubes=hc))
         return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs + heads + [tail])]
 
@@ -1521,9 +1760,10 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             lz, ang = oz - 2.4 + i * 1.6, 26 - i * 18
             for side, prefix in ((1, "comp_spider_l"), (-1, "comp_spider_r")):
                 piv = [ox + side * 2.4, 3.4, lz]
-                legs.append(make_bone(f"{prefix}{i}", piv, anim=f"{prefix}{i}", cubes=[
-                    make_cube("fem", _sx(side, 2.2, 6.6), [3.0, 4.6], [lz - 0.7, lz + 0.7], pivot=piv, rot=[0, -side * ang, side * 24], zone="B", color=s),
-                    make_cube("tib", _sx(side, 5.4, 7.2), [0.0, 5.2], [lz - 0.65, lz + 0.65], pivot=[ox + side * 6.0, 4.8, lz], rot=[0, -side * ang, -side * 16], zone="A", color=p),
+                knee = [ox + side * 5.9, 4.95, lz]
+                legs.append(make_bone(f"{prefix}{i}", piv, rot=[0, side * ang, 0], anim=f"{prefix}{i}", cubes=[
+                    make_cube("fem", _sx_at(ox, side, 2.2, 6.2), [2.9, 4.3], [lz - 0.6, lz + 0.6], pivot=piv, rot=[0, 0, side * 24], zone="B", color=s),
+                    make_cube("tib", _sx_at(ox, side, 5.2, 6.6), [0.2, 5.2], [lz - 0.55, lz + 0.55], pivot=knee, rot=[0, 0, side * 14], zone="A", color=p),
                 ]))
         return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs)]
 
@@ -1542,9 +1782,10 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             lz, ang = oz - 2.2 + i * 1.5, 32 - i * 20
             for side, prefix in ((1, "comp_spider_l"), (-1, "comp_spider_r")):
                 piv = [ox + side * 1.7, 4.2, lz]
-                legs.append(make_bone(f"{prefix}{i}", piv, anim=f"{prefix}{i}", cubes=[
-                    make_cube("fem", _sx(side, 1.6, 6.8), [4.2, 5.0], [lz - 0.35, lz + 0.35], pivot=piv, rot=[0, -side * ang, side * 42], zone="B", color=s),
-                    make_cube("tib", _sx(side, 6.2, 7.0), [0.0, 7.2], [lz - 0.3, lz + 0.3], pivot=[ox + side * 6.6, 7.0, lz], rot=[0, -side * ang, -side * 12], zone="A", color=p),
+                knee = [ox + side * 5.3, 7.4, lz]
+                legs.append(make_bone(f"{prefix}{i}", piv, rot=[0, side * ang, 0], anim=f"{prefix}{i}", cubes=[
+                    make_cube("fem", _sx_at(ox, side, 1.5, 6.5), [3.85, 4.55], [lz - 0.35, lz + 0.35], pivot=piv, rot=[0, 0, side * 42], zone="B", color=s),
+                    make_cube("tib", _sx_at(ox, side, 4.95, 5.65), [0.25, 7.6], [lz - 0.3, lz + 0.3], pivot=knee, rot=[0, 0, side * 12], zone="A", color=p),
                 ]))
         return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs)]
 
@@ -1583,29 +1824,125 @@ def build_companion_bones(arch: str, p: int, s: int, a: int) -> list[dict[str, A
             ]))
         return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=palm, children=fingers)]
 
+    if arch == "fenrir_wolf":
+        # Mythic Frost Fenrir Spirit Wolf: obsidian armored wolf with glowing glacial ice mane spikes & sweeping spirit tail!
+        bw, bh, bl, leg_h = 4.4, 4.8, 9.0, 5.2
+        by = leg_h
+        body = [
+            make_cube("fw_torso", [ox - bw * 0.5, by, oz - bl * 0.5], [ox + bw * 0.5, by + bh, oz + bl * 0.5], zone="A", color=p),
+            make_cube("fw_mane", [ox - bw * 0.64, by + 0.8, oz - bl * 0.58], [ox + bw * 0.64, by + bh + 1.1, oz - bl * 0.04], zone="B", color=s),
+            # Glacial frost crystal shoulder spikes & dorsal ice ridge!
+            make_cube("fw_sp_l", [ox + bw * 0.45, by + bh - 0.2, oz - bl * 0.42], [ox + bw * 0.45 + 1.5, by + bh + 3.0, oz - bl * 0.14], rot=[-18, 0, -26], zone="C", color=a, emissive=True),
+            make_cube("fw_sp_r", [ox - bw * 0.45 - 1.5, by + bh - 0.2, oz - bl * 0.42], [ox - bw * 0.45, by + bh + 3.0, oz - bl * 0.14], rot=[-18, 0, 26], zone="C", color=a, emissive=True),
+            make_cube("fw_ridge1", [ox - 0.5, by + bh - 0.1, oz - 1.6], [ox + 0.5, by + bh + 2.2, oz + 0.4], rot=[-24, 0, 0], zone="C", color=a, emissive=True),
+            make_cube("fw_ridge2", [ox - 0.45, by + bh - 0.2, oz + 1.0], [ox + 0.45, by + bh + 1.8, oz + 2.8], rot=[-28, 0, 0], zone="C", color=a, emissive=True),
+        ]
+        legs = [make_bone(tag, [lx, by, lz], anim=tag, cubes=[
+            make_cube(tag, [lx - 0.78, 0.0, lz - 0.78], [lx + 0.78, by + 0.4, lz + 0.78], zone="A", color=p),
+            make_cube(f"{tag}_ice", [lx - 0.88, 0.0, lz - 1.0], [lx + 0.88, 1.4, lz + 0.75], zone="C", color=a, emissive=True),
+        ]) for tag, lx, lz in [
+            ("comp_leg_fl", ox + bw * 0.34, oz - bl * 0.34), ("comp_leg_fr", ox - bw * 0.34, oz - bl * 0.34),
+            ("comp_leg_bl", ox + bw * 0.34, oz + bl * 0.34), ("comp_leg_br", ox - bw * 0.34, oz + bl * 0.34),
+        ]]
+        tail = make_bone("comp_tail", [ox, by + bh * 0.78, oz + bl * 0.48], anim="comp_tail", cubes=[
+            make_cube("fw_t1", [ox - 1.05, by + bh * 0.35, oz + bl * 0.45], [ox + 1.05, by + bh * 1.15, oz + bl * 0.45 + 4.8],
+                      pivot=[ox, by + bh * 0.75, oz + bl * 0.45], rot=[28, 0, 0], zone="B", color=s),
+            make_cube("fw_t2", [ox - 0.85, by + bh * 0.65, oz + bl * 0.45 + 3.8], [ox + 0.85, by + bh * 1.35, oz + bl * 0.45 + 7.6],
+                      pivot=[ox, by + bh * 0.75, oz + bl * 0.45], rot=[28, 0, 0], zone="C", color=a, emissive=True),
+        ])
+        hy, hz = by + bh - 0.5, oz - bl * 0.54
+        head = make_bone("comp_head", [ox, hy + 1.1, hz], anim="comp_head", cubes=[
+            make_cube("fw_head", [ox - 2.0, hy, hz - 3.4], [ox + 2.0, hy + 3.8, hz + 0.6], zone="A", color=p),
+            make_cube("fw_snout", [ox - 1.1, hy, hz - 5.2], [ox + 1.1, hy + 1.8, hz - 3.1], zone="B", color=s),
+            make_cube("fw_nose", [ox - 0.45, hy + 1.3, hz - 5.4], [ox + 0.45, hy + 1.9, hz - 4.9], zone="D_DARK", color=0x18181B),
+            make_cube("fw_el", [ox + 0.65, hy + 2.0, hz - 3.6], [ox + 1.7, hy + 2.9, hz - 3.1], zone="D_EYE", color=a, emissive=True),
+            make_cube("fw_er", [ox - 1.7, hy + 2.0, hz - 3.6], [ox - 0.65, hy + 2.9, hz - 3.1], zone="D_EYE", color=a, emissive=True),
+            make_cube("fw_ear_l", [ox + 0.8, hy + 3.6, hz - 1.6], [ox + 1.9, hy + 6.0, hz - 0.1], rot=[0, 0, -10], zone="A", color=p),
+            make_cube("fw_ear_r", [ox - 1.9, hy + 3.6, hz - 1.6], [ox - 0.8, hy + 6.0, hz - 0.1], rot=[0, 0, 10], zone="A", color=p),
+            make_cube("fw_crown", [ox - 0.5, hy + 3.6, hz - 2.9], [ox + 0.5, hy + 5.2, hz - 1.7], rot=[-20, 0, 0], zone="C", color=a, emissive=True),
+        ])
+        return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs + [head, tail])]
+
+    if arch == "red_panda":
+        # Irresistibly cute Fluffy Red Panda with cream face mask, round white-rimmed ears, rosy cheeks & big ringed tail!
+        bw, bh, bl, leg_h = 3.4, 3.3, 6.2, 2.7
+        by = leg_h
+        body = [
+            make_cube("rp_torso", [ox - bw * 0.5, by, oz - bl * 0.5], [ox + bw * 0.5, by + bh, oz + bl * 0.5], zone="A", color=p),
+            make_cube("rp_belly", [ox - bw * 0.44, by - 0.1, oz - bl * 0.48], [ox + bw * 0.44, by + bh * 0.55, oz + bl * 0.38], zone="D_DARK", color=0x1C1917),
+        ]
+        legs = [make_bone(tag, [lx, by, lz], anim=tag, cubes=[
+            make_cube(tag, [lx - 0.6, 0.0, lz - 0.6], [lx + 0.6, by + 0.4, lz + 0.6], zone="D_DARK", color=0x1C1917),
+        ]) for tag, lx, lz in [
+            ("comp_leg_fl", ox + bw * 0.34, oz - bl * 0.34), ("comp_leg_fr", ox - bw * 0.34, oz - bl * 0.34),
+            ("comp_leg_bl", ox + bw * 0.34, oz + bl * 0.34), ("comp_leg_br", ox - bw * 0.34, oz + bl * 0.34),
+        ]]
+        # Iconic big fluffy striped ringed tail!
+        tail = make_bone("comp_tail", [ox, by + bh * 0.6, oz + bl * 0.46], anim="comp_tail", cubes=[
+            make_cube("rp_t1", [ox - 1.15, by + 0.5, oz + bl * 0.42], [ox + 1.15, by + 2.8, oz + bl * 0.42 + 2.2], zone="A", color=p),
+            make_cube("rp_t2", [ox - 1.2, by + 0.45, oz + bl * 0.42 + 2.0], [ox + 1.2, by + 2.85, oz + bl * 0.42 + 3.6], zone="B", color=s),
+            make_cube("rp_t3", [ox - 1.15, by + 0.5, oz + bl * 0.42 + 3.4], [ox + 1.15, by + 2.8, oz + bl * 0.42 + 5.2], zone="A", color=p),
+            make_cube("rp_t4", [ox - 1.0, by + 0.65, oz + bl * 0.42 + 5.0], [ox + 1.0, by + 2.65, oz + bl * 0.42 + 6.6], zone="D_DARK", color=0x1C1917),
+        ])
+        hy, hz = by + bh - 0.45, oz - bl * 0.52
+        head = make_bone("comp_head", [ox, hy + 1.1, hz], anim="comp_head", cubes=[
+            make_cube("rp_head", [ox - 2.25, hy, hz - 3.1], [ox + 2.25, hy + 3.4, hz + 0.5], zone="A", color=p),
+            make_cube("rp_cheeks", [ox - 2.45, hy + 0.1, hz - 3.25], [ox + 2.45, hy + 1.6, hz - 1.2], zone="B", color=s),
+            make_cube("rp_snout", [ox - 1.1, hy + 0.15, hz - 4.15], [ox + 1.1, hy + 1.5, hz - 2.8], zone="B", color=s),
+            make_cube("rp_nose", [ox - 0.45, hy + 1.0, hz - 4.35], [ox + 0.45, hy + 1.5, hz - 3.95], zone="D_DARK", color=0x18181B),
+            # Cute cream eyebrow spots + sparkling eyes + rosy cheeks!
+            make_cube("rp_br1", [ox + 0.7, hy + 2.5, hz - 3.25], [ox + 1.5, hy + 3.0, hz - 2.85], zone="B", color=s),
+            make_cube("rp_br2", [ox - 1.5, hy + 2.5, hz - 3.25], [ox - 0.7, hy + 3.0, hz - 2.85], zone="B", color=s),
+            make_cube("rp_el", [ox + 0.75, hy + 1.45, hz - 3.32], [ox + 1.75, hy + 2.4, hz - 2.85], zone="D_EYE", color=0x18181B),
+            make_cube("rp_er", [ox - 1.75, hy + 1.45, hz - 3.32], [ox - 0.75, hy + 2.4, hz - 2.85], zone="D_EYE", color=0x18181B),
+            make_cube("rp_bl1", [ox + 1.45, hy + 0.75, hz - 3.32], [ox + 2.2, hy + 1.3, hz - 2.85], zone="D_BLUSH", color=0xF472B6),
+            make_cube("rp_bl2", [ox - 2.2, hy + 0.75, hz - 3.32], [ox - 1.45, hy + 1.3, hz - 2.85], zone="D_BLUSH", color=0xF472B6),
+            # Round white-rimmed fluffy panda ears + tiny glowing green leaf!
+            make_cube("rp_ear_l", [ox + 1.3, hy + 3.0, hz - 1.8], [ox + 2.7, hy + 4.5, hz - 0.4], zone="B", color=s),
+            make_cube("rp_ear_li", [ox + 1.55, hy + 3.2, hz - 1.95], [ox + 2.4, hy + 4.1, hz - 1.4], zone="D_BLUSH", color=0xF472B6),
+            make_cube("rp_ear_r", [ox - 2.7, hy + 3.0, hz - 1.8], [ox - 1.3, hy + 4.5, hz - 0.4], zone="B", color=s),
+            make_cube("rp_ear_ri", [ox - 2.4, hy + 3.2, hz - 1.95], [ox - 1.55, hy + 4.1, hz - 1.4], zone="D_BLUSH", color=0xF472B6),
+            make_cube("rp_leaf", [ox - 0.5, hy + 3.35, hz - 2.0], [ox + 0.9, hy + 4.2, hz - 1.0], rot=[0, 0, 22], zone="C", color=a, emissive=True),
+        ])
+        return [make_bone("comp_root", [ox, 0, oz], anim="comp_root", cubes=body, children=legs + [head, tail])]
+
     if arch == "lop_bunny":
         body = [
             make_cube("body", [ox - 2.8, 1.2, oz - 3.0], [ox + 2.8, 6.4, oz + 3.4], zone="A", color=p),
-            make_cube("head", [ox - 2.3, 5.2, oz - 4.6], [ox + 2.3, 9.2, oz - 0.6], zone="A", color=p),
-            make_cube("lop_l", [ox + 2.2, 3.4, oz - 3.4], [ox + 3.5, 8.4, oz - 1.4], rot=[0, 0, -14], zone="B", color=s),
-            make_cube("lop_r", [ox - 3.5, 3.4, oz - 3.4], [ox - 2.2, 8.4, oz - 1.4], rot=[0, 0, 14], zone="B", color=s),
-            make_cube("puff", [ox - 1.1, 2.2, oz + 3.2], [ox + 1.1, 4.2, oz + 4.8], zone="A", color=p),
-            make_cube("eye_l", [ox + 0.7, 6.8, oz - 4.8], [ox + 1.7, 7.8, oz - 4.4], zone="D_EYE", color=a),
-            make_cube("eye_r", [ox - 1.7, 6.8, oz - 4.8], [ox - 0.7, 7.8, oz - 4.4], zone="D_EYE", color=a),
-            make_cube("foot_l", [ox + 0.7, 0.0, oz - 2.6], [ox + 2.2, 1.4, oz + 1.4], zone="B", color=s),
-            make_cube("foot_r", [ox - 2.2, 0.0, oz - 2.6], [ox - 0.7, 1.4, oz + 1.4], zone="B", color=s),
+            make_cube("chest_ruff", [ox - 2.2, 2.0, oz - 3.4], [ox + 2.2, 5.2, oz - 2.2], zone="B", color=0xF8FAFC),
+            make_cube("head", [ox - 2.4, 5.2, oz - 4.7], [ox + 2.4, 9.4, oz - 0.5], zone="A", color=p),
+            make_cube("lop_l", [ox + 2.3, 3.2, oz - 3.4], [ox + 3.6, 8.6, oz - 1.3], rot=[0, 0, -14], zone="B", color=s),
+            make_cube("lop_r", [ox - 3.6, 3.2, oz - 3.4], [ox - 2.3, 8.6, oz - 1.3], rot=[0, 0, 14], zone="B", color=s),
+            make_cube("puff", [ox - 1.25, 2.2, oz + 3.2], [ox + 1.25, 4.4, oz + 5.0], zone="B", color=0xF8FAFC),
+            make_cube("eye_l", [ox + 0.75, 6.85, oz - 4.92], [ox + 1.8, 7.9, oz - 4.45], zone="D_EYE", color=a),
+            make_cube("eye_r", [ox - 1.8, 6.85, oz - 4.92], [ox - 0.75, 7.9, oz - 4.45], zone="D_EYE", color=a),
+            make_cube("lb_bl1", [ox + 1.4, 6.0, oz - 4.86], [ox + 2.2, 6.6, oz - 4.45], zone="D_BLUSH", color=0xF472B6),
+            make_cube("lb_bl2", [ox - 2.2, 6.0, oz - 4.86], [ox - 1.4, 6.6, oz - 4.45], zone="D_BLUSH", color=0xF472B6),
+            make_cube("lb_nose", [ox - 0.45, 6.25, oz - 4.95], [ox + 0.45, 6.8, oz - 4.55], zone="D_BLUSH", color=0xF472B6),
+            make_cube("foot_l", [ox + 0.7, 0.0, oz - 2.8], [ox + 2.3, 1.4, oz + 1.4], zone="B", color=s),
+            make_cube("foot_r", [ox - 2.3, 0.0, oz - 2.8], [ox - 0.7, 1.4, oz + 1.4], zone="B", color=s),
         ]
         return [make_bone("comp_hop", [ox, 0, oz], anim="comp_hop", cubes=body)]
 
-    # crowned_chick: hilariously round fluffy chick wearing a tiny glowing golden crown!
+    # crowned_chick: hilariously adorable round fluffy chick wearing a TRUE sculpted 5-spike golden royal crown & ruby gem!
     body = [
         make_cube("body", [ox - 3.2, 1.2, oz - 3.0], [ox + 3.2, 7.4, oz + 3.2], zone="A", color=p),
-        make_cube("wing_l", [ox + 3.0, 2.6, oz - 1.6], [ox + 4.0, 5.4, oz + 1.8], rot=[0, 0, -14], zone="A", color=p),
-        make_cube("wing_r", [ox - 4.0, 2.6, oz - 1.6], [ox - 3.0, 5.4, oz + 1.8], rot=[0, 0, 14], zone="A", color=p),
-        make_cube("eye_l", [ox + 0.8, 4.6, oz - 3.25], [ox + 1.9, 5.7, oz - 2.8], zone="D_EYE", color=0x18181B),
-        make_cube("eye_r", [ox - 1.9, 4.6, oz - 3.25], [ox - 0.8, 5.7, oz - 2.8], zone="D_EYE", color=0x18181B),
-        make_cube("beak", [ox - 0.9, 3.4, oz - 4.2], [ox + 0.9, 4.5, oz - 2.9], zone="D_GOLD", color=0xF59E0B),
-        make_cube("crown", [ox - 1.5, 7.4, oz - 1.5], [ox + 1.5, 9.2, oz + 1.5], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("ahoge", [ox - 0.45, 7.3, oz - 0.4], [ox + 0.45, 8.6, oz + 0.5], rot=[-18, 0, 12], zone="A", color=p),
+        make_cube("wing_l", [ox + 3.0, 2.6, oz - 1.6], [ox + 4.1, 5.5, oz + 1.8], rot=[0, 0, -18], zone="A", color=p),
+        make_cube("wing_r", [ox - 4.1, 2.6, oz - 1.6], [ox - 3.0, 5.5, oz + 1.8], rot=[0, 0, 18], zone="A", color=p),
+        make_cube("eye_l", [ox + 0.85, 4.6, oz - 3.28], [ox + 2.0, 5.75, oz - 2.8], zone="D_EYE", color=0x18181B),
+        make_cube("eye_r", [ox - 2.0, 4.6, oz - 3.28], [ox - 0.85, 5.75, oz - 2.8], zone="D_EYE", color=0x18181B),
+        make_cube("ch_bl1", [ox + 1.75, 3.7, oz - 3.22], [ox + 2.75, 4.35, oz - 2.8], zone="D_BLUSH", color=0xF472B6),
+        make_cube("ch_bl2", [ox - 2.75, 3.7, oz - 3.22], [ox - 1.75, 4.35, oz - 2.8], zone="D_BLUSH", color=0xF472B6),
+        make_cube("beak", [ox - 0.9, 3.4, oz - 4.3], [ox + 0.9, 4.5, oz - 2.9], zone="B", color=s),
+        # Sculpted royal mini golden crown with ruby centerpiece!
+        make_cube("cr_base", [ox - 1.7, 7.35, oz - 1.7], [ox + 1.7, 8.35, oz + 1.7], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_sp1", [ox - 1.7, 8.3, oz - 1.7], [ox - 0.9, 9.5, oz - 0.9], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_sp2", [ox + 0.9, 8.3, oz - 1.7], [ox + 1.7, 9.5, oz - 0.9], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_sp3", [ox - 0.45, 8.3, oz - 1.7], [ox + 0.45, 9.9, oz - 0.9], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_sp4", [ox - 1.7, 8.3, oz + 0.9], [ox - 0.9, 9.5, oz + 1.7], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_sp5", [ox + 0.9, 8.3, oz + 0.9], [ox + 1.7, 9.5, oz + 1.7], zone="D_GOLD", color=0xFDE047, emissive=True),
+        make_cube("cr_ruby", [ox - 0.45, 7.6, oz - 1.9], [ox + 0.45, 8.5, oz - 1.3], zone="D_BLUSH", color=0xF43F5E, emissive=True),
         make_cube("foot_l", [ox + 0.6, 0.0, oz - 2.2], [ox + 2.2, 1.4, oz + 1.2], zone="B", color=s),
         make_cube("foot_r", [ox - 2.2, 0.0, oz - 2.2], [ox - 0.6, 1.4, oz + 1.2], zone="B", color=s),
     ]

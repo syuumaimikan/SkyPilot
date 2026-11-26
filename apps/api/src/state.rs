@@ -75,6 +75,8 @@ pub struct AppState {
     pub secrets: crate::secrets::SecretBox,
     /// Each user's own translation provider choice (built from their encrypted settings).
     pub user_translation: Cache<Uuid, Arc<UserTranslation>>,
+    /// Live multiplayer Wardrobe cosmetic sync cache (keyed by 32-char lowercase Minecraft UUID).
+    pub wardrobe: Cache<String, crate::routes::wardrobe::WardrobeProfile>,
 }
 
 /// Which translator a user's chat lines go through.
@@ -129,6 +131,7 @@ impl AppState {
             players: Cache::builder().max_capacity(512).time_to_live(Duration::from_secs(1800)).build(),
             secrets,
             user_translation: Cache::builder().max_capacity(2048).time_to_live(Duration::from_secs(600)).build(),
+            wardrobe: Cache::builder().max_capacity(50_000).time_to_live(Duration::from_secs(600)).build(),
         }
     }
 

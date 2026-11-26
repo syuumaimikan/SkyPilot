@@ -12,12 +12,52 @@ public final class WardrobeTools {
 
     public static final int MAX_OUTFITS = 8;
 
+    public record Preset(
+            String id, String name, String ja, int color,
+            String cape, String back, String hat, String aura, String pet, String companion,
+            double wingScale
+    ) {
+        public String label(boolean japanese) { return japanese ? ja : name; }
+
+        public void apply(SkyPilotConfig.Appearance a) {
+            a.cape = cape;
+            a.back = back;
+            a.hat = hat;
+            a.aura = aura;
+            a.pet = pet;
+            a.companion = companion;
+            a.wingScale = wingScale;
+            a.color = color;
+            a.cosmeticGlow = true;
+            a.cosmeticParticles = true;
+            a.accessory = "none";
+        }
+    }
+
+    /** Curated 1-click 6-slot theme outfits (cool + kawaii showcases). */
+    public static final List<Preset> PRESETS = List.of(
+            new Preset("kawaii_pastel", "Kawaii Pastel", "ゆめかわパステル", 0xF472B6,
+                    "strawberry_ribbon", "angel_ribbon_wings", "bunny_beret", "bubble_prism_aura", "pet_axolotl", "comp_red_panda", 1.05),
+            new Preset("sakura_seraph", "Sakura Seraph", "桜の熾天使", 0xFBCFE8,
+                    "sakura", "sakura_seraph_wings", "sakura_blossom", "sakura_bloom_aura", "pet_celestial_kitsune", "comp_shiba_inu", 1.15),
+            new Preset("frost_sovereign", "Frost Sovereign", "蒼炎の覇王", 0x38BDF8,
+                    "cyber_chains", "frost_dragon_wings", "empress_diadem", "starfall_blades_aura", "pet_frost_dragon", "comp_fenrir_wolf", 1.2),
+            new Preset("twilight_seraph", "Twilight Seraph", "黎明の熾天使", 0xA855F7,
+                    "eclipse", "twilight_seraph_wings", "angel_halo", "arcane_circle_aura", "pet_ivory_wyvern", "comp_void_tiger", 1.2),
+            new Preset("astral_blade", "Astral Blade", "星界の剣聖", 0x818CF8,
+                    "starlight", "celestial_katana_halo", "astral_halo_crown", "galaxy_orbit_aura", "pet_star_slime", "comp_rainbow_unicorn", 1.1),
+            new Preset("crimson_abyss", "Crimson Abyss", "紅蓮の冥帝", 0xF97316,
+                    "blaze_spirit", "phoenix", "samurai_kabuto", "inferno_flame_aura", "pet_shadow_wyvern", "comp_cerberus", 1.25)
+    );
+
     public static final class Outfit {
         public String name = "", cape = "none", hat = "none", back = "none", aura = "none", pet = "none", companion = "none";
         public double wingScale = 1.0;
         public boolean cosmeticGlow = true;
+        public boolean cosmeticParticles = true;
         public int color = 0xA38BFA;
         public boolean skin3d;
+        public Map<String, SkyPilotConfig.SlotTransform> slotTransforms = new LinkedHashMap<>();
     }
 
     private WardrobeTools() {}
@@ -33,8 +73,16 @@ public final class WardrobeTools {
         o.companion = a.companion;
         o.wingScale = a.wingScale;
         o.cosmeticGlow = a.cosmeticGlow;
+        o.cosmeticParticles = a.cosmeticParticles;
         o.color = a.color;
         o.skin3d = a.skin3d;
+        if (a.slotTransforms != null) {
+            for (var e : a.slotTransforms.entrySet()) {
+                if (e.getValue() != null && !e.getValue().isIdentity()) {
+                    o.slotTransforms.put(e.getKey(), e.getValue().copy());
+                }
+            }
+        }
         return o;
     }
 
@@ -47,9 +95,21 @@ public final class WardrobeTools {
         a.companion = o.companion == null ? "none" : o.companion;
         a.wingScale = o.wingScale <= 0 ? 1.0 : Math.max(0.6, Math.min(1.5, o.wingScale));
         a.cosmeticGlow = o.cosmeticGlow;
+        a.cosmeticParticles = o.cosmeticParticles;
         a.color = o.color;
         a.skin3d = o.skin3d;
         a.accessory = "none";
+        if (a.slotTransforms == null) a.slotTransforms = new LinkedHashMap<>();
+        a.slotTransforms.clear();
+        if (o.slotTransforms != null) {
+            for (var e : o.slotTransforms.entrySet()) {
+                if (e.getKey() != null && CosmeticCatalog.SLOTS.contains(e.getKey()) && e.getValue() != null) {
+                    var copy = e.getValue().copy();
+                    copy.sanitize();
+                    if (!copy.isIdentity()) a.slotTransforms.put(e.getKey(), copy);
+                }
+            }
+        }
     }
 
     public static void clear(SkyPilotConfig.Appearance a) {
@@ -113,6 +173,10 @@ public final class WardrobeTools {
             if (!Double.isFinite(o.wingScale) || o.wingScale <= 0) o.wingScale = 1.0;
             o.wingScale = Math.max(0.6, Math.min(1.5, o.wingScale));
             o.color &= 0xFFFFFF;
+            if (o.slotTransforms == null) o.slotTransforms = new LinkedHashMap<>();
+            o.slotTransforms.entrySet().removeIf(e -> e.getKey() == null || !CosmeticCatalog.SLOTS.contains(e.getKey()) || e.getValue() == null);
+            for (var tr : o.slotTransforms.values()) tr.sanitize();
+            o.slotTransforms.entrySet().removeIf(e -> e.getValue().isIdentity());
             if (unique.containsKey(o.name) || unique.size() < MAX_OUTFITS) unique.put(o.name, o);
         }
         a.outfits = new ArrayList<>(unique.values());

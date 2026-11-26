@@ -17,7 +17,9 @@ plugins {
 rootProject.name = 'skypilot-mod'
 
 // Version-independent modules (plain Java, unit-tested without Minecraft).
-include 'core', 'network', 'translation', 'session', 'hud'
+include 'core', 'wardrobe-assets', 'network', 'translation', 'session', 'hud'
+// Standalone Fabric 26.2 Wardrobe mod (works standalone or alongside SkyPilot).
+include 'wardrobe'
 // Minecraft-version-specific platform layer. A future Minecraft version gets its own
 // platform/mcXX_Y module that reuses every module above.
 include 'platform:mc26_2'

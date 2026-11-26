@@ -12,6 +12,7 @@ pub mod modfit;
 pub mod modlist;
 pub mod settings;
 pub mod status_page;
+pub mod wardrobe;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -144,6 +145,11 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/mod/server-status", get(status_page::server_status))
         .route("/mod/completion", get(progress::completion))
         .route("/mod/mod-updates", post(modlist::mod_updates))
+        // multiplayer wardrobe sync (no game-server packets; client HTTP only)
+        .route("/wardrobe/sync", post(wardrobe::sync))
+        .route("/wardrobe/batch", post(wardrobe::batch))
+        .route("/wardrobe/leave", post(wardrobe::leave))
+        .route("/wardrobe/stats", get(wardrobe::stats))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit));
 
     let pub_origin = state.config.public_web_url.trim_end_matches('/').to_string();

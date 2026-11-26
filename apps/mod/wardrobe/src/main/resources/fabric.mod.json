@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "skypilot_wardrobe",
+	"version": "${version}",
+	"name": "SkyPilot Wardrobe",
+	"description": "Standalone 3D Blockbench (.bbmodel) Wardrobe mod with 300+ free animated cloaks, wings, headwear, auras, pets & companions, per-slot transforms, granular 1st-person controls, and multiplayer visibility.",
+	"authors": ["SkyPilot"],
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.skypilot.wardrobe.WardrobeModClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
+

@@ -18,7 +18,7 @@ final class ClientShortcuts {
     private static KeyMapping tttCenter;
     private static KeyMapping nightVision;
     static void register(KeyMapping.Category category){
-        add("wardrobe",()->new AppearanceScreen(null),category);
+        add("wardrobe",()->WardrobeBridge.createWardrobeScreen(null),category);
         add("desk",()->new DeskScreen(null),category);
         add("puzzle",()->new PuzzleScreen(null),category);
         add("visual",()->new VisualScreen(null),category);

@@ -181,6 +181,10 @@ CLOAKS: list[CosmeticDef] = [
                 "Dreamy iridescent cotton-candy nebula shimmering with soft sparkles.",
                 "夢見心地なパステルカラーが揺らめく幻想星雲。",
                 0xF9A8D4, 0x93C5FD, 0xFEF08A, "legendary", "frost_crystal", "pastel_nebula", True, 6, 7, False, True),
+    CosmeticDef("strawberry_ribbon", "cape", "Strawberry Ribbon", "いちごミルクのリボン",
+                "Sweet pastel strawberry-cream gingham cloak with 3D satin bow, lace hem & hearts.",
+                "立体サテンリボンとレース裾・ハートが揺れる甘かわ苺ミルククローク。",
+                0xF472B6, 0xFFF1F2, 0xFDE047, "mythic", "ribbon", "strawberry_milk", True, 6, 8, False, True),
 ]
 
 # ==============================================================================
@@ -333,6 +337,18 @@ WINGS: list[CosmeticDef] = [
                 "Gilded icicle-spurred azure-ice dragon wings glowing with arctic energy.",
                 "黄金の爪と氷柱の棘を備えた氷河の古龍翼。",
                 0x0EA5E9, 0x0C4A6E, 0xFDE047, "mythic", "frost_dragon", "honeycomb", True, 1, 8, True, True, True, 225, 0xFFFFFF, "AC"),
+    CosmeticDef("twilight_seraph_wings", "back", "Twilight Seraph", "黎明と宵闇の大翼",
+                "Asymmetric 6-winged archangel: radiant celestial gold on one side, abyssal violet on the other!",
+                "片翼は黄金の聖光、片翼は深淵の紫闇を宿す非対称の六枚大翼。",
+                0x4C1D95, 0x1E1033, 0xC084FC, "mythic", "twilight_seraph", "feathers", True, 1, 8, True, True, False, 255, 0xFFFFFF, "AC"),
+    CosmeticDef("celestial_katana_halo", "back", "Spirit Blade Halo", "剣陣・八咫光輪",
+                "Eight luminous astral katanas revolving radially in a sacred wheel behind your back!",
+                "八振りの光り輝く霊刀が背後に光輪を描いて回転する剣聖の背飾り。",
+                0x38BDF8, 0x0F172A, 0xE0F2FE, "mythic", "katana_halo", "metal", True, 1, 8, True, True, False, 255, 0xFFFFFF, "AC"),
+    CosmeticDef("angel_ribbon_wings", "back", "Sweetheart Cherub", "天使のリボン翼",
+                "Plush pastel pearl-pink cherub wings tied with a glowing satin bow & floating hearts!",
+                "ふわふわ桃色の天使羽に大きな光るリボンとハートが浮かぶ愛されウィング。",
+                0xFBCFE8, 0xFFF1F2, 0xF472B6, "mythic", "angel_ribbon", "pastel_plush", True, 1, 8, True, True, False, 255, 0xFFFFFF, "C"),
 ]
 
 # ==============================================================================
@@ -435,6 +451,14 @@ HATS: list[CosmeticDef] = [
                 "Segmented neon-cyan hexagonal holographic ring with floating HUD ticks.",
                 "六角形ネオンホログラムとデータ目盛が回る光輪。",
                 0x06B6D4, 0x0891B2, 0x67E8F9, "legendary", "cyber_halo", "crystal", True, 1, 8, False, True, True, 220, 0xFFFFFF, "AC"),
+    CosmeticDef("empress_diadem", "hat", "Starlight Diadem", "星界の女帝冠",
+                "Multi-tiered golden imperial starlight diadem orbited by constellation micro-stars!",
+                "極上の宝玉と周回する星屑が頭上に輝く女帝のティアラ冠。",
+                0xFDE047, 0x93C5FD, 0xE0F2FE, "mythic", "empress_diadem", "crystal", True, 1, 8, False, True, False, 255, 0xFFFFFF, "C"),
+    CosmeticDef("bunny_beret", "hat", "Fluffy Bunny Beret", "うさ耳ベレー帽",
+                "Adorable tilted cream plush beret with drooping pastel bunny ears & pink satin bow!",
+                "たれうさ耳とリボンが揺れるとびきり可愛いクリーム色のベレー帽。",
+                0xFFFBEB, 0xFDE68A, 0xF472B6, "legendary", "bunny_beret", "pastel_plush", True, 1, 8, False, True, False, 255, 0xFFFFFF, "C"),
 ]
 
 # ==============================================================================
@@ -545,6 +569,14 @@ AURAS: list[CosmeticDef] = [
                 "Glowing ringed mini planets orbiting around your body like a solar system!",
                 "環を持つミニ惑星があなたを中心に公転する宇宙オーラ。",
                 0x6366F1, 0x1E1B4B, 0xFDE047, "mythic", "galaxy_orbit", "galaxy", True, 1, 8, False, True, False, 255, 0xFFFFFF, "AC"),
+    CosmeticDef("starfall_blades_aura", "aura", "Starfall Swords", "星降りの剣陣",
+                "Six luminous astral spirit swords revolving majestically point-downward around you!",
+                "六振りの星界霊剣が切先を下に向けて周囲を巡る圧巻の剣陣オーラ。",
+                0x38BDF8, 0x1E293B, 0xE0F2FE, "mythic", "starfall_blades", "crystal", True, 1, 8, False, True, False, 255, 0xFFFFFF, "AC"),
+    CosmeticDef("bubble_prism_aura", "aura", "Prism Bubbles", "しゃぼん玉オーラ",
+                "Translucent iridescent pastel soap bubbles drifting blissfully upward around you!",
+                "虹色にきらめく半透明のしゃぼん玉がふわりと舞い上がる癒しオーラ。",
+                0xF9A8D4, 0x93C5FD, 0xBAE6FD, "legendary", "bubble_prism", "pastel_plush", True, 1, 8, False, True, True, 175, 0xFFFFFF, "AC"),
 ]
 
 # ==============================================================================
@@ -639,6 +671,14 @@ PETS: list[CosmeticDef] = [
                 "Tufted great owl with wide feathered disc face and gleaming golden eyes.",
                 "耳羽と黄金の瞳で夜空を見通す星界の大フクロウ。",
                 0x312E81, 0x1E1B4B, 0xFDE047, "legendary", "astral_owl", "galaxy", True, 1, 8, False, True, False, 255, 0xFDE047),
+    CosmeticDef("pet_celestial_kitsune", "pet", "Spirit Kitsune", "九尾の霊狐",
+                "Mystical floating snow-white kitsune with 5 fanned golden tails & shrine collar!",
+                "黄金に輝く五本の尾と紅い首輪を纏って優雅に舞う白狐の精霊ペット。",
+                0xF8FAFC, 0xDC2626, 0xFDE047, "mythic", "celestial_kitsune", "fur", True, 1, 8, False, True, False, 255, 0x38BDF8),
+    CosmeticDef("pet_star_slime", "pet", "Starry Mochi Slime", "ほしぞらスライム",
+                "Glossy pastel crystal slime wearing a tiny gold crown with a glowing star inside!",
+                "小さな王冠をかぶり、ぷるぷるの体の中に星が輝くパステルもちスライム。",
+                0xF9A8D4, 0xC4B5FD, 0xFEF08A, "legendary", "star_slime", "pastel_plush", True, 1, 8, False, True, True, 195, 0x18181B),
 ]
 
 # ==============================================================================
@@ -738,9 +778,40 @@ COMPANIONS: list[CosmeticDef] = [
                 "光る三日月チャームを首に下げた神秘の黒猫。",
                 0x18181B, 0x09090B, 0xFACC15, "epic", "cat_black_moon", "fur", True, 1, 8, False, True, False, 255, 0xFACC15),
     CosmeticDef("comp_crowned_chick", "companion", "Royal Chick", "王冠ひよこ",
-                "Hilariously round fluffy cream chick crowned like tiny royalty!",
-                "小さな黄金の王冠をかぶったまんまるひよこ王。",
+                "Hilariously round fluffy cream chick crowned with a ruby-set royal golden crown!",
+                "ルビー付きの小さな黄金王冠をかぶったまんまるひよこ王。",
                 0xFEF3C7, 0xD97706, 0xFDE047, "legendary", "crowned_chick", "feathers", True, 1, 8, False, True, False, 255, 0x18181B),
+    CosmeticDef("comp_fenrir_wolf", "companion", "Frost Fenrir", "蒼炎のフェンリル",
+                "Regal obsidian spirit wolf armored with glowing glacial ice mane spikes & frozen paws!",
+                "氷結晶のたてがみと蒼い霊炎を纏って駆け抜ける伝説の狼フェンリル。",
+                0x111827, 0x1E293B, 0x38BDF8, "mythic", "fenrir_wolf", "rune_fur", True, 1, 8, False, True, False, 255, 0x67E8F9),
+    CosmeticDef("comp_red_panda", "companion", "Fluffy Red Panda", "レッサーパンダ",
+                "Irresistibly cute rust-and-cream red panda with rosy cheeks & huge fluffy ringed tail!",
+                "ほっぺのチークと大きなしましま尻尾がたまらないふわふわレッサーパンダ。",
+                0xC2410C, 0xFFFBEB, 0x22C55E, "mythic", "red_panda", "fur", True, 1, 8, False, True, False, 255, 0x18181B),
 ]
+
+from catalog_defs_v2 import (  # noqa: E402
+    AURAS_V2,
+    CLOAKS_V2,
+    COMPANIONS_V2,
+    HATS_V2,
+    PETS_V2,
+    WINGS_V2,
+)
+
+# Upgrade all animated cloaks to 10 smooth frames for silky flowing motion!
+def _smooth_cloak(c: CosmeticDef) -> CosmeticDef:
+    if c.animated and c.frames > 1 and c.frames < 10:
+        from dataclasses import replace
+        return replace(c, frames=10, fps=max(8, c.fps))
+    return c
+
+CLOAKS = [_smooth_cloak(c) for c in CLOAKS] + CLOAKS_V2
+WINGS = WINGS + WINGS_V2
+HATS = HATS + HATS_V2
+AURAS = AURAS + AURAS_V2
+PETS = PETS + PETS_V2
+COMPANIONS = COMPANIONS + COMPANIONS_V2
 
 ALL_COSMETICS: list[CosmeticDef] = CLOAKS + WINGS + HATS + AURAS + PETS + COMPANIONS
