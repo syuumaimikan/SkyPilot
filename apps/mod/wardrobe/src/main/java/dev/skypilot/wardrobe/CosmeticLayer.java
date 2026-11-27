@@ -15,12 +15,26 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 
 /**
- * Animated, textured, emissive-lit 3D Blockbench ({@code .bbmodel}) cosmetic layer for BOTH
- * the local player and synced remote players running the Wardrobe mod, with per-slot fine
- * transform adjustments (offset, scale, tilt) and dynamic armor & multi-slot clearances.
+ * Animated, textured, emissive-lit, Chroma/Dye-tinted 3D Blockbench ({@code .bbmodel}) cosmetic
+ * layer for BOTH local and synced remote players, plus live Studio Hover Try-On, full Outfit
+ * Preview, and interactive Studio Motion Simulation (Idle / Walk / Sprint / Glide).
  */
 final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     static int submittedVoxels;
+
+    /** Transient live Studio hover try-on override (never mutates saved config!). */
+    static volatile String studioPreviewSlot;
+    static volatile String studioPreviewId;
+    /** Transient full 10-slot Outfit/Preset live hover preview for OutfitScreen. */
+    static volatile SkyPilotConfig.Appearance studioOutfitPreview;
+    /** Studio pose/motion preview: 0=Idle, 1=Walk, 2=Sprint, 3=Glide/Fly. */
+    static volatile int studioMotionMode;
+
+    static void clearStudioPreviews() {
+        studioPreviewSlot = null;
+        studioPreviewId = null;
+        studioOutfitPreview = null;
+    }
 
     CosmeticLayer(RenderLayerParent<AvatarRenderState, PlayerModel> parent) {
         super(parent);
@@ -36,9 +50,17 @@ final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         AbstractClientPlayer targetPlayer;
         SkyPilotConfig.Appearance a;
 
+        var screen = mc.gui != null ? mc.gui.screen() : null;
+        boolean isGuiEntityPreview = isLocal && (screen instanceof AppearanceScreen
+                || screen instanceof WardrobeAdjustScreen
+                || screen instanceof OutfitScreen
+                || screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>)
+                && collector != CosmeticWorldRenderer.worldCollector();
+
         if (isLocal) {
             targetPlayer = mc.player;
-            a = rt.appearance();
+            SkyPilotConfig.Appearance outfitPrev = (isGuiEntityPreview && screen instanceof OutfitScreen) ? studioOutfitPreview : null;
+            a = outfitPrev != null ? outfitPrev : rt.appearance();
         } else {
             if (!rt.appearance().showOtherPlayers || mc.level == null) return;
             Entity ent = mc.level.getEntity(state.id);
@@ -59,28 +81,37 @@ final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         double speed = phys.smoothedSpeed;
         double vertSpeed = phys.smoothedVertSpeed;
         double yawTurnRate = phys.yawTurnRate;
+
+        // Live Studio Motion Simulator so players can inspect flowing capes, flapping wings & wagging tails!
+        if (isGuiEntityPreview && (screen instanceof AppearanceScreen || screen instanceof WardrobeAdjustScreen || screen instanceof OutfitScreen)) {
+            switch (studioMotionMode) {
+                case 1 -> { speed = 0.16; yawTurnRate = Math.sin(time * 2.2) * 0.45; }
+                case 2 -> { speed = 0.34; yawTurnRate = Math.sin(time * 3.1) * 0.85; }
+                case 3 -> { speed = 0.38; isFlying = true; vertSpeed = -0.18; yawTurnRate = Math.sin(time * 1.8) * 0.65; }
+                default -> { speed = Math.max(speed, 0.04); }
+            }
+        }
+
         boolean glow = a.cosmeticGlow;
         float wingScale = (float) Math.max(0.6, Math.min(1.5, a.wingScale <= 0 ? 1.0 : a.wingScale));
 
         boolean hasHelmet = !targetPlayer.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
         boolean hasChest = !targetPlayer.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
         boolean hasLegs = !targetPlayer.getItemBySlot(EquipmentSlot.LEGS).isEmpty();
-        boolean hasCape = !"none".equals(a.cape);
-
-        // Render static Pet/Companion only inside GUI entity previews (Wardrobe Studio / Adjust / Inventory);
-        // in the live 3D world, CosmeticWorldRenderer renders them with smooth world-space follow physics!
-        var screen = mc.gui != null ? mc.gui.screen() : null;
-        boolean isGuiEntityPreview = isLocal && (screen instanceof AppearanceScreen
-                || screen instanceof WardrobeAdjustScreen
-                || screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?>)
-                && collector != CosmeticWorldRenderer.worldCollector();
+        String hoverSlot = (isGuiEntityPreview && screen instanceof AppearanceScreen) ? studioPreviewSlot : null;
+        String hoverId = (isGuiEntityPreview && screen instanceof AppearanceScreen) ? studioPreviewId : null;
+        String effectiveCape = "cape".equals(hoverSlot) && hoverId != null ? hoverId : a.cape;
+        boolean hasCape = !"none".equals(effectiveCape);
 
         int totalCubes = 0;
 
-        for (String slot : CosmeticCatalog.SLOTS) {
+        for (int slotIdx = 0; slotIdx < CosmeticCatalog.SLOTS.size(); slotIdx++) {
+            String slot = CosmeticCatalog.SLOTS.get(slotIdx);
             if (!isGuiEntityPreview && ("pet".equals(slot) || "companion".equals(slot))) continue;
 
-            String id = CosmeticCatalog.equippedId(a, slot);
+            String id = (slot.equals(hoverSlot) && hoverId != null)
+                    ? hoverId
+                    : CosmeticCatalog.equippedId(a, slot);
             if ("none".equals(id)) continue;
             var rig = CosmeticRigRenderer.get(id);
             if (rig == null) continue;
@@ -135,12 +166,13 @@ final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
                 }
             }
 
-            // Apply fine user-adjusted per-slot transform (Position X/Y/Z, Scale, Tilt X/Y/Z)
-            CosmeticRigRenderer.applySlotTransform(pose, slot, a.transformOf(slot));
+            SkyPilotConfig.SlotTransform tr = a.transformOf(slot);
+            CosmeticRigRenderer.applySlotTransform(pose, slot, tr);
+            int tintArgb = CosmeticRigRenderer.resolveTintArgb(tr, time, slotIdx);
 
             int cubes = CosmeticRigRenderer.submit(
                     rig, pose, collector, light, time,
-                    slotSpeed, sneaking, isFalling, isFlying, vertSpeed, yawTurnRate, glow
+                    slotSpeed, sneaking, isFalling, isFlying, vertSpeed, yawTurnRate, glow, tintArgb
             );
             pose.popPose();
             totalCubes += cubes;
@@ -151,4 +183,3 @@ final class CosmeticLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
         }
     }
 }
-

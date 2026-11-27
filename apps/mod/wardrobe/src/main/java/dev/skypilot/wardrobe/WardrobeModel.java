@@ -87,62 +87,75 @@ final class WardrobeModel {
             int x0, int y0, int x1, int y1,
             double time
     ) {
+        renderCard(g, item, glowEnabled, x0, y0, x1, y1, time, false);
+    }
+
+    static void renderCard(
+            GuiGraphicsExtractor g,
+            CosmeticCatalog.Item item,
+            boolean glowEnabled,
+            int x0, int y0, int x1, int y1,
+            double time,
+            boolean hovered
+    ) {
         ensureModels();
         var rig = CosmeticRigRenderer.get(item.id());
         if (rig == null) return;
         int w = x1 - x0, h = y1 - y0;
         String slot = item.slot();
+        float boost = hovered ? 1.08f : 1.0f;
+        float hoverSpin = hovered ? (float) ((time * 52.0) % 360.0) : 0.0f;
 
         if ("pet".equals(slot) || "companion".equals(slot)) {
-            float rotY = 28.0f + (float) (Math.sin(time * 0.9) * 14.0);
-            float scale = ("pet".equals(slot) ? 0.56f : 0.44f) * Math.min(w, h);
+            float rotY = hovered ? hoverSpin : (28.0f + (float) (Math.sin(time * 0.9) * 14.0));
+            float scale = ("pet".equals(slot) ? 0.56f : 0.44f) * Math.min(w, h) * boost;
             CosmeticRigRenderer.renderGui(rig, g, scale, -14.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, true, null);
             return;
         }
 
         if ("hat".equals(slot) || "face".equals(slot)) {
             // Centered Head-Bust view with +14px vertical shift: 100% of tall crowns, horns, ears & masks visible!
-            float scale = "face".equals(slot) ? Math.min(w * 0.46f, h * 0.72f) : Math.min(w * 0.36f, h * 0.58f);
-            float rotY = ("face".equals(slot) ? 18.0f : 26.0f) + (float) (Math.sin(time * 0.85) * 12.0);
+            float scale = ("face".equals(slot) ? Math.min(w * 0.46f, h * 0.72f) : Math.min(w * 0.36f, h * 0.58f)) * boost;
+            float rotY = hovered ? (24.0f + (float) (Math.sin(time * 2.1) * 34.0)) : (("face".equals(slot) ? 18.0f : 26.0f) + (float) (Math.sin(time * 0.85) * 12.0));
             g.skin(headBustModel, TEXTURE, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1);
             CosmeticRigRenderer.renderGui(rig, g, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, true, null);
             return;
         }
 
         if ("feet".equals(slot)) {
-            float scale = Math.min(w * 0.34f, h * 0.54f);
-            float rotY = 30.0f + (float) (Math.sin(time * 0.7) * 14.0);
+            float scale = Math.min(w * 0.34f, h * 0.54f) * boost;
+            float rotY = hovered ? hoverSpin : (30.0f + (float) (Math.sin(time * 0.7) * 14.0));
             g.skin(feetBustModel, TEXTURE, scale, -18.0f, rotY, 0.0f, x0, y0, x1, y1);
             CosmeticRigRenderer.renderGui(rig, g, scale, -18.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, true, null);
             return;
         }
 
         if ("shoulder".equals(slot)) {
-            float scale = Math.min(w * 0.29f, h * 0.46f);
-            float rotY = 26.0f + (float) (Math.sin(time * 0.8) * 12.0);
+            float scale = Math.min(w * 0.29f, h * 0.46f) * boost;
+            float rotY = hovered ? (26.0f + (float) (Math.sin(time * 1.9) * 38.0)) : (26.0f + (float) (Math.sin(time * 0.8) * 12.0));
             g.skin(mannequinModel, TEXTURE, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1);
             CosmeticRigRenderer.renderGui(rig, g, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, false, null);
             return;
         }
 
         if ("waist".equals(slot)) {
-            float scale = Math.min(w * 0.26f, h * 0.42f);
-            float rotY = 142.0f + (float) (Math.sin(time * 0.8) * 14.0);
+            float scale = Math.min(w * 0.26f, h * 0.42f) * boost;
+            float rotY = hovered ? (145.0f + (float) (Math.sin(time * 1.8) * 42.0)) : (142.0f + (float) (Math.sin(time * 0.8) * 14.0));
             g.skin(mannequinModel, TEXTURE, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1);
             CosmeticRigRenderer.renderGui(rig, g, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, false, null);
             return;
         }
 
         if ("aura".equals(slot)) {
-            float scale = Math.min(w * 0.22f, h * 0.36f);
-            float rotY = 32.0f + (float) (Math.sin(time * 0.6) * 12.0);
+            float scale = Math.min(w * 0.22f, h * 0.36f) * boost;
+            float rotY = hovered ? hoverSpin : (32.0f + (float) (Math.sin(time * 0.6) * 12.0));
             g.skin(mannequinModel, TEXTURE, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1);
             CosmeticRigRenderer.renderGui(rig, g, scale, -10.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, false, null);
             return;
         }
 
-        float scale = "back".equals(slot) ? Math.min(w * 0.23f, h * 0.38f) : Math.min(w * 0.28f, h * 0.44f);
-        float rotY = 158.0f + (float) (Math.sin(time * 0.7) * 8.0);
+        float scale = ("back".equals(slot) ? Math.min(w * 0.23f, h * 0.38f) : Math.min(w * 0.28f, h * 0.44f)) * boost;
+        float rotY = hovered ? (158.0f + (float) (Math.sin(time * 1.8) * 32.0)) : (158.0f + (float) (Math.sin(time * 0.7) * 8.0));
         g.skin(mannequinModel, TEXTURE, scale, -8.0f, rotY, 0.0f, x0, y0, x1, y1);
         CosmeticRigRenderer.renderGui(rig, g, scale, -8.0f, rotY, 0.0f, x0, y0, x1, y1, time, glowEnabled, false, null);
     }

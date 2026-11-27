@@ -8,6 +8,10 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -22,10 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Living world-space physics, warp/teleport recovery, AND 8 distinct signature visual attack
- * choreographies tailored per Pet &amp; Companion archetype (Dragon Fireball Breath, Beast Claw
- * Pounce, Phantom Blink Slash, Arcane Star Barrage, Cyber Orbital Laser, Hydro Wave Surge,
- * Meteor Slam, and Iaijutsu Flash Cut) — 100% client-side visual only!
+ * Living world-space physics, warp/teleport recovery, 8 signature per-species visual attack
+ * choreographies, AND full interactive bonding system (Patting, Treats, 3D Ball Fetch, Tricks,
+ * Sit/Stay, Head/Shoulder Perch, Crouch-Greeting, Eye-Contact &amp; Persisted Affection Levels)
+ * — 100% client-side visual/audio only, zero game server packets!
  */
 final class PetWorldPhysics {
     enum AttackStyle {
@@ -39,12 +43,18 @@ final class PetWorldPhysics {
         IAI_DASH_SLASH    // Samurai, Knight, Sword, Blade, Golem, Valkyrie
     }
 
+    enum Action {
+        PAT, TREAT, FETCH, TRICK, TOGGLE_STAY, TOGGLE_PERCH
+    }
+
     enum PetMode {
-        FOLLOW_SIDE, ORBIT_PLAYFUL, PERCH_SHOULDER_L, PERCH_SHOULDER_R, PERCH_HEAD, CURIOUS_PEEK, ATTACK_TARGET
+        FOLLOW_SIDE, ORBIT_PLAYFUL, PERCH_SHOULDER_L, PERCH_SHOULDER_R, PERCH_HEAD, CURIOUS_PEEK, ATTACK_TARGET,
+        INTERACT_PAT, INTERACT_TREAT, INTERACT_FETCH, INTERACT_TRICK, STAY_WAIT, PERCH_COMMAND
     }
 
     enum CompMode {
-        FOLLOW, WANDER, SIT_WATCH, ATTACK_TARGET
+        FOLLOW, WANDER, SIT_WATCH, ATTACK_TARGET,
+        INTERACT_PAT, INTERACT_TREAT, INTERACT_FETCH, INTERACT_TRICK, STAY_WAIT, PERCH_SHOULDER
     }
 
     static final class Snapshot {
@@ -97,12 +107,14 @@ final class PetWorldPhysics {
     private static int petAttackSide = 1;
     private static AttackStyle petAttackStyle = AttackStyle.CLAW_POUNCE;
     private static String petAttackCosmeticId = "";
+    private static int petInteractTicks;
+    private static double petStayX, petStayY, petStayZ;
 
     // ---- Local Ground Companion State ----
     private static boolean compInit;
     private static double cx, cy, cz, prevCx, prevCy, prevCz;
     private static double cvx, cvz;
-    private static float cYaw, prevCYaw, cPitch, prevCPitch;
+    private static float cYaw, prevCYaw, cPitch, prevCPitch, cRoll, prevCRoll;
     private static double cHop, prevCHop;
     private static CompMode compMode = CompMode.FOLLOW;
     private static int compModeTicks;
@@ -115,6 +127,29 @@ final class PetWorldPhysics {
     private static int compAttackSide = 1;
     private static AttackStyle compAttackStyle = AttackStyle.CLAW_POUNCE;
     private static String compAttackCosmeticId = "";
+    private static int compInteractTicks;
+    private static double compStayX, compStayZ;
+
+    // ---- Interactive Play Objects (Treat & 3D Bouncing Fetch Ball) ----
+    private static boolean stayCommanded;
+    private static boolean perchCommanded;
+    private static boolean treatActive;
+    private static double treatX, treatY, treatZ;
+    private static int treatTicks;
+
+    private static boolean ballActive;
+    private static int ballCarriedBy; // 0 = loose/bouncing, 1 = pet carrying, 2 = companion carrying
+    private static double ballX, ballY, ballZ, prevBallX, prevBallY, prevBallZ;
+    private static double ballVx, ballVy, ballVz;
+    private static int ballTicks;
+
+    // ---- Natural Reactive Behavior (Crouch Greet, Eye Contact, Bond Cooldown) ----
+    private static boolean wasCrouching;
+    private static long lastCrouchEdgeMs;
+    private static long lastCrouchGreetMs;
+    private static long lastBondAwardMs;
+    private static long lastDirectClickMs;
+    private static int gazeTicks;
 
     private PetWorldPhysics() {}
 
@@ -174,6 +209,36 @@ final class PetWorldPhysics {
         };
     }
 
+    private static void playSpeciesSound(ClientLevel level, double x, double y, double z, String cosmeticId, float vol, float pitchBase) {
+        if (level == null) return;
+        String s = cosmeticId == null ? "" : cosmeticId.toLowerCase(Locale.ROOT);
+        SoundEvent sound;
+        float pitch = pitchBase;
+        if (s.contains("cat") || s.contains("kitty") || s.contains("mochi") || s.contains("calico") || s.contains("tiger") || s.contains("lion")) {
+            sound = SoundEvents.CAT_PURREOW_BABY.value();
+            pitch = pitchBase * 1.05f;
+        } else if (s.contains("axolotl") || s.contains("whale") || s.contains("shark") || s.contains("dolphin") || s.contains("koi") || s.contains("otter")) {
+            sound = SoundEvents.AXOLOTL_IDLE_AIR;
+            pitch = pitchBase * 1.12f;
+        } else if (s.contains("wolf") || s.contains("dog") || s.contains("shiba") || s.contains("corgi") || s.contains("fenrir") || s.contains("cerberus")) {
+            sound = SoundEvents.WOLF_AMBIENT_BABY.value();
+            pitch = pitchBase * 1.08f;
+        } else if (s.contains("fox") || s.contains("kitsune") || s.contains("ferret")) {
+            sound = SoundEvents.FOX_AMBIENT;
+            pitch = pitchBase * 1.18f;
+        } else if (s.contains("slime") || s.contains("jelly")) {
+            sound = SoundEvents.SLIME_SQUISH_SMALL;
+            pitch = pitchBase * 1.25f;
+        } else if (s.contains("owl") || s.contains("bird") || s.contains("chick") || s.contains("duck") || s.contains("penguin") || s.contains("raven") || s.contains("phoenix")) {
+            sound = SoundEvents.PARROT_AMBIENT;
+            pitch = pitchBase * 1.15f;
+        } else {
+            sound = SoundEvents.ALLAY_AMBIENT_WITH_ITEM;
+            pitch = pitchBase * 1.10f;
+        }
+        level.playLocalSound(x, y, z, sound, SoundSource.NEUTRAL, vol, pitch, false);
+    }
+
     static void reset() {
         petInit = false;
         compInit = false;
@@ -186,8 +251,271 @@ final class PetWorldPhysics {
         compStruck = false;
         cHop = prevCHop = 0.0;
         cPitch = prevCPitch = 0.0f;
+        cRoll = prevCRoll = 0.0f;
+        treatActive = false;
+        ballActive = false;
+        ballCarriedBy = 0;
+        stayCommanded = false;
+        perchCommanded = false;
+        petInteractTicks = 0;
+        compInteractTicks = 0;
+        gazeTicks = 0;
         REMOTE_STATES.clear();
     }
+
+    // ---------------------------------------------------------------- Public Pet Interaction API
+
+    static boolean isStaying() {
+        return stayCommanded;
+    }
+
+    static boolean isPerchCommanded() {
+        return perchCommanded;
+    }
+
+    static String currentMoodLabel(boolean ja) {
+        if (ballActive) return ja ? "🎾 ボールを追いかけ中！" : "🎾 Playing fetch!";
+        if (treatActive) return ja ? "🍪 おやつに夢中！" : "🍪 Catching a treat!";
+        if (petMode == PetMode.INTERACT_PAT || compMode == CompMode.INTERACT_PAT) return ja ? "♥ なでられてご機嫌！" : "♥ Loving the pats!";
+        if (petMode == PetMode.INTERACT_TRICK || compMode == CompMode.INTERACT_TRICK) return ja ? "✨ とくぎ披露中！" : "✨ Performing a trick!";
+        if (stayCommanded) return ja ? "🪑 おすわり待機中" : "🪑 Sitting & waiting";
+        if (perchCommanded) return ja ? "🤗 頭・肩でくつろぎ中" : "🤗 Snuggling on perch";
+        return ja ? "🐾 いっしょにお散歩中" : "🐾 Happily following you";
+    }
+
+    /** Ray-sphere hit test checking if player is looking directly at their floating pet or companion. */
+    static String aimedPetSlot(LocalPlayer player, double maxDist) {
+        if (player == null) return null;
+        Vec3 eye = player.getEyePosition();
+        Vec3 dir = player.getLookAngle().normalize();
+        double bestT = maxDist + 1.0;
+        String best = null;
+        if (petInit) {
+            double t = raySphereHit(eye, dir, new Vec3(px, py, pz), 0.62, maxDist);
+            if (t >= 0 && t < bestT) { bestT = t; best = "pet"; }
+        }
+        if (compInit) {
+            double t = raySphereHit(eye, dir, new Vec3(cx, cy + cHop + 0.42, cz), 0.68, maxDist);
+            if (t >= 0 && t < bestT) { bestT = t; best = "companion"; }
+        }
+        return best;
+    }
+
+    private static double raySphereHit(Vec3 ro, Vec3 rd, Vec3 center, double radius, double maxDist) {
+        Vec3 oc = center.subtract(ro);
+        double proj = oc.dot(rd);
+        if (proj < 0.0 || proj > maxDist) return -1.0;
+        double distSq = oc.lengthSqr() - proj * proj;
+        return distSq <= radius * radius ? proj : -1.0;
+    }
+
+    /** Called on empty-hand right-click: if aiming at your pet or companion, pets them immediately! */
+    static boolean tryDirectPetClick(Minecraft mc) {
+        LocalPlayer player = mc.player;
+        if (player == null || mc.level == null) return false;
+        long now = System.currentTimeMillis();
+        if (now - lastDirectClickMs < 320L) return false;
+        String slot = aimedPetSlot(player, 4.4);
+        if (slot == null) return false;
+        lastDirectClickMs = now;
+        return performAction(Action.PAT, slot);
+    }
+
+    /**
+     * Performs an interactive action with the player's equipped Pet and/or Companion.
+     *
+     * @param action           One of the 6 bonding actions
+     * @param targetSlotFilter {@code "pet"}, {@code "companion"}, or {@code null} for both
+     * @return true if at least one pet/companion responded
+     */
+    static boolean performAction(Action action, String targetSlotFilter) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        ClientLevel level = mc.level;
+        WardrobeRuntime rt = WardrobeRuntime.get();
+        if (player == null || level == null || rt == null) return false;
+
+        SkyPilotConfig.Appearance a = rt.appearance();
+        boolean ja = rt.japanese();
+        boolean usePet = !"none".equals(a.pet) && (targetSlotFilter == null || "pet".equals(targetSlotFilter));
+        boolean useComp = !"none".equals(a.companion) && (targetSlotFilter == null || "companion".equals(targetSlotFilter));
+
+        if (!usePet && !useComp) {
+            mc.gui.hud.setOverlayMessage(Component.literal(
+                    ja ? "ペットまたは相棒を装備してから触れ合えます (Kキーで装備)"
+                            : "Equip a Pet or Companion first (press K)"), false);
+            return false;
+        }
+
+        // Ensure initialized right near player if invoked right after equipping
+        if (usePet && !petInit) {
+            px = prevPx = player.getX() + 0.85; py = prevPy = player.getY() + 1.5; pz = prevPz = player.getZ();
+            petInit = true;
+        }
+        if (useComp && !compInit) {
+            cx = prevCx = player.getX() - 0.95; cz = prevCz = player.getZ();
+            cy = prevCy = findGroundY(level, cx, player.getY(), cz);
+            compInit = true;
+        }
+
+        String primaryId = usePet ? a.pet : a.companion;
+        var primaryItem = CosmeticCatalog.byId(primaryId);
+        String petLabel = primaryItem != null ? primaryItem.label(ja) : (ja ? "ペット" : "Pet");
+        int baseColor = primaryItem != null ? (primaryItem.color() & 0xFFFFFF) : 0xF472B6;
+        if (usePet && useComp && targetSlotFilter == null) {
+            petLabel = ja ? "ペット＆相棒" : "Pet & Companion";
+        }
+
+        long now = System.currentTimeMillis();
+        boolean canAwardBond = (now - lastBondAwardMs >= 1600L);
+
+        switch (action) {
+            case PAT -> {
+                if (usePet) {
+                    petMode = PetMode.INTERACT_PAT;
+                    petInteractTicks = 36;
+                    WardrobeVfxEngine.spawnPetHearts(new Vec3(px, py + 0.25, pz), 8, 0xF472B6, 0xFDE047);
+                    playSpeciesSound(level, px, py, pz, a.pet, 0.72f, 1.08f);
+                }
+                if (useComp) {
+                    compMode = CompMode.INTERACT_PAT;
+                    compInteractTicks = 36;
+                    cHop = Math.max(cHop, 0.34);
+                    WardrobeVfxEngine.spawnPetHearts(new Vec3(cx, cy + 0.55, cz), 8, 0xF472B6, 0x67E8F9);
+                    playSpeciesSound(level, cx, cy + 0.5, cz, a.companion, 0.72f, 1.05f);
+                }
+                level.playLocalSound(player.getX(), player.getY() + 1.2, player.getZ(),
+                        SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 0.45f, 1.35f, false);
+                int lv = awardBond(rt, a, usePet, useComp, canAwardBond ? 2 : 0);
+                int pts = a.bondOf(primaryId);
+                mc.gui.hud.setOverlayMessage(Component.literal(
+                        ja ? "♥ " + petLabel + "をなでた！ (なつき度 Lv." + lv + " · ♥" + pts + ")"
+                                : "♥ You patted " + petLabel + "! (Bond Lv." + lv + " · ♥" + pts + ")"), false);
+            }
+            case TREAT -> {
+                stayCommanded = false;
+                perchCommanded = false;
+                Vec3 eye = player.getEyePosition();
+                Vec3 look = player.getLookAngle();
+                treatX = eye.x + look.x * 1.45;
+                treatY = Mth.clamp(eye.y + look.y * 1.10 - 0.08, player.getY() + 0.65, player.getY() + 2.15);
+                treatZ = eye.z + look.z * 1.45;
+                treatActive = true;
+                treatTicks = 44;
+                if (usePet) { petMode = PetMode.INTERACT_TREAT; petInteractTicks = 46; }
+                if (useComp) { compMode = CompMode.INTERACT_TREAT; compInteractTicks = 46; }
+                WardrobeVfxEngine.spawnTreatVisual(new Vec3(treatX, treatY, treatZ), false);
+                level.playLocalSound(treatX, treatY, treatZ, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.NEUTRAL, 0.6f, 1.4f, false);
+                int lv = awardBond(rt, a, usePet, useComp, canAwardBond ? 4 : 0);
+                mc.gui.hud.setOverlayMessage(Component.literal(
+                        ja ? "🍪 " + petLabel + "におやつをあげた！ (なつき度 Lv." + lv + ")"
+                                : "🍪 You offered a treat to " + petLabel + "! (Bond Lv." + lv + ")"), false);
+            }
+            case FETCH -> {
+                stayCommanded = false;
+                perchCommanded = false;
+                Vec3 eye = player.getEyePosition();
+                Vec3 look = player.getLookAngle().normalize();
+                ballX = prevBallX = eye.x + look.x * 0.7;
+                ballY = prevBallY = eye.y - 0.15;
+                ballZ = prevBallZ = eye.z + look.z * 0.7;
+                ballVx = look.x * 0.56;
+                ballVy = Math.max(0.22, look.y * 0.42 + 0.24);
+                ballVz = look.z * 0.56;
+                ballCarriedBy = 0;
+                ballActive = true;
+                ballTicks = 130;
+                if (usePet) { petMode = PetMode.INTERACT_FETCH; petInteractTicks = 130; }
+                if (useComp) { compMode = CompMode.INTERACT_FETCH; compInteractTicks = 130; }
+                level.playLocalSound(player.getX(), player.getY() + 1.2, player.getZ(),
+                        SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.55f, 1.3f, false);
+                mc.gui.hud.setOverlayMessage(Component.literal(
+                        ja ? "🎾 ボールを投げた！ " + petLabel + "が取りに行きます！"
+                                : "🎾 Ball tossed! " + petLabel + " is racing to fetch it!"), false);
+            }
+            case TRICK -> {
+                stayCommanded = false;
+                perchCommanded = false;
+                if (usePet) {
+                    petMode = PetMode.INTERACT_TRICK;
+                    petInteractTicks = 42;
+                    WardrobeVfxEngine.spawnTrickShow(new Vec3(px, py, pz), baseColor, 0xFDE047);
+                    playSpeciesSound(level, px, py, pz, a.pet, 0.75f, 1.22f);
+                }
+                if (useComp) {
+                    compMode = CompMode.INTERACT_TRICK;
+                    compInteractTicks = 42;
+                    WardrobeVfxEngine.spawnTrickShow(new Vec3(cx, cy + 0.45, cz), baseColor, 0x67E8F9);
+                    playSpeciesSound(level, cx, cy + 0.5, cz, a.companion, 0.75f, 1.18f);
+                }
+                level.playLocalSound(player.getX(), player.getY() + 1.2, player.getZ(),
+                        SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.NEUTRAL, 0.65f, 1.25f, false);
+                int lv = awardBond(rt, a, usePet, useComp, canAwardBond ? 3 : 0);
+                mc.gui.hud.setOverlayMessage(Component.literal(
+                        ja ? "✨ " + petLabel + "がクルッととくぎを披露！ (なつき度 Lv." + lv + ")"
+                                : "✨ " + petLabel + " performed a dazzling trick! (Bond Lv." + lv + ")"), false);
+            }
+            case TOGGLE_STAY -> {
+                stayCommanded = !stayCommanded;
+                if (stayCommanded) {
+                    perchCommanded = false;
+                    if (usePet) {
+                        petStayX = px; petStayY = py; petStayZ = pz;
+                        petMode = PetMode.STAY_WAIT;
+                    }
+                    if (useComp) {
+                        compStayX = cx; compStayZ = cz;
+                        compMode = CompMode.STAY_WAIT;
+                    }
+                    level.playLocalSound(player.getX(), player.getY() + 1.0, player.getZ(),
+                            SoundEvents.NOTE_BLOCK_CHIME.value(), SoundSource.NEUTRAL, 0.5f, 0.85f, false);
+                    mc.gui.hud.setOverlayMessage(Component.literal(
+                            ja ? "🪑 " + petLabel + "はおすわりして待っています"
+                                    : "🪑 " + petLabel + " is sitting and waiting"), false);
+                } else {
+                    if (usePet) { petMode = PetMode.FOLLOW_SIDE; petModeTicks = 70; }
+                    if (useComp) { compMode = CompMode.FOLLOW; compModeTicks = 70; cHop = 0.28; }
+                    playSpeciesSound(level, player.getX(), player.getY() + 1.2, player.getZ(), primaryId, 0.65f, 1.15f);
+                    mc.gui.hud.setOverlayMessage(Component.literal(
+                            ja ? "🐾 " + petLabel + "が元気に戻ってきました！"
+                                    : "🐾 " + petLabel + " came running back!"), false);
+                }
+            }
+            case TOGGLE_PERCH -> {
+                perchCommanded = !perchCommanded;
+                if (perchCommanded) {
+                    stayCommanded = false;
+                    if (usePet) petMode = PetMode.PERCH_COMMAND;
+                    if (useComp) compMode = CompMode.PERCH_SHOULDER;
+                    playSpeciesSound(level, player.getX(), player.getY() + 1.5, player.getZ(), primaryId, 0.7f, 1.18f);
+                    WardrobeVfxEngine.spawnPetHearts(player.position().add(0, 1.8, 0), 6, 0xF472B6, 0x67E8F9);
+                    mc.gui.hud.setOverlayMessage(Component.literal(
+                            ja ? "🤗 " + petLabel + "があなたの頭・肩にちょこんと乗りました！"
+                                    : "🤗 " + petLabel + " hopped happily onto your perch!"), false);
+                } else {
+                    if (usePet) { petMode = PetMode.FOLLOW_SIDE; petModeTicks = 70; }
+                    if (useComp) { compMode = CompMode.FOLLOW; compModeTicks = 70; }
+                    mc.gui.hud.setOverlayMessage(Component.literal(
+                            ja ? "🐾 " + petLabel + "が軽やかに降りました"
+                                    : "🐾 " + petLabel + " hopped back down"), false);
+                }
+            }
+        }
+        return true;
+    }
+
+    private static int awardBond(WardrobeRuntime rt, SkyPilotConfig.Appearance a, boolean usePet, boolean useComp, int delta) {
+        if (delta > 0) {
+            lastBondAwardMs = System.currentTimeMillis();
+            if (usePet) a.addBond(a.pet, delta);
+            if (useComp) a.addBond(a.companion, delta);
+            rt.save();
+        }
+        String key = usePet ? a.pet : a.companion;
+        return SkyPilotConfig.Appearance.bondLevel(a.bondOf(key));
+    }
+
+    // ---------------------------------------------------------------- Attack Hook
 
     static void onPlayerAttack(Entity target) {
         Minecraft mc = Minecraft.getInstance();
@@ -199,7 +527,7 @@ final class PetWorldPhysics {
         SkyPilotConfig.Appearance a = rt.appearance();
         lastAttackTriggerTick = player.tickCount;
 
-        if (!"none".equals(a.pet) && petInit) {
+        if (!"none".equals(a.pet) && petInit && !stayCommanded) {
             petAttackTargetId = target.getId();
             petMode = PetMode.ATTACK_TARGET;
             petAttackAge = 0;
@@ -210,7 +538,7 @@ final class PetWorldPhysics {
             petAttackStyle = attackStyleFor(a.pet);
             petModeTicks = 24;
         }
-        if (!"none".equals(a.companion) && compInit) {
+        if (!"none".equals(a.companion) && compInit && !stayCommanded) {
             compAttackTargetId = target.getId();
             compMode = CompMode.ATTACK_TARGET;
             compAttackAge = 0;
@@ -229,6 +557,8 @@ final class PetWorldPhysics {
         if (le.isInvisibleTo(player)) return false;
         return le.distanceToSqr(player) <= 18.0 * 18.0;
     }
+
+    // ---------------------------------------------------------------- Tick Loop
 
     static void tick(Minecraft mc) {
         LocalPlayer player = mc.player;
@@ -251,8 +581,13 @@ final class PetWorldPhysics {
             compAttackTargetId = -1;
             petStruck = false;
             compStruck = false;
+            treatActive = false;
+            ballActive = false;
+            ballCarriedBy = 0;
+            stayCommanded = false;
             cHop = prevCHop = 0.0;
             cPitch = prevCPitch = 0.0f;
+            cRoll = prevCRoll = 0.0f;
             if (levelChanged) REMOTE_STATES.clear();
         }
         lastLevel = level;
@@ -264,6 +599,40 @@ final class PetWorldPhysics {
 
         SkyPilotConfig.Appearance a = rt.appearance();
         boolean firstPerson = mc.options.getCameraType().isFirstPerson();
+
+        // Natural Crouch-Greeting (double-tap Shift near pet/companion -> happy greeting hop & heart!)
+        boolean crouchingNow = player.isCrouching();
+        if (crouchingNow && !wasCrouching && (!"none".equals(a.pet) || !"none".equals(a.companion))) {
+            long now = System.currentTimeMillis();
+            if (now - lastCrouchEdgeMs < 650L && now - lastCrouchGreetMs > 2800L) {
+                lastCrouchGreetMs = now;
+                if (petInit && petMode != PetMode.ATTACK_TARGET) {
+                    petMode = PetMode.INTERACT_PAT;
+                    petInteractTicks = 24;
+                    WardrobeVfxEngine.spawnPetHearts(new Vec3(px, py + 0.25, pz), 4, 0xF472B6, 0xFDE047);
+                    playSpeciesSound(level, px, py, pz, a.pet, 0.55f, 1.22f);
+                }
+                if (compInit && compMode != CompMode.ATTACK_TARGET) {
+                    compMode = CompMode.INTERACT_PAT;
+                    compInteractTicks = 24;
+                    cHop = 0.36;
+                    WardrobeVfxEngine.spawnPetHearts(new Vec3(cx, cy + 0.55, cz), 4, 0xF472B6, 0x67E8F9);
+                    playSpeciesSound(level, cx, cy + 0.5, cz, a.companion, 0.55f, 1.18f);
+                }
+            }
+            lastCrouchEdgeMs = now;
+        }
+        wasCrouching = crouchingNow;
+
+        // Track eye-contact curiosity when looking at pet/companion while standing still
+        if (aimedPetSlot(player, 4.5) != null && Math.hypot(player.getDeltaMovement().x, player.getDeltaMovement().z) < 0.05) {
+            gazeTicks = Math.min(80, gazeTicks + 1);
+        } else {
+            gazeTicks = 0;
+        }
+
+        // Advance floating treat & bouncing fetch toy physics
+        tickInteractiveObjects(mc, player, level, rt, a);
 
         if (player.swinging && player.swingTime == 1 && (player.tickCount - lastAttackTriggerTick) >= 2
                 && (!"none".equals(a.pet) || !"none".equals(a.companion))) {
@@ -278,7 +647,7 @@ final class PetWorldPhysics {
             petAttackTargetId = -1;
         }
         if (!"none".equals(a.companion)) {
-            tickCompanion(player, level);
+            tickCompanion(player, level, a, firstPerson);
         } else {
             compInit = false;
             compAttackTargetId = -1;
@@ -288,6 +657,83 @@ final class PetWorldPhysics {
             tickRemotePlayers(player, level);
         } else if (!REMOTE_STATES.isEmpty()) {
             REMOTE_STATES.clear();
+        }
+    }
+
+    private static void tickInteractiveObjects(Minecraft mc, LocalPlayer player, ClientLevel level, WardrobeRuntime rt, SkyPilotConfig.Appearance a) {
+        if (treatActive) {
+            treatTicks--;
+            treatY += Math.sin(player.tickCount * 0.25) * 0.012;
+            WardrobeVfxEngine.spawnTreatVisual(new Vec3(treatX, treatY, treatZ), false);
+            boolean petAte = petInit && Math.sqrt(Math.pow(px - treatX, 2) + Math.pow(py - treatY, 2) + Math.pow(pz - treatZ, 2)) < 0.52;
+            boolean compAte = compInit && Math.hypot(cx - treatX, cz - treatZ) < 0.68 && treatTicks < 34;
+            if (petAte || compAte || treatTicks <= 0) {
+                treatActive = false;
+                WardrobeVfxEngine.spawnTreatVisual(new Vec3(treatX, treatY, treatZ), true);
+                level.playLocalSound(treatX, treatY, treatZ, SoundEvents.GENERIC_EAT.value(), SoundSource.NEUTRAL, 0.78f, 1.15f, false);
+                level.playLocalSound(treatX, treatY, treatZ, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.5f, 1.45f, false);
+                if (petInit) { petMode = PetMode.INTERACT_PAT; petInteractTicks = 26; }
+                if (compInit) { compMode = CompMode.INTERACT_PAT; compInteractTicks = 26; cHop = 0.42; }
+            }
+        }
+
+        if (ballActive) {
+            ballTicks--;
+            prevBallX = ballX; prevBallY = ballY; prevBallZ = ballZ;
+            if (ballCarriedBy == 0) {
+                ballVy -= 0.045;
+                ballX += ballVx;
+                ballY += ballVy;
+                ballZ += ballVz;
+                double floorY = findGroundY(level, ballX, ballY, ballZ) + 0.16;
+                if (ballY < floorY) {
+                    ballY = floorY;
+                    ballVy = Math.abs(ballVy) * 0.56;
+                    if (ballVy < 0.06) ballVy = 0.0;
+                    ballVx *= 0.74;
+                    ballVz *= 0.74;
+                } else {
+                    ballVx *= 0.985;
+                    ballVz *= 0.985;
+                }
+                // Check pickup by Pet or Companion
+                if (ballTicks < 122) {
+                    if (petInit && Math.sqrt(Math.pow(px - ballX, 2) + Math.pow(py - ballY, 2) + Math.pow(pz - ballZ, 2)) < 0.72) {
+                        ballCarriedBy = 1;
+                        playSpeciesSound(level, px, py, pz, a.pet, 0.72f, 1.25f);
+                        WardrobeVfxEngine.spawnPetHearts(new Vec3(ballX, ballY + 0.2, ballZ), 5, 0x38BDF8, 0xFDE047);
+                    } else if (compInit && Math.hypot(cx - ballX, cz - ballZ) < 0.85 && ballY <= cy + 1.25) {
+                        ballCarriedBy = 2;
+                        playSpeciesSound(level, cx, cy + 0.5, cz, a.companion, 0.72f, 1.20f);
+                        WardrobeVfxEngine.spawnPetHearts(new Vec3(ballX, ballY + 0.2, ballZ), 5, 0x38BDF8, 0xFDE047);
+                    }
+                }
+            } else if (ballCarriedBy == 1 && petInit) {
+                ballX = px; ballY = py - 0.18; ballZ = pz;
+            } else if (ballCarriedBy == 2 && compInit) {
+                ballX = cx; ballY = cy + cHop + 0.42; ballZ = cz;
+            }
+
+            WardrobeVfxEngine.spawnToyBallFrame(new Vec3(ballX, ballY, ballZ), new Vec3(prevBallX, prevBallY, prevBallZ), 0x38BDF8, 0xF472B6);
+
+            // Delivered back to player!
+            boolean delivered = ballCarriedBy != 0 && Math.hypot(ballX - player.getX(), ballZ - player.getZ()) < 1.65;
+            if (delivered || ballTicks <= 0) {
+                ballActive = false;
+                if (delivered) {
+                    boolean ja = rt.japanese();
+                    WardrobeVfxEngine.spawnTrickShow(new Vec3(ballX, ballY + 0.2, ballZ), 0x38BDF8, 0xF472B6);
+                    level.playLocalSound(player.getX(), player.getY() + 1.2, player.getZ(),
+                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 0.7f, 1.35f, false);
+                    int lv = awardBond(rt, a, !"none".equals(a.pet), !"none".equals(a.companion), 5);
+                    mc.gui.hud.setOverlayMessage(Component.literal(
+                            ja ? "🎾 ナイスキャッチ！ ボールを持ってきてくれた！ (+5♥ · Lv." + lv + ")"
+                                    : "🎾 Good fetch! Brought the ball right back! (+5♥ · Lv." + lv + ")"), false);
+                }
+                ballCarriedBy = 0;
+                if (petInit && petMode == PetMode.INTERACT_FETCH) { petMode = PetMode.INTERACT_PAT; petInteractTicks = 24; }
+                if (compInit && compMode == CompMode.INTERACT_FETCH) { compMode = CompMode.INTERACT_PAT; compInteractTicks = 24; cHop = 0.42; }
+            }
         }
     }
 
@@ -368,7 +814,7 @@ final class PetWorldPhysics {
         return best;
     }
 
-    // ---------------------------------------------------------------- Floating Pet AI & 8 Signature Attacks
+    // ---------------------------------------------------------------- Floating Pet AI & Interactive Modes
 
     private static void tickPet(LocalPlayer player, ClientLevel level, SkyPilotConfig.Appearance a, boolean firstPerson) {
         double bodyRad = Math.toRadians(player.yBodyRot);
@@ -384,15 +830,17 @@ final class PetWorldPhysics {
         boolean hasChest = !player.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
         boolean hasHat = !"none".equals(a.hat);
 
-        boolean attacking = petMode == PetMode.ATTACK_TARGET;
-        if (!petInit || Math.hypot(px - player.getX(), pz - player.getZ()) > (attacking ? 22.0 : 13.0)
-                || Math.abs(py - (player.getY() + 1.5)) > (attacking ? 11.0 : 5.5)) {
+        boolean wideRange = petMode == PetMode.ATTACK_TARGET || petMode == PetMode.INTERACT_FETCH || petMode == PetMode.STAY_WAIT;
+        if (!petInit || Math.hypot(px - player.getX(), pz - player.getZ()) > (wideRange ? 24.0 : 13.0)
+                || Math.abs(py - (player.getY() + 1.5)) > (wideRange ? 12.0 : 5.5)) {
             px = prevPx = player.getX() + leftX * 0.95 - fwdX * 0.35;
             py = prevPy = player.getY() + 1.55;
             pz = prevPz = player.getZ() + leftZ * 0.95 - fwdZ * 0.35;
             pvx = pvy = pvz = 0;
             pYaw = prevPYaw = player.yBodyRot; pPitch = prevPPitch = 0; pRoll = prevPRoll = 0;
-            petMode = PetMode.FOLLOW_SIDE; petAttackTargetId = -1; petStruck = false; petModeTicks = 90; petInit = true;
+            petMode = perchCommanded ? PetMode.PERCH_COMMAND : PetMode.FOLLOW_SIDE;
+            stayCommanded = false;
+            petAttackTargetId = -1; petStruck = false; petModeTicks = 90; petInit = true;
             return;
         }
 
@@ -403,13 +851,140 @@ final class PetWorldPhysics {
             Entity target = petAttackTargetId >= 0 ? level.getEntity(petAttackTargetId) : null;
             petAttackAge++;
             if (target == null || !isValidAttackTarget(player, target) || petAttackAge > 22) {
-                petMode = PetMode.FOLLOW_SIDE; petAttackTargetId = -1; petStruck = false; petModeTicks = 65;
+                petMode = perchCommanded ? PetMode.PERCH_COMMAND : PetMode.FOLLOW_SIDE;
+                petAttackTargetId = -1; petStruck = false; petModeTicks = 65;
             } else {
                 tickPetSignatureAttack(player, target);
                 return;
             }
         }
 
+        // ---- Interactive Pet Modes (Pat, Treat, Fetch, Trick, Stay, Commanded Perch) ----
+        double t = player.tickCount * 0.05;
+        double crouchDrop = player.isCrouching() ? 0.25 : 0.0;
+        double headTopY = player.getY() + 2.02 - crouchDrop + (hasHelmet ? 0.10 : 0.0) + (hasHat ? 0.18 : 0.0);
+
+        if (petMode == PetMode.INTERACT_PAT) {
+            petInteractTicks--;
+            double tx = player.getX() + lookFwdX * 1.12 + lookLeftX * (0.28 * petSide);
+            double tz = player.getZ() + lookFwdZ * 1.12 + lookLeftZ * (0.28 * petSide);
+            double ty = player.getEyeY() - 0.14 + Math.abs(Math.sin(petInteractTicks * 0.45)) * 0.22;
+            px += (tx - px) * 0.24; py += (ty - py) * 0.26; pz += (tz - pz) * 0.24;
+            float facePlayer = (float) Math.toDegrees(Math.atan2(-(player.getX() - px), player.getZ() - pz));
+            pYaw += Mth.wrapDegrees(facePlayer - pYaw) * 0.35f;
+            pPitch = (float) Math.sin(petInteractTicks * 0.55) * 14.0f;
+            pRoll = (float) Math.sin(petInteractTicks * 0.72) * 24.0f; // Adorable happy head-wiggle!
+            petSpeed = 0.08;
+            if (petInteractTicks % 10 == 0 && petInteractTicks > 4) {
+                WardrobeVfxEngine.spawnPetHearts(new Vec3(px, py + 0.24, pz), 2, 0xF472B6, 0xFDE047);
+            }
+            if (petInteractTicks <= 0) {
+                petMode = stayCommanded ? PetMode.STAY_WAIT : (perchCommanded ? PetMode.PERCH_COMMAND : PetMode.FOLLOW_SIDE);
+                petModeTicks = 75;
+            }
+            return;
+        }
+
+        if (petMode == PetMode.INTERACT_TREAT) {
+            if (!treatActive || --petInteractTicks <= 0) {
+                petMode = PetMode.INTERACT_PAT; petInteractTicks = 20;
+            } else {
+                px += (treatX - px) * 0.32;
+                py += (treatY - py) * 0.32;
+                pz += (treatZ - pz) * 0.32;
+                float toTreat = (float) Math.toDegrees(Math.atan2(-(treatX - px), treatZ - pz));
+                pYaw += Mth.wrapDegrees(toTreat - pYaw) * 0.45f;
+                pPitch = 16.0f;
+                pRoll = (float) Math.sin(petInteractTicks * 0.8) * 18.0f;
+                petSpeed = 0.30;
+            }
+            return;
+        }
+
+        if (petMode == PetMode.INTERACT_FETCH) {
+            if (!ballActive || --petInteractTicks <= 0) {
+                petMode = PetMode.FOLLOW_SIDE; petModeTicks = 65;
+            } else {
+                double tx = (ballCarriedBy == 1) ? (player.getX() + lookFwdX * 1.10) : ballX;
+                double ty = (ballCarriedBy == 1) ? (player.getEyeY() - 0.12) : (ballY + 0.18);
+                double tz = (ballCarriedBy == 1) ? (player.getZ() + lookFwdZ * 1.10) : ballZ;
+                double dx = tx - px, dy = ty - py, dz = tz - pz;
+                double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                double spd = Math.min(0.62, Math.max(0.24, dist * 0.34));
+                if (dist > 1e-4) {
+                    px += (dx / dist) * spd; py += (dy / dist) * spd; pz += (dz / dist) * spd;
+                }
+                float aim = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                pYaw += Mth.wrapDegrees(aim - pYaw) * 0.45f;
+                pPitch = 20.0f; pRoll = (float) Math.sin(player.tickCount * 0.5) * 20.0f;
+                petSpeed = spd;
+            }
+            return;
+        }
+
+        if (petMode == PetMode.INTERACT_TRICK) {
+            petInteractTicks--;
+            double p = 1.0 - (petInteractTicks / 42.0);
+            double ang = p * Math.PI * 2.0;
+            double cx0 = player.getX() + lookFwdX * 1.45;
+            double cz0 = player.getZ() + lookFwdZ * 1.45;
+            double tx = cx0 + Math.cos(ang) * 0.55;
+            double tz = cz0 + Math.sin(ang) * 0.55;
+            double ty = player.getEyeY() - 0.05 + Math.sin(p * Math.PI) * 0.72;
+            px += (tx - px) * 0.35; py += (ty - py) * 0.35; pz += (tz - pz) * 0.35;
+            pYaw = (float) ((p * 720.0) % 360.0); // Joyful double-spin!
+            pPitch = (float) (Math.sin(p * Math.PI * 2.0) * 38.0);
+            pRoll = (float) (p * 360.0); // Full acrobatic barrel roll!
+            petSpeed = 0.25;
+            if (petInteractTicks % 7 == 0) {
+                WardrobeVfxEngine.spawnPetHearts(new Vec3(px, py, pz), 2, 0xFDE047, 0xF472B6);
+            }
+            if (petInteractTicks <= 0) {
+                pRoll = 0.0f; pPitch = 0.0f;
+                petMode = stayCommanded ? PetMode.STAY_WAIT : (perchCommanded ? PetMode.PERCH_COMMAND : PetMode.FOLLOW_SIDE);
+                petModeTicks = 75;
+            }
+            return;
+        }
+
+        if (petMode == PetMode.STAY_WAIT) {
+            double ty = petStayY + Math.sin(t * 2.0) * 0.08;
+            px += (petStayX - px) * 0.16; py += (ty - py) * 0.16; pz += (petStayZ - pz) * 0.16;
+            float toPlayer = (float) Math.toDegrees(Math.atan2(-(player.getX() - px), player.getZ() - pz));
+            pYaw += Mth.wrapDegrees(toPlayer - pYaw) * 0.18f;
+            pPitch += (0.0f - pPitch) * 0.2f;
+            pRoll += ((gazeTicks > 15 ? (float) Math.sin(t * 2.2) * 14.0f : 0.0f) - pRoll) * 0.2f;
+            petSpeed = 0.0;
+            if (player.tickCount % 36 == 0) {
+                WardrobeVfxEngine.spawnSleepySparkle(new Vec3(px, py + 0.1, pz), 0x7DD3FC);
+            }
+            return;
+        }
+
+        if (petMode == PetMode.PERCH_COMMAND) {
+            double tx, ty, tz;
+            if (firstPerson) {
+                // Snuggle warmly right beside the player's cheek in 1st-person without blocking center!
+                tx = player.getX() + lookFwdX * 0.72 + lookLeftX * 0.62;
+                tz = player.getZ() + lookFwdZ * 0.72 + lookLeftZ * 0.62;
+                ty = player.getEyeY() - 0.14 + Math.sin(t * 2.4) * 0.04;
+            } else {
+                tx = player.getX();
+                tz = player.getZ();
+                ty = headTopY;
+            }
+            px += (tx - px) * 0.36; py += (ty - py) * 0.36; pz += (tz - pz) * 0.36;
+            pYaw += Mth.wrapDegrees(player.yBodyRot - pYaw) * 0.30f;
+            pPitch += (0.0f - pPitch) * 0.25f;
+            pRoll += ((float) Math.sin(t * 1.8) * 6.0f - pRoll) * 0.2f;
+            petSpeed = 0.0;
+            if (player.tickCount % 55 == 0) {
+                WardrobeVfxEngine.spawnPetHearts(new Vec3(px, py + 0.28, pz), 1, 0xF472B6, 0xFDE047);
+            }
+            return;
+        }
+
+        // ---- Autonomous Living Follow / Orbit / Peek / Random Perch ----
         if ((firstPerson || movingFast) && (petMode == PetMode.PERCH_HEAD || petMode == PetMode.PERCH_SHOULDER_L || petMode == PetMode.PERCH_SHOULDER_R)) {
             petMode = PetMode.FOLLOW_SIDE; petModeTicks = 75;
         }
@@ -435,13 +1010,10 @@ final class PetWorldPhysics {
             }
         }
 
-        double t = player.tickCount * 0.05;
         double tx, ty, tz;
         boolean perched = false;
         double stiffness = 0.12, damping = 0.68;
-        double crouchDrop = player.isCrouching() ? 0.25 : 0.0;
         double shoulderY = player.getY() + 1.56 - crouchDrop + (hasChest ? 0.09 : 0.0);
-        double headTopY = player.getY() + 2.02 - crouchDrop + (hasHelmet ? 0.10 : 0.0) + (hasHat ? 0.18 : 0.0);
 
         switch (petMode) {
             case ORBIT_PLAYFUL -> {
@@ -519,14 +1091,16 @@ final class PetWorldPhysics {
         px += pvx; py += pvy; pz += pvz;
         petSpeed = Math.hypot(pvx, pvz);
 
-        float targetYaw = (petMode == PetMode.CURIOUS_PEEK && petSpeed < 0.08)
+        boolean eyeContact = gazeTicks > 18 && "pet".equals(aimedPetSlot(player, 4.5));
+        float targetYaw = (eyeContact || (petMode == PetMode.CURIOUS_PEEK && petSpeed < 0.08))
                 ? (float) Math.toDegrees(Math.atan2(-(player.getX() - px), player.getZ() - pz))
                 : (perched ? player.yBodyRot + (float) Math.sin(t * 1.15) * 26.0f
                 : (petSpeed > 0.035 ? (float) Math.toDegrees(Math.atan2(-pvx, pvz)) : player.yBodyRot));
         float yawDiff = Mth.wrapDegrees(targetYaw - pYaw);
         pYaw += yawDiff * 0.22f;
         pPitch += ((perched ? 0.0f : (float) Mth.clamp(-pvy * 55.0 + petSpeed * 26.0, -24.0, 24.0)) - pPitch) * 0.2f;
-        pRoll += ((perched ? 0.0f : Mth.clamp(yawDiff * 0.75f, -26.0f, 26.0f)) - pRoll) * 0.22f;
+        float desiredRoll = eyeContact ? 15.0f : (perched ? 0.0f : Mth.clamp(yawDiff * 0.75f, -26.0f, 26.0f));
+        pRoll += (desiredRoll - pRoll) * 0.22f;
     }
 
     /** Executes one of 8 distinct signature pet attack choreographies! */
@@ -540,7 +1114,6 @@ final class PetWorldPhysics {
 
         switch (petAttackStyle) {
             case BREATH_FIREBALL, ORBITAL_LASER, HYDRO_SURGE -> {
-                // Ranged Hover Lock-On: climb high, rear back, then fire a concentrated 3D beam/breath/hydro wave!
                 double hoverDist = petAttackStyle == AttackStyle.ORBITAL_LASER ? 2.8 : 2.3;
                 double hoverY = aim.y + (petAttackStyle == AttackStyle.ORBITAL_LASER ? 1.45 : 0.85);
                 double inv = dist > 1e-4 ? 1.0 / dist : 1.0;
@@ -551,11 +1124,11 @@ final class PetWorldPhysics {
                 pvz = (pvz + (tz - pz) * 0.34) * 0.62;
                 px += pvx; py += pvy; pz += pvz;
                 if (petAttackAge < 5) {
-                    pPitch = -26.0f; // Rearing up / charging!
+                    pPitch = -26.0f;
                     pRoll = petAttackSide * 18.0f;
                 } else if (!petStruck) {
                     petStruck = true;
-                    pPitch = 28.0f; // Recoil forward!
+                    pPitch = 28.0f;
                     WardrobeVfxEngine.spawnPetSignatureVfx(petAttackStyle, new Vec3(px, py, pz), aim, aimYaw, cols[0], cols[1]);
                 } else {
                     pPitch += (0.0f - pPitch) * 0.22f;
@@ -564,7 +1137,6 @@ final class PetWorldPhysics {
                 }
             }
             case ARCANE_BARRAGE -> {
-                // Graceful Spiral Orbit firing 3 rapid homing star bolts at tick 3, 7, 11!
                 double ang = petAttackAge * 0.48 * petAttackSide;
                 double tx = aim.x + Math.cos(ang) * 2.1;
                 double tz = aim.z + Math.sin(ang) * 2.1;
@@ -579,7 +1151,6 @@ final class PetWorldPhysics {
                 if (petAttackAge >= 16) finishPetAttack();
             }
             case PHANTOM_BLINK -> {
-                // Vanish & teleport directly behind the enemy, strike with a crescent scythe arc, then blink back!
                 if (petAttackAge == 3) {
                     Vec3 prev = new Vec3(px, py, pz);
                     double rad = Math.toRadians(target.getYRot());
@@ -598,7 +1169,6 @@ final class PetWorldPhysics {
                 }
             }
             case METEOR_SLAM -> {
-                // Adorable High Parabolic Leap directly above enemy, spin-drop slam, then bouncy recoil!
                 if (!petStruck) {
                     double frac = Math.min(1.0, petAttackAge / 8.0);
                     double arcY = aim.y + 0.2 + Math.sin(frac * Math.PI) * 2.15;
@@ -617,7 +1187,6 @@ final class PetWorldPhysics {
                 }
             }
             case IAI_DASH_SLASH -> {
-                // Blinding horizontal flash-through past the target leaving an afterimage flash cut!
                 if (petAttackAge < 4) {
                     pPitch = -15.0f; pRoll = petAttackSide * 30.0f;
                 } else if (!petStruck) {
@@ -635,7 +1204,6 @@ final class PetWorldPhysics {
                 }
             }
             default -> {
-                // CLAW_POUNCE: blistering pounce rush across the enemy with twin X-claw slashes!
                 double hitRadius = Math.max(0.45, target.getBbWidth() * 0.52 + 0.28);
                 if (!petStruck) {
                     double inv = dist > 1e-4 ? 1.0 / dist : 0.0;
@@ -677,46 +1245,168 @@ final class PetWorldPhysics {
     }
 
     private static void finishPetAttack() {
-        petMode = PetMode.FOLLOW_SIDE;
+        petMode = perchCommanded ? PetMode.PERCH_COMMAND : PetMode.FOLLOW_SIDE;
         petAttackTargetId = -1;
         petStruck = false;
         petModeTicks = 60;
     }
 
-    // ---------------------------------------------------------------- Ground Companion AI & Signature Attacks
+    // ---------------------------------------------------------------- Ground Companion AI & Interactive Modes
 
-    private static void tickCompanion(LocalPlayer player, ClientLevel level) {
+    private static void tickCompanion(LocalPlayer player, ClientLevel level, SkyPilotConfig.Appearance a, boolean firstPerson) {
         double bodyRad = Math.toRadians(player.yBodyRot);
         double fwdX = -Math.sin(bodyRad), fwdZ = Math.cos(bodyRad);
         double rightX = -Math.cos(bodyRad), rightZ = -Math.sin(bodyRad);
+        double lookRad = Math.toRadians(player.getYRot());
+        double lookFwdX = -Math.sin(lookRad), lookFwdZ = Math.cos(lookRad);
         double playerHorizSpeed = Math.hypot(player.getDeltaMovement().x, player.getDeltaMovement().z);
 
-        boolean attacking = compMode == CompMode.ATTACK_TARGET;
-        if (!compInit || Math.hypot(cx - player.getX(), cz - player.getZ()) > (attacking ? 22.0 : 13.0)
-                || Math.abs(cy - player.getY()) > (attacking ? 8.0 : 4.5)) {
+        boolean wideRange = compMode == CompMode.ATTACK_TARGET || compMode == CompMode.INTERACT_FETCH || compMode == CompMode.STAY_WAIT;
+        if (!compInit || Math.hypot(cx - player.getX(), cz - player.getZ()) > (wideRange ? 24.0 : 13.0)
+                || Math.abs(cy - player.getY()) > (wideRange ? 9.0 : 4.5)) {
             cx = prevCx = player.getX() + rightX * 1.25 - fwdX * 0.4;
             cz = prevCz = player.getZ() + rightZ * 1.25 - fwdZ * 0.4;
             cy = prevCy = findGroundY(level, cx, player.getY(), cz);
-            cvx = cvz = 0; cYaw = prevCYaw = player.yBodyRot; cPitch = prevCPitch = 0.0f; cHop = prevCHop = 0.0;
-            compMode = CompMode.FOLLOW; compAttackTargetId = -1; compStruck = false; compModeTicks = 90; compInit = true;
+            cvx = cvz = 0; cYaw = prevCYaw = player.yBodyRot; cPitch = prevCPitch = 0.0f; cRoll = prevCRoll = 0.0f; cHop = prevCHop = 0.0;
+            compMode = perchCommanded ? CompMode.PERCH_SHOULDER : CompMode.FOLLOW;
+            stayCommanded = false;
+            compAttackTargetId = -1; compStruck = false; compModeTicks = 90; compInit = true;
             return;
         }
 
-        prevCx = cx; prevCy = cy; prevCz = cz; prevCYaw = cYaw; prevCPitch = cPitch; prevCHop = cHop;
+        prevCx = cx; prevCy = cy; prevCz = cz; prevCYaw = cYaw; prevCPitch = cPitch; prevCRoll = cRoll; prevCHop = cHop;
 
         if (compMode == CompMode.ATTACK_TARGET) {
             Entity target = compAttackTargetId >= 0 ? level.getEntity(compAttackTargetId) : null;
             compAttackAge++;
             if (target == null || !isValidAttackTarget(player, target) || compAttackAge > 24) {
-                compMode = CompMode.FOLLOW; compAttackTargetId = -1; compStruck = false; compModeTicks = 55;
+                compMode = perchCommanded ? CompMode.PERCH_SHOULDER : CompMode.FOLLOW;
+                compAttackTargetId = -1; compStruck = false; compModeTicks = 55;
             } else {
                 tickCompanionSignatureAttack(player, level, target);
                 return;
             }
         }
 
+        // ---- Interactive Companion Modes ----
+        if (compMode == CompMode.INTERACT_PAT) {
+            compInteractTicks--;
+            double tx = player.getX() + lookFwdX * 1.32 + rightX * 0.35;
+            double tz = player.getZ() + lookFwdZ * 1.32 + rightZ * 0.35;
+            cx += (tx - cx) * 0.22; cz += (tz - cz) * 0.22;
+            snapCompanionY(findGroundY(level, cx, player.getY(), cz));
+            cHop = Math.abs(Math.sin(compInteractTicks * 0.48)) * 0.34;
+            float facePlayer = (float) Math.toDegrees(Math.atan2(-(player.getX() - cx), player.getZ() - cz));
+            cYaw += Mth.wrapDegrees(facePlayer - cYaw) * 0.36f;
+            cPitch = -14.0f; // Looking up happily at you!
+            cRoll = (float) Math.sin(compInteractTicks * 0.72) * 20.0f;
+            compSpeed = 0.08;
+            if (compInteractTicks % 10 == 0 && compInteractTicks > 4) {
+                WardrobeVfxEngine.spawnPetHearts(new Vec3(cx, cy + cHop + 0.55, cz), 2, 0xF472B6, 0x67E8F9);
+            }
+            if (compInteractTicks <= 0) {
+                cRoll = 0.0f; cPitch = 0.0f;
+                compMode = stayCommanded ? CompMode.STAY_WAIT : (perchCommanded ? CompMode.PERCH_SHOULDER : CompMode.FOLLOW);
+                compModeTicks = 65;
+            }
+            return;
+        }
+
+        if (compMode == CompMode.INTERACT_TREAT) {
+            if (!treatActive || --compInteractTicks <= 0) {
+                compMode = CompMode.INTERACT_PAT; compInteractTicks = 20;
+            } else {
+                cx += (treatX - cx) * 0.26; cz += (treatZ - cz) * 0.26;
+                snapCompanionY(findGroundY(level, cx, player.getY(), cz));
+                cHop = Math.abs(Math.sin(compInteractTicks * 0.5)) * 0.48; // Hopping up for the treat!
+                float aim = (float) Math.toDegrees(Math.atan2(-(treatX - cx), treatZ - cz));
+                cYaw += Mth.wrapDegrees(aim - cYaw) * 0.42f;
+                cPitch = -22.0f; cRoll = 0.0f; compSpeed = 0.26;
+            }
+            return;
+        }
+
+        if (compMode == CompMode.INTERACT_FETCH) {
+            if (!ballActive || --compInteractTicks <= 0) {
+                compMode = CompMode.FOLLOW; compModeTicks = 60;
+            } else {
+                double tx = (ballCarriedBy == 2) ? (player.getX() + lookFwdX * 1.15) : ballX;
+                double tz = (ballCarriedBy == 2) ? (player.getZ() + lookFwdZ * 1.15) : ballZ;
+                double dx = tx - cx, dz = tz - cz, dist = Math.hypot(dx, dz);
+                double spd = Math.min(0.55, Math.max(0.24, dist * 0.35));
+                if (dist > 1e-4) { cx += (dx / dist) * spd; cz += (dz / dist) * spd; }
+                snapCompanionY(findGroundY(level, cx, player.getY(), cz));
+                cHop = Math.abs(Math.sin(player.tickCount * 0.55)) * 0.24;
+                float aim = (float) Math.toDegrees(Math.atan2(-dx, dz));
+                cYaw += Mth.wrapDegrees(aim - cYaw) * 0.45f;
+                cPitch = 10.0f; cRoll = 0.0f; compSpeed = spd;
+            }
+            return;
+        }
+
+        if (compMode == CompMode.INTERACT_TRICK) {
+            compInteractTicks--;
+            double p = 1.0 - (compInteractTicks / 42.0);
+            cHop = Math.sin(p * Math.PI) * 1.15; // Joyful high acrobatic flip-leap!
+            cYaw = (float) ((p * 720.0) % 360.0);
+            cPitch = (float) (p * 360.0);
+            cRoll = 0.0f;
+            snapCompanionY(findGroundY(level, cx, player.getY(), cz));
+            compSpeed = 0.22;
+            if (compInteractTicks % 8 == 0) {
+                WardrobeVfxEngine.spawnPetHearts(new Vec3(cx, cy + cHop + 0.5, cz), 2, 0x67E8F9, 0xF472B6);
+            }
+            if (compInteractTicks <= 0) {
+                cPitch = 0.0f; cHop = 0.0;
+                compMode = stayCommanded ? CompMode.STAY_WAIT : (perchCommanded ? CompMode.PERCH_SHOULDER : CompMode.FOLLOW);
+                compModeTicks = 65;
+            }
+            return;
+        }
+
+        if (compMode == CompMode.STAY_WAIT) {
+            cx += (compStayX - cx) * 0.20; cz += (compStayZ - cz) * 0.20;
+            snapCompanionY(findGroundY(level, cx, cy, cz));
+            cHop *= 0.5;
+            float toPlayer = (float) Math.toDegrees(Math.atan2(-(player.getX() - cx), player.getZ() - cz));
+            cYaw += Mth.wrapDegrees(toPlayer - cYaw) * 0.20f;
+            cPitch += (-8.0f - cPitch) * 0.2f;
+            cRoll += ((gazeTicks > 15 ? 14.0f : 0.0f) - cRoll) * 0.2f;
+            compSpeed = 0.0;
+            if (player.tickCount % 40 == 0) {
+                WardrobeVfxEngine.spawnSleepySparkle(new Vec3(cx, cy + 0.45, cz), 0xA5F3FC);
+            }
+            return;
+        }
+
+        if (compMode == CompMode.PERCH_SHOULDER) {
+            double crouchDrop = player.isCrouching() ? 0.25 : 0.0;
+            boolean hasChest = !player.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
+            double tx, ty, tz;
+            if (firstPerson) {
+                tx = player.getX() + lookFwdX * 0.78 - Math.cos(lookRad) * 0.68;
+                tz = player.getZ() + lookFwdZ * 0.78 - Math.sin(lookRad) * 0.68;
+                ty = player.getEyeY() - 0.36;
+            } else {
+                double sOff = 0.48 + (hasChest ? 0.07 : 0.0);
+                tx = player.getX() + rightX * sOff - fwdX * 0.04;
+                tz = player.getZ() + rightZ * sOff - fwdZ * 0.04;
+                ty = player.getY() + 1.48 - crouchDrop + (hasChest ? 0.08 : 0.0);
+            }
+            cx += (tx - cx) * 0.38; cy += (ty - cy) * 0.38; cz += (tz - cz) * 0.38;
+            cHop = 0.0;
+            cYaw += Mth.wrapDegrees(player.yBodyRot - cYaw) * 0.32f;
+            cPitch += (0.0f - cPitch) * 0.25f;
+            cRoll += ((float) Math.sin(player.tickCount * 0.09) * 6.0f - cRoll) * 0.2f;
+            compSpeed = 0.0;
+            return;
+        }
+
+        // ---- Autonomous Companion Follow / Wander / Sit ----
         cHop *= 0.55; if (cHop < 0.01) cHop = 0.0;
         cPitch *= 0.65f;
+        boolean eyeContact = gazeTicks > 18 && "companion".equals(aimedPetSlot(player, 4.5));
+        cRoll += ((eyeContact ? -15.0f : 0.0f) - cRoll) * 0.22f;
 
         if (playerHorizSpeed > 0.08) {
             compMode = CompMode.FOLLOW; compModeTicks = 55;
@@ -752,8 +1442,9 @@ final class PetWorldPhysics {
 
         snapCompanionY(findGroundY(level, cx, player.getY(), cz));
 
-        float targetYaw = compSpeed > 0.025 ? (float) Math.toDegrees(Math.atan2(-cvx, cvz))
-                : (compMode == CompMode.SIT_WATCH ? (float) Math.toDegrees(Math.atan2(-(player.getX() - cx), player.getZ() - cz)) : player.yBodyRot);
+        float targetYaw = (eyeContact || compMode == CompMode.SIT_WATCH)
+                ? (float) Math.toDegrees(Math.atan2(-(player.getX() - cx), player.getZ() - cz))
+                : (compSpeed > 0.025 ? (float) Math.toDegrees(Math.atan2(-cvx, cvz)) : player.yBodyRot);
         cYaw += Mth.wrapDegrees(targetYaw - cYaw) * 0.22f;
     }
 
@@ -763,7 +1454,6 @@ final class PetWorldPhysics {
         Vec3 hitPos = new Vec3(target.getX(), target.getY() + Math.min(0.95, target.getBbHeight() * 0.50), target.getZ());
         int[] cols = attackColors(compAttackCosmeticId, compAttackStyle);
 
-        // Ranged companions (Dragon/Cerberus breath, Cyber laser, Hydro surge, Arcane) attack from mid-range!
         if (compAttackStyle == AttackStyle.BREATH_FIREBALL || compAttackStyle == AttackStyle.ORBITAL_LASER
                 || compAttackStyle == AttackStyle.HYDRO_SURGE || compAttackStyle == AttackStyle.ARCANE_BARRAGE) {
             if (compAttackAge < 5) {
@@ -783,7 +1473,6 @@ final class PetWorldPhysics {
             return;
         }
 
-        // Melee / Leap / Blink companions rush or meteor-leap directly onto the target!
         double reach = Math.max(0.65, target.getBbWidth() * 0.55 + 0.42);
         if (!compStruck) {
             double inv = dist > 1e-4 ? 1.0 / dist : 0.0;
@@ -843,7 +1532,8 @@ final class PetWorldPhysics {
         double x = Mth.lerp(partialTick, prevPx, px), y = Mth.lerp(partialTick, prevPy, py), z = Mth.lerp(partialTick, prevPz, pz);
         float yaw = prevPYaw + Mth.wrapDegrees(pYaw - prevPYaw) * partialTick;
         float pitch = Mth.lerp(partialTick, prevPPitch, pPitch), roll = Mth.lerp(partialTick, prevPRoll, pRoll);
-        boolean perched = (petMode == PetMode.PERCH_HEAD || petMode == PetMode.PERCH_SHOULDER_L || petMode == PetMode.PERCH_SHOULDER_R) && petSpeed < 0.05;
+        boolean perched = (petMode == PetMode.PERCH_HEAD || petMode == PetMode.PERCH_SHOULDER_L
+                || petMode == PetMode.PERCH_SHOULDER_R || petMode == PetMode.PERCH_COMMAND) && petSpeed < 0.05;
         return new Snapshot(x, y, z, yaw, pitch, roll, petSpeed, perched);
     }
 
@@ -851,7 +1541,10 @@ final class PetWorldPhysics {
         if (!compInit) return null;
         double x = Mth.lerp(partialTick, prevCx, cx), y = Mth.lerp(partialTick, prevCy, cy) + Mth.lerp(partialTick, prevCHop, cHop), z = Mth.lerp(partialTick, prevCz, cz);
         float yaw = prevCYaw + Mth.wrapDegrees(cYaw - prevCYaw) * partialTick;
-        return new Snapshot(x, y, z, yaw, Mth.lerp(partialTick, prevCPitch, cPitch), 0.0f, compSpeed, compMode == CompMode.SIT_WATCH && compSpeed < 0.02);
+        float pitch = Mth.lerp(partialTick, prevCPitch, cPitch);
+        float roll = Mth.lerp(partialTick, prevCRoll, cRoll);
+        boolean sitting = (compMode == CompMode.SIT_WATCH || compMode == CompMode.STAY_WAIT || compMode == CompMode.PERCH_SHOULDER) && compSpeed < 0.02;
+        return new Snapshot(x, y, z, yaw, pitch, roll, compSpeed, sitting);
     }
 
     static Snapshot remotePetSnapshot(UUID uuid, float partialTick) {

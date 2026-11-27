@@ -69,8 +69,8 @@ public final class CosmeticAnimation {
 
         // ---- Articulated multi-joint wings ----
         switch (anim) {
-            case "wing_l_root", "wing_r_root" -> {
-                double side = anim.equals("wing_l_root") ? 1.0 : -1.0;
+            case "wing_l_root", "wing_r_root", "wing_primary_l", "wing_primary_r" -> {
+                double side = (anim.equals("wing_l_root") || anim.equals("wing_primary_l")) ? 1.0 : -1.0;
                 double flapDeg = Math.toDegrees(wingFlap(t + phase, speed, falling, flying)) * a;
                 double breathe = Math.sin(t * 2.1 + phase) * 3.5 * a;
                 return new BoneTransform(0, 0, 0, breathe, -side * flapDeg, side * (breathe * 0.6), 1, 1, 1, true);
@@ -182,6 +182,19 @@ public final class CosmeticAnimation {
                 boolean flash = (cyc < 0.14) || (cyc > 0.22 && cyc < 0.32);
                 double sc = flash ? 1.05 : 0.01;
                 return new BoneTransform(0, 0, 0, 0, (t * 180.0) % 360.0, 0, sc, sc, sc, flash);
+            }
+            case "aura_orbit_bob" -> {
+                double dy = Math.sin(t * 2.8 + phase) * 1.15 * a;
+                double rx = Math.sin(t * 1.9 + phase) * 5.0 * a;
+                double rz = Math.cos(t * 2.2 + phase) * 6.0 * a;
+                return new BoneTransform(0, dy, 0, rx, 0, rz, 1, 1, 1, true);
+            }
+            case "tail_wag" -> {
+                double freq = 3.2 + Math.min(5.5, speed * 14.0);
+                double sway = Math.sin(t * freq + phase) * (14.0 + Math.min(16.0, speed * 32.0)) * a;
+                double lift = (sneaking ? 14.0 : 0.0) + Math.min(22.0, speed * 50.0) + Math.cos(t * (freq * 0.65) + phase) * 5.5 * a;
+                double twist = Math.sin(t * freq + phase + 0.5) * 6.5 * a;
+                return new BoneTransform(0, 0, 0, -lift * 0.55, sway, twist, 1, 1, 1, true);
             }
             case "aura_pulse" -> {
                 double p = 0.88 + 0.18 * Math.sin(t * 4.2 + phase);
@@ -537,6 +550,27 @@ public final class CosmeticAnimation {
     /** Steampunk gear continuous rotation angle (radians). */
     public static double gearAngle(double time, double speedMult) {
         return (time * 2.2 * speedMult) % (Math.PI * 2.0);
+    }
+
+    /** Silky smooth Rainbow Chroma RGB color for Chroma-enabled cosmetics &amp; UI accents. */
+    public static int chromaRgb(double time, double hueOffset) {
+        double h = ((time * 0.22 + hueOffset) % 1.0 + 1.0) % 1.0;
+        double s = 0.72;
+        double v = 1.0;
+        double c = v * s;
+        double x = c * (1.0 - Math.abs(((h * 6.0) % 2.0) - 1.0));
+        double m = v - c;
+        double r, g, b;
+        int sector = (int) Math.floor(h * 6.0) % 6;
+        switch (sector) {
+            case 0 -> { r = c; g = x; b = 0; }
+            case 1 -> { r = x; g = c; b = 0; }
+            case 2 -> { r = 0; g = c; b = x; }
+            case 3 -> { r = 0; g = x; b = c; }
+            case 4 -> { r = x; g = 0; b = c; }
+            default -> { r = c; g = 0; b = x; }
+        }
+        return clampRgb((int) Math.round((r + m) * 255.0), (int) Math.round((g + m) * 255.0), (int) Math.round((b + m) * 255.0));
     }
 
     private static int clampRgb(int r, int g, int b) {

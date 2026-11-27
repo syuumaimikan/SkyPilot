@@ -1,16 +1,30 @@
 package dev.skypilot.mod.core;
 
+import com.google.gson.Gson;
+
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.random.RandomGenerator;
 
-/** Local outfit operations shared by the launcher and game across all 6 cosmetic slots. */
+/** Local outfit operations, 10 curated 10-slot presets, 16 saved outfits, 24-color Dye palette &amp; share codes. */
 public final class WardrobeTools {
+    private static final Gson GSON = new Gson();
+    private static final String SHARE_PREFIX = "SPW1:";
+
     public static final int[] PALETTE = {
         0xA38BFA, 0x55D6D2, 0xF09055, 0xEAC574, 0xDB8AE8, 0x8D9DFF,
         0xF43F5E, 0x10B981, 0x38BDF8, 0xFDE047, 0xEC4899, 0xFFFFFF
     };
 
-    public static final int MAX_OUTFITS = 8;
+    /** 24 designer dye colors for per-slot custom cosmetic tinting (plus Rainbow Chroma!). */
+    public static final int[] DYE_PALETTE = {
+        0xFFFFFF, 0xF472B6, 0xFB7185, 0xEF4444, 0xF97316, 0xFBBF24,
+        0xFDE047, 0xA3E635, 0x4ADE80, 0x10B981, 0x2DD4BF, 0x22D3EE,
+        0x38BDF8, 0x60A5FA, 0x818CF8, 0xA855F7, 0xC084FC, 0xE879F9,
+        0xFBCFE8, 0xBAE6FD, 0xFEF08A, 0xCBD5E1, 0x64748B, 0x1E293B
+    };
+
+    public static final int MAX_OUTFITS = 16;
 
     public record Preset(
             String id, String name, String ja, int color,
@@ -37,9 +51,15 @@ public final class WardrobeTools {
             a.cosmeticParticles = true;
             a.accessory = "none";
         }
+
+        public SkyPilotConfig.Appearance previewAppearance() {
+            SkyPilotConfig.Appearance a = new SkyPilotConfig.Appearance();
+            apply(a);
+            return a;
+        }
     }
 
-    /** Curated 1-click 10-slot theme outfits (cool + kawaii showcases). */
+    /** 10 curated 1-click 10-slot flagship theme outfits (cool + kawaii + fantasy + cyber showcases). */
     public static final List<Preset> PRESETS = List.of(
             new Preset("kawaii_pastel", "Kawaii Pastel", "ゆめかわパステル", 0xF472B6,
                     "strawberry_ribbon", "angel_ribbon_wings", "bunny_beret",
@@ -64,7 +84,23 @@ public final class WardrobeTools {
             new Preset("crimson_abyss", "Crimson Abyss", "紅蓮の冥帝", 0xF97316,
                     "blaze_spirit", "phoenix", "samurai_kabuto",
                     "face_oni_fang", "sh_dragon_guards", "waist_samurai_swords", "feet_phoenix_wings",
-                    "inferno_flame_aura", "pet_shadow_wyvern", "comp_cerberus", 1.25)
+                    "inferno_flame_aura", "pet_shadow_wyvern", "comp_cerberus", 1.25),
+            new Preset("cyber_neon", "Cyber Neon", "サイバーネオン", 0x22D3EE,
+                    "cyberpunk", "prism_neon_wings", "cyber_halo",
+                    "face_cyber_holo", "sh_cyber_plates", "waist_cyber_fox", "feet_cyber_hover",
+                    "cyber_matrix_aura", "pet_void_chomper", "comp_cyber_tiger", 1.15),
+            new Preset("crimson_monarch", "Crimson Moon", "紅月の吸血鬼", 0xEF4444,
+                    "crimson_moon", "vampire_cloak_wings", "witch_moon_hat",
+                    "face_crimson_veil", "sh_royal_mantle", "waist_void_chains", "feet_crimson_moon",
+                    "blood_bats_aura", "pet_crimson_imp", "comp_crimson_tiger", 1.2),
+            new Preset("ocean_siren", "Ocean Siren", "蒼海の精霊", 0x06B6D4,
+                    "ocean_jellyfish", "celestial_harp_wings", "celestial_wing_halo",
+                    "face_angel_cuffs", "sh_ocean_pearls", "waist_mermaid_ribbon", "feet_ocean_ripple",
+                    "bubble_prism_aura", "pet_celestial_whale", "comp_arctic_fox", 1.1),
+            new Preset("jade_emperor", "Jade Dragon", "翡翠の龍神", 0x10B981,
+                    "dragon_scale", "jade_dragon_wings", "dragon_horns",
+                    "face_jade_crest", "sh_jade_hagoromo", "waist_jade_ribbon", "feet_jade_wind",
+                    "jade_dragons_aura", "pet_chibi_kitsune", "comp_sakura_fawn", 1.2)
     );
 
     public static final class Outfit {
@@ -78,6 +114,12 @@ public final class WardrobeTools {
         public boolean skin3d;
         public Map<String, SkyPilotConfig.SlotTransform> slotTransforms = new LinkedHashMap<>();
         public SkyPilotConfig.VfxSettings vfx = new SkyPilotConfig.VfxSettings();
+
+        public SkyPilotConfig.Appearance previewAppearance() {
+            SkyPilotConfig.Appearance a = new SkyPilotConfig.Appearance();
+            apply(this, a);
+            return a;
+        }
     }
 
     private WardrobeTools() {}
@@ -145,6 +187,33 @@ public final class WardrobeTools {
         }
     }
 
+    /** Encodes the current 10-slot outfit + Dye/Chroma + transforms + VFX into a compact share code. */
+    public static String exportShareCode(SkyPilotConfig.Appearance a) {
+        Outfit snap = capture("Shared", a);
+        String json = GSON.toJson(snap);
+        return SHARE_PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Decodes and safely sanitizes a clipboard outfit share code, applying it to {@code target}. */
+    public static boolean importShareCode(String raw, SkyPilotConfig.Appearance target) {
+        if (raw == null || target == null) return false;
+        String s = raw.strip();
+        if (!s.startsWith(SHARE_PREFIX) || s.length() > 6000) return false;
+        try {
+            byte[] bytes = Base64.getUrlDecoder().decode(s.substring(SHARE_PREFIX.length()));
+            if (bytes.length > 4500) return false;
+            Outfit o = GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), Outfit.class);
+            if (o == null) return false;
+            SkyPilotConfig wrap = new SkyPilotConfig();
+            apply(o, wrap.appearance);
+            wrap.sanitize();
+            apply(capture("Imported", wrap.appearance), target);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     public static void clear(SkyPilotConfig.Appearance a) {
         a.cape = "none";
         a.hat = "none";
@@ -184,7 +253,7 @@ public final class WardrobeTools {
         String label = name == null ? "" : name.strip();
         if (label.isEmpty() || label.length() > 24) throw new IllegalArgumentException("Use a name of 1–24 characters.");
         a.outfits.removeIf(o -> o.name.equals(label));
-        if (a.outfits.size() >= MAX_OUTFITS) throw new IllegalArgumentException("Eight outfits maximum. Remove one before saving another.");
+        if (a.outfits.size() >= MAX_OUTFITS) throw new IllegalArgumentException("16 outfits maximum. Remove one before saving another.");
         a.outfits.add(capture(label, a));
     }
 

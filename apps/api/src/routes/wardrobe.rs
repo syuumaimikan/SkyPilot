@@ -39,6 +39,16 @@ pub struct SlotTransformDto {
     pub rot_y: f64,
     #[serde(default)]
     pub rot_z: f64,
+    #[serde(default)]
+    pub tint_enabled: bool,
+    #[serde(default = "default_white")]
+    pub tint_color: i32,
+    #[serde(default)]
+    pub chroma: bool,
+}
+
+fn default_white() -> i32 {
+    0xFFFFFF
 }
 
 fn default_one() -> f64 {
@@ -62,13 +72,16 @@ impl SlotTransformDto {
         self.rot_x = clamp_finite(self.rot_x, -60.0, 60.0, 0.0);
         self.rot_y = clamp_finite(self.rot_y, -180.0, 180.0, 0.0);
         self.rot_z = clamp_finite(self.rot_z, -60.0, 60.0, 0.0);
+        self.tint_color &= 0xFFFFFF;
         let identity = self.offset_x.abs() < 1e-4
             && self.offset_y.abs() < 1e-4
             && self.offset_z.abs() < 1e-4
             && (self.scale - 1.0).abs() < 1e-4
             && self.rot_x.abs() < 1e-4
             && self.rot_y.abs() < 1e-4
-            && self.rot_z.abs() < 1e-4;
+            && self.rot_z.abs() < 1e-4
+            && !self.tint_enabled
+            && !self.chroma;
         if identity { None } else { Some(self) }
     }
 }

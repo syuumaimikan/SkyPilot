@@ -213,6 +213,14 @@ final class CosmeticRigRenderer {
         };
     }
 
+    /** Resolves per-slot Dye tint or animated 60 FPS Rainbow Chroma ARGB tint for any cosmetic! */
+    static int resolveTintArgb(SkyPilotConfig.SlotTransform tr, double time, int slotIndex) {
+        if (tr == null) return 0xFFFFFFFF;
+        if (tr.chroma) return 0xFF000000 | CosmeticAnimation.chromaRgb(time, slotIndex * 0.09);
+        if (tr.tintEnabled) return 0xFF000000 | (tr.tintColor & 0xFFFFFF);
+        return 0xFFFFFFFF;
+    }
+
     /** Submits an animated 3D cosmetic rig into Minecraft's live entity/world renderer. */
     static int submit(
             CompiledRig rig,
@@ -228,6 +236,25 @@ final class CosmeticRigRenderer {
             double yawTurnRate,
             boolean glowEnabled
     ) {
+        return submit(rig, pose, collector, light, time, speed, sneaking, falling, flying, vertSpeed, yawTurnRate, glowEnabled, 0xFFFFFFFF);
+    }
+
+    /** Submits an animated 3D cosmetic rig with optional per-slot custom Dye or live Rainbow Chroma tint. */
+    static int submit(
+            CompiledRig rig,
+            PoseStack pose,
+            SubmitNodeCollector collector,
+            int light,
+            double time,
+            double speed,
+            boolean sneaking,
+            boolean falling,
+            boolean flying,
+            double vertSpeed,
+            double yawTurnRate,
+            boolean glowEnabled,
+            int tintArgb
+    ) {
         if (rig == null) return 0;
         int fi = rig.frameIndex(time);
         FrameTree baseTree = rig.baseFrames[fi];
@@ -238,14 +265,14 @@ final class CosmeticRigRenderer {
                 : RenderTypes.entityCutout(rig.baseTexture);
         int baseLight = (rig.model.emissive && glowEnabled && rig.emissiveTexture == null && rig.emissiveCubeFrames == null)
                 ? FULL_BRIGHT : light;
-        collector.submitModelPart(baseTree.root, pose, baseType, baseLight, OverlayTexture.NO_OVERLAY, null, 0xFFFFFFFF, null);
+        collector.submitModelPart(baseTree.root, pose, baseType, baseLight, OverlayTexture.NO_OVERLAY, null, tintArgb, null);
 
         if (glowEnabled) {
             if (rig.emissiveTexture != null) {
                 collector.submitModelPart(
                         baseTree.root, pose,
                         RenderTypes.entityTranslucentEmissive(rig.emissiveTexture),
-                        FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null, 0xFFFFFFFF, null
+                        FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null, tintArgb, null
                 );
             } else if (rig.emissiveCubeFrames != null) {
                 FrameTree emTree = rig.emissiveCubeFrames[fi];
@@ -253,7 +280,7 @@ final class CosmeticRigRenderer {
                 collector.submitModelPart(
                         emTree.root, pose,
                         RenderTypes.entityTranslucentEmissive(rig.baseTexture),
-                        FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null, 0xFFFFFFFF, null
+                        FULL_BRIGHT, OverlayTexture.NO_OVERLAY, null, tintArgb, null
                 );
             }
         }

@@ -2,6 +2,10 @@ plugins {
 	id 'java-library'
 }
 
+// Valid SemVer 2.0 bump (> 0.1.7) so Fabric Loader always prefers the updated
+// Wardrobe-compatible core even if an older SkyPilot mod jar is present alongside it.
+version = '0.2.1'
+
 dependencies {
 
 	compileOnly "com.google.code.gson:gson:${gson_version}"

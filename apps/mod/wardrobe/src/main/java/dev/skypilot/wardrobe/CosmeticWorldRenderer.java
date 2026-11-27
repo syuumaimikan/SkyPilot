@@ -111,10 +111,11 @@ final class CosmeticWorldRenderer {
         // Never display the flat inside lining of the cloak when looking steeply downward in 1st-person!
         boolean showCape = a.firstPersonCape && !"none".equals(a.cape) && player.getXRot() < 34.0f;
         boolean showHat = a.firstPersonHat && !"none".equals(a.hat);
+        boolean showFace = a.firstPersonFace && !"none".equals(a.face);
         boolean showFeet = a.firstPersonFeet && !"none".equals(a.feet);
         boolean showWaist = a.firstPersonWaist && !"none".equals(a.waist);
         boolean showShoulder = a.firstPersonShoulder && !"none".equals(a.shoulder);
-        if (!showAura && !showWings && !showCape && !showHat && !showFeet && !showWaist && !showShoulder) return;
+        if (!showAura && !showWings && !showCape && !showHat && !showFace && !showFeet && !showWaist && !showShoulder) return;
 
         CapePhysics.State phys = CapePhysics.update(player);
         double px = Mth.lerp(partialTick, player.xOld, player.getX());
@@ -140,7 +141,8 @@ final class CosmeticWorldRenderer {
                 pose.scale(-1.08f, -0.9375f, 1.08f);
                 CosmeticRigRenderer.applySlotTransform(pose, "aura", a.transformOf("aura"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("aura"), time, 7));
                 pose.popPose();
             }
         }
@@ -154,7 +156,8 @@ final class CosmeticWorldRenderer {
                 pose.scale(-0.9375f, -0.9375f, 0.9375f);
                 CosmeticRigRenderer.applySlotTransform(pose, "feet", a.transformOf("feet"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("feet"), time, 6));
                 pose.popPose();
             }
         }
@@ -169,7 +172,8 @@ final class CosmeticWorldRenderer {
                 pose.translate(0.0f, 0.0f, 1.4f / 16.0f);
                 CosmeticRigRenderer.applySlotTransform(pose, "waist", a.transformOf("waist"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("waist"), time, 5));
                 pose.popPose();
             }
         }
@@ -183,7 +187,8 @@ final class CosmeticWorldRenderer {
                 pose.scale(-0.9375f, -0.9375f, 0.9375f);
                 CosmeticRigRenderer.applySlotTransform(pose, "shoulder", a.transformOf("shoulder"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("shoulder"), time, 4));
                 pose.popPose();
             }
         }
@@ -205,7 +210,8 @@ final class CosmeticWorldRenderer {
                 }
                 CosmeticRigRenderer.applySlotTransform(pose, "back", a.transformOf("back"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("back"), time, 1));
                 pose.popPose();
             }
         }
@@ -222,7 +228,8 @@ final class CosmeticWorldRenderer {
                 pose.mulPose(Axis.XP.rotationDegrees(-14.0f));
                 CosmeticRigRenderer.applySlotTransform(pose, "cape", a.transformOf("cape"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("cape"), time, 0));
                 pose.popPose();
             }
         }
@@ -237,7 +244,24 @@ final class CosmeticWorldRenderer {
                 pose.scale(-0.9375f, -0.9375f, 0.9375f);
                 CosmeticRigRenderer.applySlotTransform(pose, "hat", a.transformOf("hat"));
                 CosmeticRigRenderer.submit(rig, pose, collector, light, time,
-                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow);
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("hat"), time, 2));
+                pose.popPose();
+            }
+        }
+
+        if (showFace) {
+            var rig = CosmeticRigRenderer.get(a.face);
+            if (rig != null) {
+                pose.pushPose();
+                pose.translate(px - cam.x, py - cam.y + 1.52 - crouchDrop, pz - cam.z);
+                pose.mulPose(Axis.YP.rotationDegrees(180.0f - headYaw));
+                pose.scale(-0.9375f, -0.9375f, 0.9375f);
+                pose.translate(0.0f, 0.0f, -2.2f / 16.0f);
+                CosmeticRigRenderer.applySlotTransform(pose, "face", a.transformOf("face"));
+                CosmeticRigRenderer.submit(rig, pose, collector, light, time,
+                        phys.smoothedSpeed, sneaking, isFalling, isFlying, phys.smoothedVertSpeed, phys.yawTurnRate, a.cosmeticGlow,
+                        CosmeticRigRenderer.resolveTintArgb(a.transformOf("face"), time, 3));
                 pose.popPose();
             }
         }
@@ -275,7 +299,8 @@ final class CosmeticWorldRenderer {
         pose.translate((float) (-anchor[0] / 16.0), (float) (-(24.0 - anchor[1]) / 16.0), (float) (-anchor[2] / 16.0));
         CosmeticRigRenderer.submit(
                 rig, pose, collector, light, time,
-                snap.perched ? 0.0 : snap.speed, false, false, !snap.perched, 0.0, 0.0, glow
+                snap.perched ? 0.0 : snap.speed, false, false, !snap.perched, 0.0, 0.0, glow,
+                CosmeticRigRenderer.resolveTintArgb(tr, time, 8)
         );
         pose.popPose();
     }
@@ -301,6 +326,9 @@ final class CosmeticWorldRenderer {
         if (Math.abs(snap.pitch) > 0.1f) {
             pose.mulPose(Axis.XP.rotationDegrees(snap.pitch));
         }
+        if (Math.abs(snap.roll) > 0.1f) {
+            pose.mulPose(Axis.ZP.rotationDegrees(snap.roll));
+        }
         pose.scale(-0.9375f, -0.9375f, 0.9375f);
         if (tr != null && !tr.isIdentity()) {
             pose.translate((float) (tr.offsetX / 16.0), (float) (-tr.offsetY / 16.0), (float) (tr.offsetZ / 16.0));
@@ -313,7 +341,8 @@ final class CosmeticWorldRenderer {
         pose.translate((float) (-anchor[0] / 16.0), -1.501f, (float) (-anchor[2] / 16.0));
         CosmeticRigRenderer.submit(
                 rig, pose, collector, light, time,
-                snap.speed, false, false, false, 0.0, 0.0, glow
+                snap.speed, false, false, false, 0.0, 0.0, glow,
+                CosmeticRigRenderer.resolveTintArgb(tr, time, 9)
         );
         pose.popPose();
     }

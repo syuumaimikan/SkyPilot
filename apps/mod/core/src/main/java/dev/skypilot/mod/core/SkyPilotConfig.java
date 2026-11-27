@@ -72,11 +72,16 @@ public final class SkyPilotConfig {
 		public double rotX = 0.0;
 		public double rotY = 0.0;
 		public double rotZ = 0.0;
+		/** Optional per-slot custom dye tint &amp; live Rainbow Chroma mode (surpasses Lunar Chroma!). */
+		public boolean tintEnabled = false;
+		public int tintColor = 0xFFFFFF;
+		public boolean chroma = false;
 
 		public boolean isIdentity() {
 			return Math.abs(offsetX) < 1e-4 && Math.abs(offsetY) < 1e-4 && Math.abs(offsetZ) < 1e-4
 					&& Math.abs(scale - 1.0) < 1e-4
-					&& Math.abs(rotX) < 1e-4 && Math.abs(rotY) < 1e-4 && Math.abs(rotZ) < 1e-4;
+					&& Math.abs(rotX) < 1e-4 && Math.abs(rotY) < 1e-4 && Math.abs(rotZ) < 1e-4
+					&& !tintEnabled && !chroma;
 		}
 
 		public SlotTransform copy() {
@@ -88,6 +93,9 @@ public final class SkyPilotConfig {
 			t.rotX = rotX;
 			t.rotY = rotY;
 			t.rotZ = rotZ;
+			t.tintEnabled = tintEnabled;
+			t.tintColor = tintColor & 0xFFFFFF;
+			t.chroma = chroma;
 			return t;
 		}
 
@@ -95,6 +103,9 @@ public final class SkyPilotConfig {
 			offsetX = offsetY = offsetZ = 0.0;
 			scale = 1.0;
 			rotX = rotY = rotZ = 0.0;
+			tintEnabled = false;
+			tintColor = 0xFFFFFF;
+			chroma = false;
 		}
 
 		public void sanitize() {
@@ -105,6 +116,7 @@ public final class SkyPilotConfig {
 			rotX = clampFinite(rotX, -60.0, 60.0, 0.0);
 			rotY = clampFinite(rotY, -180.0, 180.0, 0.0);
 			rotZ = clampFinite(rotZ, -60.0, 60.0, 0.0);
+			tintColor &= 0xFFFFFF;
 		}
 	}
 
@@ -201,9 +213,50 @@ public final class SkyPilotConfig {
 		public java.util.Map<String, SlotTransform> slotTransforms = new java.util.LinkedHashMap<>();
 		/** Custom 3D VFX settings across 7 trigger slots (attack, kill, move, jump, dash, projectile, ambient). */
 		public VfxSettings vfx = new VfxSettings();
+		/** Persisted pet & companion bonding progress (total affection XP + per-pet bond points). */
+		public int petAffection = 0;
+		public java.util.Map<String, Integer> petBonds = new java.util.LinkedHashMap<>();
+		/** Studio preview environment backdrop: 0=Midnight, 1=Neon Cyber, 2=Golden Sunset, 3=Bright Day. */
+		public int studioBackdrop = 0;
 		public int color = 0xA38BFA;
 		public java.util.List<String> favorites = new java.util.ArrayList<>();
 		public java.util.List<WardrobeTools.Outfit> outfits = new java.util.ArrayList<>();
+
+		public int bondOf(String cosmeticId) {
+			if (petBonds == null || cosmeticId == null || "none".equals(cosmeticId)) return 0;
+			return Math.max(0, petBonds.getOrDefault(cosmeticId, 0));
+		}
+
+		public int addBond(String cosmeticId, int delta) {
+			if (cosmeticId == null || "none".equals(cosmeticId) || delta <= 0) return bondLevel(bondOf(cosmeticId));
+			if (petBonds == null) petBonds = new java.util.LinkedHashMap<>();
+			int next = Math.min(999_999, bondOf(cosmeticId) + delta);
+			petBonds.put(cosmeticId, next);
+			petAffection = Math.min(9_999_999, Math.max(0, petAffection) + delta);
+			return bondLevel(next);
+		}
+
+		private static final int[] BOND_THRESHOLDS = {0, 10, 25, 50, 90, 150, 230, 330, 450, 600};
+
+		public static int bondLevel(int points) {
+			int p = Math.max(0, points);
+			int lv = 1;
+			for (int i = 1; i < BOND_THRESHOLDS.length; i++) {
+				if (p >= BOND_THRESHOLDS[i]) lv = i + 1;
+				else break;
+			}
+			return lv;
+		}
+
+		public static int bondPrevThreshold(int level) {
+			int idx = Math.max(0, Math.min(BOND_THRESHOLDS.length - 1, level - 1));
+			return BOND_THRESHOLDS[idx];
+		}
+
+		public static int bondNextThreshold(int level) {
+			if (level >= BOND_THRESHOLDS.length) return BOND_THRESHOLDS[BOND_THRESHOLDS.length - 1];
+			return BOND_THRESHOLDS[Math.max(1, level)];
+		}
 
 		public SlotTransform transformOf(String slot) {
 			if (slotTransforms == null || slot == null) return new SlotTransform();
@@ -486,6 +539,11 @@ public final class SkyPilotConfig {
 		appearance.slotTransforms.entrySet().removeIf(e -> e.getValue().isIdentity());
 		if (appearance.vfx == null) appearance.vfx = new VfxSettings();
 		appearance.vfx.sanitize();
+		appearance.petAffection = Math.max(0, Math.min(9_999_999, appearance.petAffection));
+		appearance.studioBackdrop = Math.floorMod(appearance.studioBackdrop, 4);
+		if (appearance.petBonds == null) appearance.petBonds = new java.util.LinkedHashMap<>();
+		appearance.petBonds.entrySet().removeIf(e -> e.getKey() == null || e.getKey().isBlank() || e.getKey().length() > 64 || e.getValue() == null || e.getValue() <= 0);
+		appearance.petBonds.replaceAll((k, v) -> Math.min(999_999, Math.max(0, v)));
 		WardrobeTools.sanitize(appearance);
 		if(deskNotes==null)deskNotes="";
 		deskNotes=deskNotes.substring(0,Math.min(1400,deskNotes.length()));

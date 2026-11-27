@@ -124,13 +124,15 @@ final class WardrobeVfxScreen extends Screen {
             String slot = WardrobeVfxCatalog.EVENT_SLOTS.get(i);
             boolean activeTab = slot.equals(eventSlot);
             boolean equipped = !"none".equals(WardrobeVfxCatalog.equippedId(cfg, slot));
-            String prefix = (activeTab ? "▸" : "") + (equipped ? "●" : "");
+            String prefix = equipped ? "●" : "";
             String lbl = prefix + WardrobeVfxCatalog.eventLabel(slot, ja);
             addRenderableWidget(WardrobeUi.button(lbl, b -> {
                 eventSlot = slot;
                 page = 0;
                 rebuildWidgets();
-            }).bounds(left + i * (tabW + 2), 52, tabW, 15).tooltip(WardrobeVfxCatalog.eventDesc(slot, ja)).build());
+            }).bounds(left + i * (tabW + 2), 52, tabW, 15)
+                    .style(activeTab ? WardrobeUi.Style.ACTIVE_TAB : (equipped ? WardrobeUi.Style.EQUIPPED : WardrobeUi.Style.DEFAULT))
+                    .tooltip(WardrobeVfxCatalog.eventDesc(slot, ja)).build());
         }
 
         visible = WardrobeVfxCatalog.search(query);
@@ -145,7 +147,10 @@ final class WardrobeVfxScreen extends Screen {
 
             addRenderableWidget(WardrobeUi.button((selected ? "✓ " : "") + style.label(ja), b -> {
                 toggleStyle(cfg, style, rt, ja);
-            }).bounds(x, y + cardH - 15, cardW - 18, 15).tooltip(style.detail(ja)).build());
+            }).bounds(x, y + cardH - 15, cardW - 18, 15)
+                    .style(selected ? WardrobeUi.Style.EQUIPPED : WardrobeUi.Style.DEFAULT)
+                    .accent(style.primaryColor())
+                    .tooltip(style.detail(ja)).build());
 
             addRenderableWidget(WardrobeUi.button("▶", b -> {
                 WardrobeVfxEngine.triggerPreview(eventSlot, style.id());
@@ -309,10 +314,12 @@ final class WardrobeVfxScreen extends Screen {
         String currentId = WardrobeVfxCatalog.equippedId(cfg, eventSlot);
         if (style.id().equals(currentId)) {
             WardrobeVfxCatalog.equip(cfg, eventSlot, "none");
+            WardrobeUi.playEquip(false);
             statusMsg = WardrobeVfxCatalog.eventLabel(eventSlot, ja) + ": OFF";
         } else {
             WardrobeVfxCatalog.equip(cfg, eventSlot, style.id());
             WardrobeVfxEngine.triggerPreview(eventSlot, style.id());
+            WardrobeUi.playEquip(true);
             flash(style.primaryColor());
             statusMsg = "✦ " + WardrobeVfxCatalog.eventLabel(eventSlot, ja) + " → " + style.label(ja);
         }

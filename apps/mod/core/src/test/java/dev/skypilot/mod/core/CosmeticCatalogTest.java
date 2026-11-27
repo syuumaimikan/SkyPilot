@@ -159,6 +159,38 @@ class CosmeticCatalogTest {
         c.appearance.companion = "invalid";
         c.sanitize();
         assertTrue(CosmeticMesh.build(c.appearance).isEmpty());
+
+        // Pet bonding & standalone LAN sync defaults
+        assertEquals("lan", c.appearance.wardrobeSyncMode);
+        assertEquals(1, SkyPilotConfig.Appearance.bondLevel(0));
+        assertEquals(2, c.appearance.addBond("pet_axolotl_pink", 12));
+        assertEquals(12, c.appearance.bondOf("pet_axolotl_pink"));
+        assertEquals(12, c.appearance.petAffection);
+        c.appearance.wardrobeSyncUrl = "http://localhost:8080";
+        c.sanitize();
+        assertEquals("", c.appearance.wardrobeSyncUrl);
+
+        // Chroma/Dye tint + Outfit share code round-trip
+        var tr = c.appearance.editTransform("back");
+        tr.tintEnabled = true;
+        tr.tintColor = 0x38BDF8;
+        tr.chroma = true;
+        c.appearance.cape = "sakura";
+        c.appearance.waist = "waist_nine_tails";
+        String code = WardrobeTools.exportShareCode(c.appearance);
+        assertTrue(code.startsWith("SPW1:"));
+        var target = new SkyPilotConfig.Appearance();
+        assertTrue(WardrobeTools.importShareCode(code, target));
+        assertEquals("sakura", target.cape);
+        assertEquals("waist_nine_tails", target.waist);
+        assertTrue(target.transformOf("back").chroma);
+        assertEquals(0x38BDF8, target.transformOf("back").tintColor);
+
+        // Verify new tail_wag / wing_primary_l / aura_orbit_bob animations evaluate non-trivially
+        var tailPose = CosmeticAnimation.evaluateBone("tail_wag", 1.0, 0.0, 1.25, 0.25, false, false, false, 0.0, 0.0);
+        assertNotEquals(CosmeticAnimation.BoneTransform.IDENTITY, tailPose);
+        var ankleWingPose = CosmeticAnimation.evaluateBone("wing_primary_l", 1.0, 0.0, 1.25, 0.25, false, false, false, 0.0, 0.0);
+        assertNotEquals(CosmeticAnimation.BoneTransform.IDENTITY, ankleWingPose);
     }
 
     @Test

@@ -281,6 +281,103 @@ final class WardrobeVfxEngine {
         }
     }
 
+    /** Heartwarming pastel HDR hearts &amp; sparkles when petting, feeding, or bonding with a pet! */
+    static void spawnPetHearts(Vec3 pos, int count, int c1, int c2) {
+        var rng = ThreadLocalRandom.current();
+        for (int i = 0; i < count; i++) {
+            boolean isHeart = i < Math.max(1, (count * 2) / 3);
+            EffectInstance e = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex(isHeart ? "heart_glow" : "star_spark"), true, false);
+            if (e == null) break;
+            double ang = rng.nextDouble() * Math.PI * 2.0;
+            double r = 0.12 + rng.nextDouble() * 0.36;
+            e.x = e.prevX = pos.x + Math.cos(ang) * r;
+            e.y = e.prevY = pos.y + 0.12 + rng.nextDouble() * 0.34;
+            e.z = e.prevZ = pos.z + Math.sin(ang) * r;
+            e.vx = Math.cos(ang) * (0.015 + rng.nextDouble() * 0.025);
+            e.vy = 0.042 + rng.nextDouble() * 0.048;
+            e.vz = Math.sin(ang) * (0.015 + rng.nextDouble() * 0.025);
+            e.drag = 0.94;
+            e.roll = (rng.nextFloat() - 0.5f) * 26.0f;
+            e.vRoll = (rng.nextFloat() - 0.5f) * 3.5f;
+            e.scaleStart = isHeart ? (0.19f + rng.nextFloat() * 0.10f) : (0.14f + rng.nextFloat() * 0.08f);
+            e.scaleEnd = 0.04f;
+            e.colorStart = isHeart ? c1 : c2;
+            e.colorEnd = isHeart ? 0xFFF1F7 : 0xFFFFFF;
+            e.baseAlpha = 0.94f;
+            e.maxAge = 18 + rng.nextInt(12);
+        }
+    }
+
+    /** Golden glowing treat orb hovering in midair or bursting into hearts &amp; stars when eaten! */
+    static void spawnTreatVisual(Vec3 pos, boolean eaten) {
+        if (!eaten) {
+            EffectInstance orb = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex("sun_flare"), true, false);
+            if (orb != null) {
+                orb.x = orb.prevX = pos.x; orb.y = orb.prevY = pos.y; orb.z = orb.prevZ = pos.z;
+                orb.vRoll = 12.0f;
+                orb.scaleStart = 0.34f; orb.scaleEnd = 0.28f;
+                orb.colorStart = 0xFBBF24; orb.colorEnd = 0xFEF08A;
+                orb.baseAlpha = 0.95f; orb.maxAge = 3;
+            }
+            EffectInstance core = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex("star_spark"), true, false);
+            if (core != null) {
+                core.x = core.prevX = pos.x; core.y = core.prevY = pos.y; core.z = core.prevZ = pos.z;
+                core.vRoll = -18.0f;
+                core.scaleStart = 0.22f; core.scaleEnd = 0.18f;
+                core.colorStart = 0xFFFFFF; core.colorEnd = 0xFDE047;
+                core.baseAlpha = 0.98f; core.maxAge = 3;
+            }
+        } else {
+            spawnFlashStar(pos, 0xFFFFFF, 0xFDE047, 0.85f, 10);
+            spawnRing(pos, 0.18f, 1.15f, 8f, 0f, 0f, 0xFBBF24, 0xF472B6, tex("shockwave_ring"), 12, 0.85f);
+            spawnPetHearts(pos, 10, 0xF472B6, 0xFDE047);
+        }
+    }
+
+    /** Glowing 3D fetch toy orb + soft trailing ribbon for Play Fetch! */
+    static void spawnToyBallFrame(Vec3 pos, Vec3 prevPos, int c1, int c2) {
+        EffectInstance halo = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex("glow_soft"), true, false);
+        if (halo != null) {
+            halo.x = halo.prevX = pos.x; halo.y = halo.prevY = pos.y; halo.z = halo.prevZ = pos.z;
+            halo.scaleStart = 0.42f; halo.scaleEnd = 0.24f;
+            halo.colorStart = c1; halo.colorEnd = c2;
+            halo.baseAlpha = 0.78f; halo.maxAge = 3;
+        }
+        EffectInstance orb = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex("bubble_orb"), true, false);
+        if (orb != null) {
+            orb.x = orb.prevX = pos.x; orb.y = orb.prevY = pos.y; orb.z = orb.prevZ = pos.z;
+            orb.vRoll = 16.0f;
+            orb.scaleStart = 0.28f; orb.scaleEnd = 0.22f;
+            orb.colorStart = 0xFFFFFF; orb.colorEnd = c1;
+            orb.baseAlpha = 0.96f; orb.maxAge = 3;
+        }
+        if (prevPos != null && pos.distanceTo(prevPos) > 0.08) {
+            spawnEnergyBeam(prevPos, pos, 0xFFFFFF, c1, 0.10f, 6);
+        }
+    }
+
+    /** Celebratory magic circle, floating musical notes &amp; stars for Pet Tricks! */
+    static void spawnTrickShow(Vec3 pos, int c1, int c2) {
+        spawnRing(pos.add(0, -0.15, 0), 0.25f, 1.40f, 16f, 0f, 0f, c1, c2, tex("magic_circle"), 18, 0.85f);
+        spawnMoteBurst(pos, tex("music_note"), c1, c2, 7, 0.11, 0.22f, 18);
+        spawnPetHearts(pos, 7, 0xF472B6, c2);
+    }
+
+    /** Gentle calm sparkle rising above a sitting/resting pet. */
+    static void spawnSleepySparkle(Vec3 pos, int c1) {
+        var rng = ThreadLocalRandom.current();
+        EffectInstance e = spawn(WardrobeVfxMeshes.Kind.QUAD_BILLBOARD, tex("star_spark"), true, false);
+        if (e == null) return;
+        e.x = e.prevX = pos.x + (rng.nextDouble() - 0.5) * 0.35;
+        e.y = e.prevY = pos.y + 0.30;
+        e.z = e.prevZ = pos.z + (rng.nextDouble() - 0.5) * 0.35;
+        e.vx = 0.0; e.vy = 0.028; e.vz = 0.0;
+        e.vRoll = 6.0f;
+        e.scaleStart = 0.14f; e.scaleEnd = 0.03f;
+        e.colorStart = c1; e.colorEnd = 0xFFFFFF;
+        e.baseAlpha = 0.72f; e.maxAge = 20;
+    }
+
     // ---------------------------------------------------------------- tick loop
 
     static void tick(Minecraft mc) {

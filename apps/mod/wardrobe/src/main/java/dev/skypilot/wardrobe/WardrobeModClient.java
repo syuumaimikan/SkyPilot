@@ -27,12 +27,14 @@ import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
 /**
  * Standalone Fabric 26.2 client entrypoint for SkyPilot Wardrobe ({@code skypilot_wardrobe}).
  *
- * <p>Strictly client-side visuals &amp; optional external HTTP multiplayer sync: sends ZERO packets
- * to any Minecraft game server.
+ * <p>Strictly client-side visuals, interactive pet bonding, and zero-server LAN auto-sync:
+ * sends ZERO custom packets to any Minecraft game server.
  */
 public final class WardrobeModClient implements ClientModInitializer {
     private static final KeyMapping.Category CATEGORY =
             KeyMapping.Category.register(Identifier.fromNamespaceAndPath("skypilot_wardrobe", "main"));
+
+    private static boolean wasUseKeyDown;
 
     @Override
     public void onInitializeClient() {
@@ -46,6 +48,8 @@ public final class WardrobeModClient implements ClientModInitializer {
                 new KeyMapping("key.skypilot_wardrobe.settings", InputConstants.UNKNOWN.getValue(), CATEGORY));
         KeyMapping openVfx = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.skypilot_wardrobe.vfx", InputConstants.UNKNOWN.getValue(), CATEGORY));
+        KeyMapping petInteract = KeyMappingHelper.registerKeyMapping(
+                new KeyMapping("key.skypilot_wardrobe.pet_interact", InputConstants.KEY_H, CATEGORY));
         KeyMapping randomOutfit = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.skypilot_wardrobe.random", InputConstants.UNKNOWN.getValue(), CATEGORY));
 
@@ -87,6 +91,34 @@ public final class WardrobeModClient implements ClientModInitializer {
                         openLater(() -> new OutfitScreen(null));
                         return 1;
                     }))
+                    .then(literal("play").executes(c -> {
+                        openLater(() -> new PetInteractScreen(null));
+                        return 1;
+                    }))
+                    .then(literal("pat").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.PAT, null));
+                        return 1;
+                    }))
+                    .then(literal("treat").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.TREAT, null));
+                        return 1;
+                    }))
+                    .then(literal("fetch").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.FETCH, null));
+                        return 1;
+                    }))
+                    .then(literal("trick").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.TRICK, null));
+                        return 1;
+                    }))
+                    .then(literal("sit").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.TOGGLE_STAY, null));
+                        return 1;
+                    }))
+                    .then(literal("perch").executes(c -> {
+                        Minecraft.getInstance().execute(() -> PetWorldPhysics.performAction(PetWorldPhysics.Action.TOGGLE_PERCH, null));
+                        return 1;
+                    }))
                     .then(literal("sync").executes(c -> {
                         RemoteWardrobeSync.markDirty();
                         var rt = WardrobeRuntime.get();
@@ -104,6 +136,14 @@ public final class WardrobeModClient implements ClientModInitializer {
             RemoteWardrobeSync.tick(mc);
 
             boolean inGame = mc.player != null && mc.gui.screen() == null;
+
+            // Direct empty-hand Right-Click petting while looking at your pet or companion!
+            boolean useDown = inGame && mc.options.keyUse.isDown();
+            if (useDown && !wasUseKeyDown && mc.player.getMainHandItem().isEmpty()) {
+                PetWorldPhysics.tryDirectPetClick(mc);
+            }
+            wasUseKeyDown = useDown;
+
             while (openWardrobe.consumeClick()) {
                 if (inGame) mc.gui.setScreen(new AppearanceScreen(null));
             }
@@ -115,6 +155,16 @@ public final class WardrobeModClient implements ClientModInitializer {
             }
             while (openVfx.consumeClick()) {
                 if (inGame) mc.gui.setScreen(new WardrobeVfxScreen(null));
+            }
+            while (petInteract.consumeClick()) {
+                if (inGame) {
+                    if (mc.player.isShiftKeyDown()) {
+                        mc.gui.setScreen(new PetInteractScreen(null));
+                    } else {
+                        String aimed = PetWorldPhysics.aimedPetSlot(mc.player, 5.0);
+                        PetWorldPhysics.performAction(PetWorldPhysics.Action.PAT, aimed);
+                    }
+                }
             }
             while (randomOutfit.consumeClick()) {
                 if (inGame) {
@@ -146,4 +196,3 @@ public final class WardrobeModClient implements ClientModInitializer {
         mc.execute(() -> mc.gui.setScreen(factory.get()));
     }
 }
-
