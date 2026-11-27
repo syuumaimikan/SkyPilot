@@ -140,6 +140,11 @@ public final class Performance {
 		return allowParticle(options);
 	}
 
+	/** Should a FireworkParticles.Starter be skipped before ticking/spawning sparks? */
+	public static boolean hideFireworkStarter() {
+		return fireworks;
+	}
+
 	/** Block break and mining crumbs. */
 	public static boolean hideBreakParticles() {
 		return breaking;
